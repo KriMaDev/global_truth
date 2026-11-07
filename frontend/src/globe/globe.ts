@@ -101,6 +101,9 @@ const MIN_ALTITUDE: Record<"2k" | "4k", number> = { "2k": 0.9, "4k": 0.5 };
 /** Furthest zoom: the whole globe still fits across a phone screen (which starts at 3.6). */
 const MAX_ALTITUDE = 4;
 
+/** Below this altitude, desktops swap in the sharper 8K night lights (loaded once). */
+const SHARP_NIGHT_ALTITUDE = 1.2;
+
 /** Windows at least this wide (CSS pixels) get 4K textures; phones and small tablets 2K. */
 const WIDE_SCREEN = 1024;
 
@@ -425,7 +428,22 @@ export async function createGlobeApp(
     })
     .catch((error: unknown) => console.warn("Coastlines and borders unavailable:", error));
 
+  // Sharper night lights when zooming in, on desktops whose graphics can hold 8192 px.
+  let sharpNight = size !== "4k" || renderer.capabilities.maxTextureSize < 8192;
+  const loadSharpNight = (): void => {
+    sharpNight = true;
+    loadTexture("/textures/night-8k.webp", renderer)
+      .then((texture) => {
+        const uniform = material.uniforms.nightTexture;
+        (uniform.value as Texture).dispose();
+        uniform.value = texture;
+        container.dataset.night = "8k";
+      })
+      .catch((error: unknown) => console.warn("Sharper night lights unavailable:", error));
+  };
+
   globe.onZoom((pov) => {
+    if (!sharpNight && pov.altitude < SHARP_NIGHT_ALTITUDE) loadSharpNight();
     regroupForAltitude(pov.altitude);
     if (geography && labelLevel(pov.altitude) !== labelsAt) {
       labelsAt = labelLevel(pov.altitude);

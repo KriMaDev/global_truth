@@ -82,7 +82,7 @@ Cloudflare Workers static assets @ globe.krimadev.com
 | Footer version (build date and commit, set by Vite from git or `GITHUB_SHA`) | `frontend/vite.config.ts` |
 | Severity look (colour, size, pulse, rings) | `frontend/src/severity.ts` |
 | Event shape and checks (untrusted input is validated, malformed events dropped) | `frontend/src/types.ts`, `frontend/src/events.ts` |
-| Earth textures (NASA, public domain), 2K for phones, 4K for wide screens | `frontend/public/textures/`, made by `tools/build_textures.py` |
+| Earth textures (NASA, public domain), 2K for phones, 4K for wide screens, and 8K night lights that desktops load when zooming in below altitude 1.2 | `frontend/public/textures/`, made by `tools/build_textures.py` |
 
 Everything from a feed is rendered as text (`textContent`), never as HTML. The sample events (`frontend/src/data/sample-events.json`) are used only in unit tests and in `npm run dev` when there is no pipeline data.
 
