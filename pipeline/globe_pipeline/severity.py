@@ -144,6 +144,7 @@ HAZARD_TERMS = (
     "explosion",
     "outbreak",
     "epidemic",
+    "pandemic",
     "famine",
     "tsunami warning",
     "hostage",

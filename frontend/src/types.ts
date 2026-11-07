@@ -6,7 +6,14 @@
 export const SEVERITIES = ["low", "moderate", "high", "critical"] as const;
 export type Severity = (typeof SEVERITIES)[number];
 
-export const CATEGORIES = ["war", "politics", "natural-disasters", "economic", "technology"] as const;
+export const CATEGORIES = [
+  "war",
+  "politics",
+  "natural-disasters",
+  "economic",
+  "technology",
+  "health",
+] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
@@ -15,6 +22,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   "natural-disasters": "Natural disasters",
   economic: "Economic",
   technology: "Technology advancements",
+  health: "Health & outbreaks",
 };
 
 /** Where an event comes from: a verified data feed, a news report, or preview sample data. */

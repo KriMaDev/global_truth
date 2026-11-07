@@ -38,7 +38,7 @@ Only the headline is read: it is what the reader sees, and the rule can be check
 2. **A hazard term in the headline** gives moderate:
    - "state of emergency", "evacuat…", "martial law", "curfew";
    - "air strike"/"airstrike", "missile strike", "drone strike", "shelling", "invasion", "coup", "explosion", "hostage", "massacre";
-   - "outbreak", "epidemic", "famine", "tsunami warning".
+   - "outbreak", "epidemic", "pandemic", "famine", "tsunami warning".
 3. **Otherwise** → low.
 
 When several outlets report the same story, the event takes the highest level any of their headlines gives.

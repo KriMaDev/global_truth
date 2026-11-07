@@ -124,6 +124,17 @@ def test_one_theme_alone_is_not_enough() -> None:
     assert categorize_news("What next for the region?", ["ECON_STOCKMARKET"]) == []
 
 
+def test_health_and_outbreaks() -> None:
+    assert categorize_news("Cholera outbreak spreads in coastal provinces", []) == ["health"]
+    assert categorize_news("Bird flu found on second farm", []) == ["health"]
+    assert categorize_news(
+        "What experts say about the new variant", ["HEALTH_PANDEMIC", "TAX_DISEASE_CORONAVIRUS"]
+    ) == ["health"]
+    # "Who is ..." is not the World Health Organization.
+    assert "health" not in categorize_news("Who is the new prime minister?", [])
+    assert news_severity("WHO declares a pandemic")[0] == Severity.MODERATE
+
+
 def test_whole_words_only() -> None:
     # "warm" is not "war", "chain" is not "ai".
     assert categorize_news("Warm weather and supply chain worries", []) == []
