@@ -2,7 +2,7 @@
 
 An interactive 3D globe of current world events, shown as glowing lights coloured by severity. Filter by place (continent → region → country → province → city) and by category (war, politics, natural disasters, economic, technology), and read the news for your selection, always linked to the original source.
 
-**Live (placeholder):** https://globe.krimadev.com
+**Live:** https://globe.krimadev.com (updated every 30 minutes)
 
 ## Honesty principles
 - Every item links to and credits its original source. Headlines are never rewritten.
@@ -55,7 +55,7 @@ Deploying is described in [docs/deploy.md](docs/deploy.md).
 ## Roadmap
 1. ✅ Plan, stack and skeleton, placeholder live (7 Nov 2026)
 2. ✅ Globe with sample events and severity lights (on `main`, not deployed: the live site keeps the placeholder until real data)
-3. ✅ Live data pipeline: USGS, GDACS, GDELT news from 32 allowlisted outlets; places, categories, severity, grouping (built; goes live when the owner says so)
+3. ✅ Live data pipeline: USGS, GDACS, GDELT news from 32 allowlisted outlets; places, categories, severity, grouping (live since 7 Nov 2026)
 4. Location drill-down and category filters; a geography view (countries coloured by severity, names of countries, oceans, seas and mountains)
 5. News panel, source attribution, About / Sources page
 6. Polish: animations, performance, mobile, accessibility
