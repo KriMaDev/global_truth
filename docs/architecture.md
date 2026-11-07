@@ -27,6 +27,35 @@ Cloudflare Workers static assets @ globe.krimadev.com
 | CI and scheduled updates | `.github/workflows/` |
 | Hosting config | `wrangler.jsonc`, `frontend/public/_headers` |
 
+## Frontend
+
+| Part | Path |
+|---|---|
+| Page shell: legend, motion switch, card, keyboard list; loads the globe lazily | `frontend/src/main.ts` |
+| Globe (globe.gl on three.js): setup, day/night shader, sun position, stars, lights | `frontend/src/globe/` |
+| Severity look (colour, size, pulse, rings) | `frontend/src/severity.ts` |
+| Event shape and checks (untrusted input is validated, malformed events dropped) | `frontend/src/types.ts`, `frontend/src/events.ts` |
+| Earth textures (NASA, public domain), 2K for phones, 4K for wide screens | `frontend/public/textures/`, made by `tools/build_textures.py` |
+
+Everything from a feed is rendered as text (`textContent`), never as HTML.
+
+## Event format
+
+Each event in `events.json` (and in the preview's `frontend/src/data/sample-events.json`):
+
+| Field | Type | Meaning |
+|---|---|---|
+| `id` | string | Stable id |
+| `title` | string ≤ 300 | The original headline, never rewritten |
+| `snippet` | string ≤ 280 | Short snippet from the source, never the full text |
+| `place` | string | Human-readable place, e.g. "Tokyo, Japan" |
+| `lat`, `lng` | number | Position in degrees |
+| `severity` | `low` \| `moderate` \| `high` \| `critical` | See docs/severity.md |
+| `categories` | list of `war`, `politics`, `natural-disasters`, `economic`, `technology` | Can be empty |
+| `kind` | `data-feed` \| `news` \| `sample` | Verified data feed, news report, or preview sample |
+| `published` | ISO 8601 string | When the source published it |
+| `sources` | list of `{name, url}` | Every outlet covering it (http/https links only) |
+
 ## Published data (from milestone 3)
 
 | File | Content |

@@ -2,38 +2,59 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>World News Globe</title>
     <meta
       name="description"
-      content="Honest, sourced world news on an interactive 3D globe. Coming soon."
+      content="Current world events on an interactive 3D globe, coloured by severity, each linked to its original source."
     />
     <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#03050b" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <canvas id="stars" aria-hidden="true"></canvas>
-    <main class="card">
-      <p class="eyebrow">globe.krimadev.com</p>
-      <h1>World News Globe</h1>
-      <p class="lead">
-        Current world events on an interactive 3D globe, as lights coloured by severity.
-        Every story links to its original source. No opinions, no rewritten headlines.
+    <header class="topbar">
+      <div class="brand">
+        <h1>World News Globe</h1>
+        <p class="preview-note">Preview: sample events, not real news</p>
+      </div>
+      <button id="motion-toggle" class="motion-toggle" type="button" aria-pressed="false">
+        Reduce motion
+      </button>
+    </header>
+
+    <main>
+      <div
+        id="globe"
+        class="globe"
+        tabindex="0"
+        role="application"
+        aria-roledescription="globe"
+        aria-label="Globe of world events"
+        aria-describedby="globe-help"
+      ></div>
+      <p id="globe-help" class="sr-only">
+        Arrow keys turn the globe, plus and minus zoom. Press Tab to go through the events, most
+        severe first: each one is shown on the globe, and Enter opens it.
       </p>
-      <p class="status">Coming soon. Built in the open.</p>
-      <ul class="legend" aria-label="Severity scale preview">
-        <li><span class="dot low" aria-hidden="true"></span>Low</li>
-        <li><span class="dot moderate" aria-hidden="true"></span>Moderate</li>
-        <li><span class="dot high" aria-hidden="true"></span>High</li>
-        <li><span class="dot critical" aria-hidden="true"></span>Critical</li>
-      </ul>
-      <p class="links">
-        <a href="https://github.com/KriMaDev/global_truth">Source code</a>
-        <span aria-hidden="true">·</span>
-        <a href="https://krimadev.com">krimadev.com</a>
-      </p>
+      <p id="status" class="status" role="status">Loading the globe…</p>
+      <nav id="event-list" class="event-list" aria-label="Events, most severe first"></nav>
+      <aside id="event-card" class="event-card" aria-labelledby="event-card-title" hidden></aside>
     </main>
+
+    <footer class="bottom">
+      <section id="legend" class="legend" aria-label="Severity legend"></section>
+      <p class="credits">
+        Earth:
+        <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/"
+          >NASA Blue Marble</a
+        >,
+        <a href="https://science.nasa.gov/earth/earth-observatory/earth-at-night/">Black Marble</a>
+        · <a href="https://github.com/KriMaDev/global_truth">Source code</a>
+      </p>
+    </footer>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

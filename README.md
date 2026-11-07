@@ -24,7 +24,9 @@ You need Node.js 24 and Python 3.13.
 # Frontend
 npm ci
 npm run dev          # http://localhost:5173
+npm test             # frontend unit tests (vitest)
 npm run build        # type check + build to frontend/dist
+npm run preview      # serve the build on http://localhost:4173
 
 # Pipeline
 cd pipeline
@@ -48,7 +50,7 @@ Deploying is described in [docs/deploy.md](docs/deploy.md).
 
 ## Roadmap
 1. ✅ Plan, stack and skeleton, placeholder live (7 Nov 2026)
-2. Globe with sample events and severity lights
+2. ✅ Globe with sample events and severity lights (on `main`, not deployed: the live site keeps the placeholder until real data)
 3. Live data pipeline (USGS, GDACS, first RSS feeds)
 4. Location drill-down and category filters
 5. News panel, source attribution, About / Sources page

@@ -13,7 +13,8 @@ An interactive, visually stunning 3D globe that shows current world events as gl
 - [x] Studied star-teller deployment setup (7 Nov 2026)
 - [x] Architecture and stack approved by the owner (7 Nov 2026; plan summarised in `docs/architecture.md`)
 - [x] Milestone 1: skeleton live at https://globe.krimadev.com (7 Nov 2026), repo https://github.com/KriMaDev/global_truth (public), CI green
-- [ ] Milestone 2: globe with static sample events and severity lights (next; start in plan mode)
+- [x] Milestone 2 built (7 Nov 2026): globe with sample events, day/night, severity lights, legend, card, keyboard, reduce motion, no-WebGL list. **On `main` but NOT deployed** (owner's decision: no sample/fake news in public). **Do not run `npm run deploy` until milestone 3 replaces the sample data with real data.** Awaiting the owner's review on localhost.
+- [ ] Milestone 3: live pipeline (start in plan mode)
 - Commits in this repo use the GitHub noreply address (repo-local git config), never the Gmail address.
 - Deploying by hand needs `$env:CLOUDFLARE_ACCOUNT_ID` set to the account ID in krimadev_rebuild's NOTES.md (the OAuth login can't list accounts on its own).
 
@@ -30,7 +31,10 @@ An interactive, visually stunning 3D globe that shows current world events as gl
 Node needs `$env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;" + $env:Path` in PowerShell.
 - Frontend: `npm ci`, `npm run dev`, `npm run build` (type check + build to `frontend/dist`), `npm run deploy` (asks first: it is public).
 - Pipeline (in `pipeline/`): `.venv\Scripts\python -m pytest`, `.venv\Scripts\ruff check .`, `.venv\Scripts\ruff format --check .`.
-- Phone-size screenshots: headless Edge `--window-size` can't go below about 500 px, so use Playwright with `channel: "msedge"` and a 390×844 viewport.
+- Frontend tests: `npm test` (vitest). Preview the build: `npm run preview` (port 4173).
+- Textures: `pipeline\.venv\Scripts\python tools\build_textures.py` (NASA sources cached in `.cache/textures/`; output committed).
+- Browser checks: Playwright from Star Teller's install (`Desktop\Star Teller\apps\web\node_modules\@playwright\test`, `channel: "msedge"`), from a scratchpad script; route the document response to add the CSP from `frontend/public/_headers`, since `vite preview` doesn't apply `_headers`. Headless Edge `--window-size` can't go below about 500 px, so use a 390×844 viewport for phones.
+- CSP: globe.gl 2.46.2 injects four `<style>` blocks, allowed by hash in `_headers`. After updating globe.gl, run the browser check; it prints any new hash to add.
 
 ## How to work
 - Start every new feature in plan mode and get approval before large changes.

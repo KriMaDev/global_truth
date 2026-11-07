@@ -1,77 +1,88 @@
 /**
- * Placeholder page: a subtle, slowly twinkling starfield behind the "coming soon" card.
- * Respects prefers-reduced-motion (stars are drawn once and stay still).
+ * The page shell: legend, motion switch, event card and keyboard list appear at once; the 3D
+ * globe (three.js, the largest part) is loaded afterwards. Without WebGL, or if the globe
+ * fails, the events are shown as a plain list instead, so the page always works.
  */
 
-interface Star {
-  x: number;
-  y: number;
-  radius: number;
-  phase: number;
-  speed: number;
+import sampleEvents from "./data/sample-events.json";
+import { compareBySeverity, parseEvents } from "./events";
+import type { GlobeApp } from "./globe/globe";
+import { attachKeyboard } from "./globe/keyboard";
+import type { GlobeEvent } from "./types";
+import { createEventCard } from "./ui/event-card";
+import { renderEventList } from "./ui/event-list";
+import { renderLegend } from "./ui/legend";
+import { initialReducedMotion, setupMotionToggle } from "./ui/motion";
+
+function byId<T extends HTMLElement>(id: string): T {
+  const element = document.getElementById(id);
+  if (!element) throw new Error(`Missing #${id} in index.html`);
+  return element as T;
 }
 
-const STARS_PER_PIXEL = 1 / 2500;
-
-function makeStars(width: number, height: number): Star[] {
-  const count = Math.round(width * height * STARS_PER_PIXEL);
-  return Array.from({ length: count }, () => ({
-    x: Math.random() * width,
-    y: Math.random() * height,
-    radius: Math.random() * 1.1 + 0.2,
-    phase: Math.random() * Math.PI * 2,
-    speed: Math.random() * 0.6 + 0.2,
-  }));
-}
-
-function drawStars(ctx: CanvasRenderingContext2D, stars: Star[], timeSeconds: number): void {
-  const { width, height } = ctx.canvas;
-  ctx.clearRect(0, 0, width, height);
-  for (const star of stars) {
-    const twinkle = 0.55 + 0.45 * Math.sin(star.phase + timeSeconds * star.speed);
-    ctx.globalAlpha = twinkle;
-    ctx.beginPath();
-    ctx.arc(star.x, star.y, star.radius * devicePixelRatio, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffffff";
-    ctx.fill();
+function hasWebGL(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    return Boolean(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
+  } catch {
+    return false;
   }
-  ctx.globalAlpha = 1;
 }
 
-function startStarfield(canvas: HTMLCanvasElement): void {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
+const events = parseEvents(sampleEvents).sort(compareBySeverity);
+const container = byId<HTMLDivElement>("globe");
+const status = byId<HTMLParagraphElement>("status");
+const list = byId<HTMLElement>("event-list");
 
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  let stars: Star[] = [];
-  let frame = 0;
+let app: GlobeApp | null = null;
+const card = createEventCard(byId("event-card"), () => app?.select(null));
 
-  const resize = (): void => {
-    canvas.width = Math.round(canvas.clientWidth * devicePixelRatio);
-    canvas.height = Math.round(canvas.clientHeight * devicePixelRatio);
-    stars = makeStars(canvas.width, canvas.height);
-    drawStars(ctx, stars, 0);
-  };
-
-  const animate = (now: number): void => {
-    drawStars(ctx, stars, now / 1000);
-    frame = requestAnimationFrame(animate);
-  };
-
-  const applyMotionPreference = (): void => {
-    cancelAnimationFrame(frame);
-    if (reducedMotion.matches) {
-      drawStars(ctx, stars, 0);
-    } else {
-      frame = requestAnimationFrame(animate);
-    }
-  };
-
-  resize();
-  applyMotionPreference();
-  window.addEventListener("resize", resize);
-  reducedMotion.addEventListener("change", applyMotionPreference);
+function openEvent(event: GlobeEvent, focus: boolean): void {
+  app?.select(event.id);
+  app?.flyTo(event);
+  card.open(event, focus);
 }
 
-const canvas = document.querySelector<HTMLCanvasElement>("#stars");
-if (canvas) startStarfield(canvas);
+function showList(message: string): void {
+  document.body.classList.add("no-globe");
+  status.textContent = message;
+  status.hidden = false;
+  renderEventList(list, events, { onOpen: (event) => card.open(event, true) });
+}
+
+async function start(): Promise<void> {
+  renderLegend(byId("legend"));
+  setupMotionToggle(byId<HTMLButtonElement>("motion-toggle"), (on) => app?.setReducedMotion(on));
+
+  if (events.length === 0) {
+    status.textContent = "No events to show right now.";
+    return;
+  }
+  if (!hasWebGL()) {
+    showList("This browser cannot show the 3D globe, so the events are listed instead.");
+    return;
+  }
+  try {
+    const { createGlobeApp } = await import("./globe/globe");
+    app = await createGlobeApp(container, {
+      events,
+      reducedMotion: initialReducedMotion(),
+      onSelect: (event) => openEvent(event, false),
+    });
+    attachKeyboard(container, app);
+    renderEventList(list, events, {
+      onFocus: (event) => {
+        app?.select(event.id);
+        app?.flyTo(event);
+      },
+      onOpen: (event) => openEvent(event, true),
+    });
+    status.hidden = true;
+    container.classList.add("ready");
+  } catch (error) {
+    console.error(error);
+    showList("The 3D globe could not start, so the events are listed instead.");
+  }
+}
+
+void start();

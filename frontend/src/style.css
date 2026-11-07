@@ -1,4 +1,5 @@
-/* Severity palette (Okabe-Ito, colourblind-safe). Keep in sync with docs/severity.md. */
+/* Severity palette (Okabe-Ito, colourblind-safe). Keep in sync with docs/severity.md and
+   src/severity.ts (a test checks all of them). */
 :root {
   --sev-low: #56b4e9;
   --sev-moderate: #f0e442;
@@ -7,10 +8,12 @@
 
   --bg: #03050b;
   --text: #e8ecf4;
-  --muted: #9aa4b8;
-  --card: rgb(12 16 28 / 72%);
-  --border: rgb(255 255 255 / 10%);
+  --muted: #a3adc2;
+  --panel: rgb(10 14 26 / 82%);
+  --border: rgb(255 255 255 / 12%);
   --accent: #8fd3ff;
+  --sample: #f5ec8a;
+  --gutter: 16px;
 }
 
 * {
@@ -20,7 +23,7 @@
 html,
 body {
   margin: 0;
-  min-height: 100%;
+  height: 100%;
   background: var(--bg);
   color: var(--text);
   font-family:
@@ -29,120 +32,477 @@ body {
     "Segoe UI",
     Roboto,
     sans-serif;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 body {
-  display: grid;
-  place-items: center;
-  min-height: 100dvh;
-  padding: 16px;
-}
-
-#stars {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-}
-
-.card {
-  position: relative;
-  z-index: 1;
-  max-width: 34rem;
-  padding: 2rem;
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  background: var(--card);
-  backdrop-filter: blur(8px);
-  text-align: center;
-}
-
-.eyebrow {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.85rem;
-  letter-spacing: 0.08em;
-}
-
-h1 {
-  margin: 0.25rem 0 1rem;
-  font-size: clamp(1.8rem, 6vw, 2.6rem);
-  font-weight: 650;
-  letter-spacing: -0.01em;
-}
-
-.lead {
-  margin: 0 0 1rem;
-  color: var(--text);
-}
-
-.status {
-  margin: 0 0 1.5rem;
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.5rem 1.25rem;
-  margin: 0 0 1.5rem;
-  padding: 0;
-  list-style: none;
-  font-size: 0.9rem;
-}
-
-.legend li {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-/* Size grows with severity, so colour is never the only signal. */
-.dot {
-  display: inline-block;
-  border-radius: 50%;
-}
-.dot.low {
-  width: 8px;
-  height: 8px;
-  background: var(--sev-low);
-  box-shadow: 0 0 6px var(--sev-low);
-}
-.dot.moderate {
-  width: 10px;
-  height: 10px;
-  background: var(--sev-moderate);
-  box-shadow: 0 0 8px var(--sev-moderate);
-}
-.dot.high {
-  width: 12px;
-  height: 12px;
-  background: var(--sev-high);
-  box-shadow: 0 0 10px var(--sev-high);
-}
-.dot.critical {
-  width: 14px;
-  height: 14px;
-  background: var(--sev-critical);
-  box-shadow: 0 0 12px var(--sev-critical);
-}
-
-.links {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.9rem;
+  overflow: hidden;
 }
 
 a {
   color: var(--accent);
 }
 
-a:focus-visible {
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 3px;
-  border-radius: 2px;
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Globe ---------- */
+
+.globe {
+  position: fixed;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+
+.globe.ready {
+  opacity: 1;
+}
+
+.globe:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+
+.no-globe .globe {
+  display: none;
+}
+
+.status {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  color: var(--muted);
+  text-align: center;
+  max-width: calc(100vw - 2 * var(--gutter));
+}
+
+.no-globe .status {
+  top: 5.5rem;
+  transform: translateX(-50%);
+}
+
+/* Hover label from globe.gl (text only, see globe.ts). */
+.globe-label {
+  max-width: 18rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--panel);
+  font-size: 0.85rem;
+}
+
+.globe-label strong,
+.globe-label span {
+  display: block;
+}
+
+.globe-label span {
+  color: var(--muted);
+}
+
+/* ---------- Top bar ---------- */
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: var(--gutter);
+  background: linear-gradient(rgb(3 5 11 / 85%), rgb(3 5 11 / 0%));
+  pointer-events: none;
+}
+
+.topbar > * {
+  pointer-events: auto;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.preview-note {
+  display: inline-block;
+  margin: 0.3rem 0 0;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid rgb(245 236 138 / 40%);
+  border-radius: 999px;
+  color: var(--sample);
+  font-size: 0.8rem;
+}
+
+.motion-toggle {
+  flex-shrink: 0;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.motion-toggle[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.motion-toggle[aria-pressed="true"]::before {
+  content: "✓ ";
+}
+
+/* ---------- Keyboard list of events ---------- */
+
+.event-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event-list-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--panel);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* On the globe view, a button shows only while it has keyboard focus. */
+body:not(.no-globe) .event-list-button:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+body:not(.no-globe) .event-list-button:focus {
+  position: fixed;
+  left: 50%;
+  top: 5.5rem;
+  z-index: 15;
+  width: auto;
+  max-width: calc(100vw - 2 * var(--gutter));
+  transform: translateX(-50%);
+}
+
+.no-globe .event-list {
+  position: fixed;
+  top: 8rem;
+  bottom: 10rem;
+  left: var(--gutter);
+  right: var(--gutter);
+  overflow-y: auto;
+}
+
+.no-globe .event-list li + li {
+  margin-top: 0.4rem;
+}
+
+/* ---------- Event card: side panel, bottom sheet on phones ---------- */
+
+.event-card {
+  position: fixed;
+  top: 5.5rem;
+  right: var(--gutter);
+  z-index: 20;
+  width: min(24rem, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 7rem);
+  overflow-y: auto;
+  padding: 1rem 1.25rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+}
+
+.card-close {
+  float: right;
+  width: 2rem;
+  height: 2rem;
+  margin: -0.25rem -0.5rem 0 0.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.card-close:hover {
+  background: rgb(255 255 255 / 8%);
+}
+
+.card-kind {
+  margin: 0 0 0.4rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.card-kind.kind-sample {
+  color: var(--sample);
+}
+
+.card-title {
+  margin: 0 0 0.3rem;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.card-title:focus {
+  outline: none;
+}
+
+.card-place {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+}
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.card-severity {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.card-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dot-color);
+  box-shadow: 0 0 8px var(--dot-color);
+}
+
+.card-snippet {
+  margin: 0 0 0.75rem;
+}
+
+.card-subtitle {
+  margin: 0 0 0.3rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.card-source-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.card-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ---------- Bottom: legend and credits ---------- */
+
+.bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: var(--gutter);
+  pointer-events: none;
+}
+
+.bottom > * {
+  pointer-events: auto;
+}
+
+.legend {
+  padding: 0.6rem 0.85rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  background: var(--panel);
+  font-size: 0.85rem;
+}
+
+.legend-title {
+  margin: 0 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.legend-list {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0 0 0.4rem;
+  padding: 0;
+  list-style: none;
+}
+
+.legend-list li {
+  display: grid;
+  grid-template-columns: 22px auto auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legend-dot {
+  justify-self: center;
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: 50%;
+  background: var(--dot-color);
+  box-shadow: 0 0 calc(var(--dot-size) * 0.9) var(--dot-color);
+}
+
+.legend-dot.pulsing {
+  animation: pulse var(--pulse) ease-in-out infinite;
+}
+
+.legend-how {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.legend-link {
+  font-size: 0.78rem;
+}
+
+.credits {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.22);
+  }
+}
+
+/* Reduce motion: no pulses or transitions; size still shows severity. */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* ---------- Phones ---------- */
+
+@media (max-width: 640px) {
+  .topbar h1 {
+    font-size: 1.05rem;
+  }
+
+  .motion-toggle {
+    font-size: 0.8rem;
+  }
+
+  .bottom {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+    padding-bottom: max(var(--gutter), env(safe-area-inset-bottom));
+  }
+
+  /* One compact row: the dots still differ in size and pulse; the words stay for screen
+     readers. */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 0.75rem;
+    padding: 0.45rem 0.7rem;
+  }
+
+  .legend-title {
+    margin: 0;
+  }
+
+  .legend-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    margin: 0;
+  }
+
+  .legend-list li {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .legend-how {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .credits {
+    text-align: center;
+  }
+
+  .event-card {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-height: 62dvh;
+    border-radius: 1rem 1rem 0 0;
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
 }
