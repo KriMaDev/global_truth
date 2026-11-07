@@ -5,7 +5,7 @@
  */
 
 import { SEVERITY_STYLES } from "../severity";
-import type { GlobeEvent } from "../types";
+import { hazardLabel, type GlobeEvent } from "../types";
 
 export interface EventListHandlers {
   onFocus?: (event: GlobeEvent) => void;
@@ -29,7 +29,8 @@ export function renderEventList(
     dot.setAttribute("aria-hidden", "true");
     dot.style.setProperty("--dot-color", SEVERITY_STYLES[event.severity].color);
     const text = document.createElement("span");
-    text.textContent = `${event.title} (${SEVERITY_STYLES[event.severity].label}, ${event.place})`;
+    const details = [hazardLabel(event), SEVERITY_STYLES[event.severity].label, event.place];
+    text.textContent = `${event.title} (${details.filter(Boolean).join(", ")})`;
     button.append(dot, text);
     if (handlers.onFocus) {
       const onFocus = handlers.onFocus;

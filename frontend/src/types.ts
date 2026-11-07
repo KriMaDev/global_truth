@@ -6,7 +6,14 @@
 export const SEVERITIES = ["low", "moderate", "high", "critical"] as const;
 export type Severity = (typeof SEVERITIES)[number];
 
-export const CATEGORIES = ["war", "politics", "natural-disasters", "economic", "technology"] as const;
+export const CATEGORIES = [
+  "war",
+  "politics",
+  "natural-disasters",
+  "economic",
+  "technology",
+  "health",
+] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
@@ -15,7 +22,29 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   "natural-disasters": "Natural disasters",
   economic: "Economic",
   technology: "Technology advancements",
+  health: "Health & outbreaks",
 };
+
+/** Natural disaster types by hazard code: GDACS's codes, plus ours for news headlines
+ * (pipeline/globe_pipeline/categorize.py, HAZARD_WORDS). */
+export const HAZARD_LABELS: Record<string, string> = {
+  EQ: "Earthquake",
+  TS: "Tsunami",
+  TC: "Tropical cyclone",
+  VO: "Volcano",
+  WF: "Wildfire",
+  FL: "Flood",
+  LS: "Landslide",
+  AV: "Avalanche",
+  DR: "Drought",
+  HW: "Heatwave",
+  ST: "Storm",
+};
+
+/** The disaster type of an event ("Earthquake"), or null when it has none or it is unknown. */
+export function hazardLabel(event: { hazard?: string | null }): string | null {
+  return (event.hazard && HAZARD_LABELS[event.hazard]) || null;
+}
 
 /** Where an event comes from: a verified data feed, a news report, or preview sample data. */
 export const KINDS = ["data-feed", "news", "sample"] as const;

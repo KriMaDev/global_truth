@@ -25,7 +25,7 @@ def usgs_feature(fid: str, mag: float, lat: float, lng: float, minutes_ago: int,
 
 def test_usgs_parse_window_dedupe_and_fields(gazetteer, now) -> None:
     recent = usgs_feature("a1", 6.2, 42.7, 23.3, 30, now)
-    old = usgs_feature("a2", 5.0, 42.7, 23.3, 60 * 80, now)
+    old = usgs_feature("a2", 5.0, 42.7, 23.3, 60 * 24 * 8, now)  # 8 days ago
     events = usgs.parse([{"features": [recent, old]}, {"features": [recent]}], gazetteer, now)
     assert [e.id for e in events] == ["usgs:a1"]
     event = events[0]

@@ -38,13 +38,21 @@ Only the headline is read: it is what the reader sees, and the rule can be check
 2. **A hazard term in the headline** gives moderate:
    - "state of emergency", "evacuat…", "martial law", "curfew";
    - "air strike"/"airstrike", "missile strike", "drone strike", "shelling", "invasion", "coup", "explosion", "hostage", "massacre";
-   - "outbreak", "epidemic", "famine", "tsunami warning".
+   - "outbreak", "epidemic", "pandemic", "famine", "tsunami warning".
 3. **Otherwise** → low.
 
 When several outlets report the same story, the event takes the highest level any of their headlines gives.
 
 ### What does not change severity
 How many outlets cover a story is shown as **coverage**, separately. It never raises severity, because prominence is not severity.
+
+## On the globe
+
+### Groups of events
+Where pillars would crowd (closer than 4°, 2° or 1° on screen depending on zoom; never when zoomed right in), they merge into one pillar. It takes the **highest severity among its events** and stands at that event's place, with a badge showing how many events it holds. Grouping never changes any event's own severity. Code: `frontend/src/clusters.ts`.
+
+### Geography view: country colours
+Each country takes the **highest severity among its events** that pass the current filters and time window, matched by the event's `geo.country_code`. Countries without such events stay a neutral tint. Events without a country (e.g. remote earthquakes at sea) do not colour any country. Code: `countrySeverity` in `frontend/src/geography.ts`.
 
 ### Known limits
 - Most news is low: a headline without a death count or a listed hazard term is low, however important the story. This keeps the rule checkable rather than guessing importance.

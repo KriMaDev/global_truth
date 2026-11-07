@@ -16,9 +16,9 @@ import re
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
-#: At most this many news events per outlet in the 72-hour window (the most severe, most
+#: At most this many news events per outlet per UTC day (the most severe, most
 #: widely reported and newest are kept), so no single outlet dominates the globe.
-MAX_EVENTS_PER_OUTLET = 30
+MAX_EVENTS_PER_OUTLET = 15
 
 #: URL paths that are not news reports (sport, audio, video, culture, live pages).
 COMMON_EXCLUDED_PATHS = (

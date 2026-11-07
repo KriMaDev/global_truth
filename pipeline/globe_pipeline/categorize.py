@@ -1,11 +1,12 @@
-"""Categories: War, Politics, Natural disasters, Economic, Technology advancements.
+"""Categories: War, Politics, Natural disasters, Economic, Technology advancements, Health &
+outbreaks.
 
 Rules (docs/categories.md): data feeds are natural disasters. For news:
 1. If the headline contains words from the lists below, the categories of those words apply
    (possibly several).
 2. Otherwise the one category with the most GDELT themes for the article applies, if it has
    at least two (ties: the first in the order War, Politics, Natural disasters, Economic,
-   Technology).
+   Technology, Health).
 3. With no category, the item is not shown.
 The headline leads because it is what the reader sees; GDELT's themes describe the whole
 article, which often touches many subjects.
@@ -15,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-CATEGORIES = ("war", "politics", "natural-disasters", "economic", "technology")
+CATEGORIES = ("war", "politics", "natural-disasters", "economic", "technology", "health")
 #: Distinct matching themes needed when the headline has no listed word.
 MIN_THEMES = 2
 
@@ -51,6 +52,13 @@ THEMES: dict[str, tuple[str, ...]] = {
         "WB_133_INFORMATION_AND_COMMUNICATION_TECHNOLOGIES",
         "CYBER_ATTACK",
         "TECH_",
+    ),
+    "health": (
+        "HEALTH_PANDEMIC",
+        "HEALTH_VACCINATION",
+        "TAX_DISEASE_",
+        "MEDICAL_",
+        "WB_621_HEALTH_NUTRITION_AND_POPULATION",
     ),
 }
 
@@ -190,6 +198,40 @@ KEYWORDS: dict[str, tuple[str, ...]] = {
         "telescope",
         "breakthrough",
     ),
+    # Not "WHO": matching ignores case, so "Who is ..." would count. The full name works.
+    "health": (
+        "outbreak",
+        "outbreaks",
+        "epidemic",
+        "pandemic",
+        "virus",
+        "viruses",
+        "disease",
+        "diseases",
+        "infection",
+        "infections",
+        "cholera",
+        "ebola",
+        "marburg",
+        "mpox",
+        "monkeypox",
+        "measles",
+        "dengue",
+        "malaria",
+        "polio",
+        "covid",
+        "covid-19",
+        "coronavirus",
+        "influenza",
+        "flu",
+        "bird flu",
+        "h5n1",
+        "plague",
+        "world health organization",
+        "vaccination",
+        "vaccination campaign",
+        "quarantine",
+    ),
 }
 
 _KEYWORD_PATTERNS = {
@@ -219,6 +261,37 @@ def theme_hits(themes: list[str]) -> dict[str, int]:
         )
         for category in CATEGORIES
     }
+
+
+#: The type of a natural disaster named in a news headline, as a hazard code (GDACS's codes
+#: where it has one). The first match in this order wins: a tsunami headline often also says
+#: "earthquake", a cyclone one "flood".
+HAZARD_WORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("TS", ("tsunami",)),
+    ("EQ", ("earthquake", "earthquakes", "quake", "quakes", "aftershock", "aftershocks")),
+    ("TC", ("hurricane", "hurricanes", "typhoon", "typhoons", "cyclone", "cyclones")),
+    ("VO", ("volcano", "volcanoes", "volcanic", "eruption", "erupts", "erupted")),
+    ("WF", ("wildfire", "wildfires", "bushfire", "bushfires", "forest fire", "forest fires")),
+    ("FL", ("flood", "floods", "flooding", "flooded", "flash flood", "flash floods")),
+    ("LS", ("landslide", "landslides", "mudslide", "mudslides")),
+    ("AV", ("avalanche", "avalanches")),
+    ("DR", ("drought", "droughts")),
+    ("HW", ("heatwave", "heatwaves", "heat wave", "heat waves")),
+    ("ST", ("storm", "storms", "tornado", "tornadoes", "blizzard", "blizzards")),
+)
+
+_HAZARD_PATTERNS = [
+    (code, re.compile(r"\b(?:" + "|".join(re.escape(w) for w in words) + r")\b", re.I))
+    for code, words in HAZARD_WORDS
+]
+
+
+def hazard_of(headline: str) -> str | None:
+    """The disaster type a headline names (see HAZARD_WORDS), or None."""
+    for code, pattern in _HAZARD_PATTERNS:
+        if pattern.search(headline):
+            return code
+    return None
 
 
 def categorize_news(headline: str, themes: list[str]) -> list[str]:

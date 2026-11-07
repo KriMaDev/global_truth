@@ -1,7 +1,8 @@
 """Build the Earth textures for the globe from NASA's public-domain images.
 
 Downloads each source image once into .cache/textures/ (git-ignored), then writes WebP
-versions at 2K (phones) and 4K (wide screens) to frontend/public/textures/. Run it again only
+versions at 2K (phones) and 4K (wide screens) to frontend/public/textures/. Close up, the
+site shows NASA GIBS tiles instead (frontend/src/globe/detail.ts). Run it again only
 to change sizes or quality; the output files are committed.
 
 Usage (from the repository root, with the pipeline's virtual environment):

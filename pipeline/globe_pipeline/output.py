@@ -1,10 +1,17 @@
-"""Reading the previous run's data and writing events.json and feeds.json."""
+"""Reading the previous run's data and writing the published files.
+
+Published (docs/architecture.md):
+- events.json: the last 72 hours (the page's first load stays small);
+- days/YYYY-MM-DD.json: every event of one UTC day, for the 7-day timeline;
+- days/index.json: the days available, with counts;
+- feeds.json: each source's health, and GDELT's cursor.
+"""
 
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +19,10 @@ from .http import FetchError, get
 from .models import Event, iso, parse_iso
 from .severity import Severity
 
-WINDOW = timedelta(hours=72)
+#: How long events are kept (the timeline's reach).
+WINDOW = timedelta(days=7)
+#: What events.json holds: the default view's time window.
+RECENT = timedelta(hours=72)
 
 
 @dataclass
@@ -55,17 +65,34 @@ def _read(location: str, name: str) -> Any | None:
         return None
 
 
+def _events_of(doc: Any) -> list[Event]:
+    """The events in a published file; damaged entries are skipped."""
+    events = []
+    for data in (doc or {}).get("events", []):
+        try:
+            events.append(Event.from_json(data))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return events
+
+
 def load_previous(location: str | None) -> Previous:
-    """The previous events.json and feeds.json, if any; damaged entries are skipped."""
+    """The previously published events (all days listed in days/index.json, or events.json
+    when there are no day files yet) and feeds.json."""
     if not location:
         return Previous()
     previous = Previous()
-    events = _read(location, "events.json")
-    for data in (events or {}).get("events", []):
-        try:
-            previous.events.append(Event.from_json(data))
-        except (KeyError, TypeError, ValueError):
-            continue
+    index = _read(location, "days/index.json")
+    by_id: dict[str, Event] = {}
+    if index and isinstance(index.get("days"), list):
+        for day in index["days"]:
+            name = day.get("file") if isinstance(day, dict) else None
+            if isinstance(name, str) and name.endswith(".json") and "/" not in name:
+                for event in _events_of(_read(location, f"days/{name}")):
+                    by_id[event.id] = event
+    for event in _events_of(_read(location, "events.json")):
+        by_id.setdefault(event.id, event)
+    previous.events = list(by_id.values())
     feeds = _read(location, "feeds.json") or {}
     previous.feeds = {feed["id"]: feed for feed in feeds.get("feeds", []) if "id" in feed}
     if feeds.get("gdelt_cursor"):
@@ -76,14 +103,33 @@ def load_previous(location: str | None) -> Previous:
     return previous
 
 
-def within_window(events: list[Event], now: datetime) -> list[Event]:
-    """Events published in the last 72 hours."""
-    return [event for event in events if now - event.published <= WINDOW]
+def within_window(events: list[Event], now: datetime, window: timedelta = WINDOW) -> list[Event]:
+    """Events published within `window` before `now` (7 days by default)."""
+    return [event for event in events if now - event.published <= window]
 
 
 def order(events: list[Event]) -> list[Event]:
     """Most severe first, then newest."""
     return sorted(events, key=lambda e: (-int(e.severity), -e.published.timestamp(), e.id))
+
+
+def _counts(events: list[Event]) -> dict[str, int]:
+    counts = {level.label: 0 for level in Severity}
+    for event in events:
+        counts[event.severity.label] += 1
+    return counts
+
+
+def _write_json(path: Path, doc: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    tmp.replace(path)
+
+
+def day_of(event: Event) -> str:
+    """The UTC date an event was published, e.g. "2026-11-08"."""
+    return event.published.astimezone(UTC).strftime("%Y-%m-%d")
 
 
 def write(
@@ -93,23 +139,54 @@ def write(
     now: datetime,
     gdelt_cursor: datetime | None,
 ) -> None:
-    """Writes events.json and feeds.json to `out`."""
+    """Writes events.json, the day files and their index, and feeds.json to `out`."""
     out.mkdir(parents=True, exist_ok=True)
-    counts = {level.label: 0 for level in Severity}
+    generated = iso(now)
+
+    recent = within_window(events, now, RECENT)
+    _write_json(
+        out / "events.json",
+        {
+            "generated": generated,
+            "window_hours": int(RECENT.total_seconds() // 3600),
+            "counts": _counts(recent),
+            "events": [event.to_json() for event in order(recent)],
+        },
+    )
+
+    by_day: dict[str, list[Event]] = {}
     for event in events:
-        counts[event.severity.label] += 1
-    events_doc = {
-        "generated": iso(now),
-        "window_hours": int(WINDOW.total_seconds() // 3600),
-        "counts": counts,
-        "events": [event.to_json() for event in order(events)],
-    }
-    feeds_doc = {
-        "generated": iso(now),
-        "feeds": [feed.to_json() for feed in feeds],
-        "gdelt_cursor": iso(gdelt_cursor) if gdelt_cursor else None,
-    }
-    for name, doc in (("events.json", events_doc), ("feeds.json", feeds_doc)):
-        tmp = out / (name + ".tmp")
-        tmp.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        tmp.replace(out / name)
+        by_day.setdefault(day_of(event), []).append(event)
+    days_dir = out / "days"
+    for stale in days_dir.glob("*.json") if days_dir.exists() else []:
+        if stale.name != "index.json" and stale.stem not in by_day:
+            stale.unlink()
+    for day, day_events in by_day.items():
+        _write_json(
+            days_dir / f"{day}.json",
+            {
+                "generated": generated,
+                "day": day,
+                "events": [e.to_json() for e in order(day_events)],
+            },
+        )
+    _write_json(
+        days_dir / "index.json",
+        {
+            "generated": generated,
+            "window_hours": int(WINDOW.total_seconds() // 3600),
+            "days": [
+                {"day": day, "file": f"{day}.json", "count": len(by_day[day])}
+                for day in sorted(by_day, reverse=True)
+            ],
+        },
+    )
+
+    _write_json(
+        out / "feeds.json",
+        {
+            "generated": generated,
+            "feeds": [feed.to_json() for feed in feeds],
+            "gdelt_cursor": iso(gdelt_cursor) if gdelt_cursor else None,
+        },
+    )

@@ -18,9 +18,32 @@
         <h1>World News Globe</h1>
         <p id="preview-note" class="preview-note" hidden>Preview · sample events, not real news</p>
       </div>
-      <button id="motion-toggle" class="motion-toggle glass" type="button" aria-pressed="false">
-        <span class="toggle-led" aria-hidden="true"></span>Reduce motion
-      </button>
+      <div class="topbar-actions">
+        <button
+          id="geo-toggle"
+          hidden
+          class="view-switch glass"
+          type="button"
+          aria-pressed="false"
+          aria-label="Geography view"
+          title="Switch between the news view and the geography view"
+        >
+          <span class="view-option" data-view="news">News</span
+          ><span class="view-option" data-view="geo">Geography</span>
+        </button>
+        <button
+          id="filter-toggle"
+          class="motion-toggle glass"
+          type="button"
+          aria-expanded="false"
+          aria-controls="filter-panel"
+        >
+          Filters<span class="toggle-count"></span>
+        </button>
+        <button id="motion-toggle" class="motion-toggle glass" type="button" aria-pressed="false">
+          <span class="toggle-led" aria-hidden="true"></span>Reduce motion
+        </button>
+      </div>
     </header>
 
     <main>
@@ -45,28 +68,50 @@
         aria-labelledby="event-card-title"
         hidden
       ></aside>
+      <section id="filter-panel" class="filter-panel glass" aria-label="Filters" hidden>
+        <div class="filter-head">
+          <h2 class="label">Filters</h2>
+          <button type="button" class="card-close" data-filter="close" aria-label="Close filters">
+            ×
+          </button>
+        </div>
+        <h3 class="label filter-label">Time</h3>
+        <div data-filter="time"></div>
+        <h3 class="label filter-label">Place</h3>
+        <div data-filter="place"></div>
+        <div class="filter-label-row">
+          <h3 class="label filter-label">Type of event</h3>
+          <button type="button" class="filter-all" data-filter="categories-all"></button>
+        </div>
+        <div class="chips" role="group" aria-label="Type of event" data-filter="categories"></div>
+        <div class="filter-label-row">
+          <h3 class="label filter-label">Severity</h3>
+          <button type="button" class="filter-all" data-filter="severities-all"></button>
+        </div>
+        <div class="chips" role="group" aria-label="Severity" data-filter="severities"></div>
+        <button type="button" class="card-back filter-clear" data-filter="clear">Clear filters</button>
+      </section>
     </main>
 
     <footer class="bottom">
       <section id="legend" class="legend glass" aria-label="Severity legend"></section>
       <div class="bottom-right">
-        <p id="hud" class="hud" aria-hidden="true"></p>
+        <div class="hud-row">
+          <button id="rotate-toggle" class="rotate-toggle" type="button" aria-pressed="true" hidden>
+            <span class="rotate-icon" aria-hidden="true"></span>Rotate
+          </button>
+          <p id="hud" class="hud" aria-hidden="true"></p>
+        </div>
         <p class="credits">
-          Data: <a href="https://earthquake.usgs.gov/">USGS</a>,
-          <a href="https://www.gdacs.org/">GDACS</a>,
-          <a href="https://www.gdeltproject.org/">GDELT</a>,
-          <a href="https://www.geonames.org/">GeoNames</a> · Earth:
-          <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/"
-            >NASA Blue Marble</a
-          >,
-          <a href="https://science.nasa.gov/earth/earth-observatory/earth-at-night/"
-            >Black Marble</a
-          >,
-          <a
-            href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/topography-bathymetry-maps/"
-            >GEBCO relief</a
-          >
-          · <a href="https://github.com/KriMaDev/global_truth">Source code</a>
+          Created by <a class="maker" href="https://krimadev.com">KriMa Development</a> ·
+          <a href="/legal/">Legal &amp; sources</a> ·
+          <a href="https://github.com/KriMaDev/global_truth">Source code</a> ·
+          <a id="version" href="https://github.com/KriMaDev/global_truth">Version</a>
+        </p>
+        <p class="credits">
+          Data: <a href="https://earthquake.usgs.gov/">USGS</a> ·
+          <a href="https://www.gdacs.org/">GDACS</a> ·
+          <a href="https://www.gdeltproject.org/">GDELT</a> · Earth imagery: NASA
         </p>
       </div>
     </footer>

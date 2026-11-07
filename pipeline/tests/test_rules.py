@@ -1,9 +1,12 @@
 """Severity and category rules: every rule and its boundaries (docs/severity.md and
 docs/categories.md describe them)."""
 
+import re
+from pathlib import Path
+
 import pytest
 
-from globe_pipeline.categorize import categorize_news
+from globe_pipeline.categorize import HAZARD_WORDS, categorize_news, hazard_of
 from globe_pipeline.severity import (
     Severity,
     casualties_in,
@@ -11,6 +14,8 @@ from globe_pipeline.severity import (
     gdacs_severity,
     news_severity,
 )
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.mark.parametrize(
@@ -124,6 +129,47 @@ def test_one_theme_alone_is_not_enough() -> None:
     assert categorize_news("What next for the region?", ["ECON_STOCKMARKET"]) == []
 
 
+def test_health_and_outbreaks() -> None:
+    assert categorize_news("Cholera outbreak spreads in coastal provinces", []) == ["health"]
+    assert categorize_news("Bird flu found on second farm", []) == ["health"]
+    assert categorize_news(
+        "What experts say about the new variant", ["HEALTH_PANDEMIC", "TAX_DISEASE_CORONAVIRUS"]
+    ) == ["health"]
+    # "Who is ..." is not the World Health Organization.
+    assert "health" not in categorize_news("Who is the new prime minister?", [])
+    assert news_severity("WHO declares a pandemic")[0] == Severity.MODERATE
+
+
 def test_whole_words_only() -> None:
     # "warm" is not "war", "chain" is not "ai".
     assert categorize_news("Warm weather and supply chain worries", []) == []
+
+
+@pytest.mark.parametrize(
+    ("headline", "code"),
+    [
+        ("Strong earthquake shakes coastal towns", "EQ"),
+        ("Tsunami warning after undersea earthquake", "TS"),
+        ("Typhoon brings flooding to northern islands", "TC"),
+        ("Volcano erupts, flights cancelled", "VO"),
+        ("Wildfires force thousands to flee", "WF"),
+        ("Flash floods sweep through valley villages", "FL"),
+        ("Landslide buries mountain road", "LS"),
+        ("Avalanche kills two skiers", "AV"),
+        ("Drought leaves reservoirs at record lows", "DR"),
+        ("Heat wave grips the capital", "HW"),
+        ("Tornado tears through farmland", "ST"),
+        ("Parliament debates the budget", None),
+        ("Stormont assembly meets again", None),
+    ],
+)
+def test_hazard_type_from_headline(headline: str, code: str | None) -> None:
+    assert hazard_of(headline) == code
+
+
+def test_every_hazard_code_has_a_label_on_the_site() -> None:
+    types = (ROOT / "frontend" / "src" / "types.ts").read_text(encoding="utf-8")
+    block = types.split("export const HAZARD_LABELS", 1)[1].split("};", 1)[0]
+    labelled = set(re.findall(r"^\s+([A-Z]{2}):", block, re.M))
+    gdacs = {"EQ", "TC", "FL", "VO", "DR", "WF"}
+    assert {code for code, _ in HAZARD_WORDS} | gdacs == labelled

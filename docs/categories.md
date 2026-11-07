@@ -1,6 +1,6 @@
 # Categories
 
-Five categories, which can be combined: **War**, **Politics**, **Natural disasters**, **Economic**, **Technology advancements**. An item can belong to more than one. The code is in `pipeline/globe_pipeline/categorize.py`, tested in `pipeline/tests/test_rules.py`.
+Six categories, which can be combined: **War**, **Politics**, **Natural disasters**, **Economic**, **Technology advancements**, **Health & outbreaks** (added 8 November 2026 so emerging epidemics are tracked). An item can belong to more than one. The code is in `pipeline/globe_pipeline/categorize.py`, tested in `pipeline/tests/test_rules.py`.
 
 ## Rules
 
@@ -11,13 +11,39 @@ Five categories, which can be combined: **War**, **Politics**, **Natural disaste
    - **Natural disasters:** earthquake, quake, tsunami, hurricane, typhoon, cyclone, tornado, flood(s), flooding, wildfire(s), bushfire, volcano, eruption, landslide, mudslide, drought, heatwave, storm, blizzard, avalanche.
    - **Economic:** economy, economic, inflation, recession, GDP, interest rate(s), central bank, stocks, stock market, markets, trade, tariff(s), unemployment, jobs report, budget, debt, currency, oil prices, IMF, World Bank, exports, imports.
    - **Technology advancements:** AI, artificial intelligence, chip(s), semiconductor(s), satellite, rocket, spacecraft, space station, quantum, robot(s), robotics, battery, batteries, fusion, vaccine, gene, genome, cyberattack, software, supercomputer, launch, telescope, breakthrough.
+   - **Health & outbreaks:** outbreak(s), epidemic, pandemic, virus(es), disease(s), infection(s), cholera, Ebola, Marburg, mpox, monkeypox, measles, dengue, malaria, polio, COVID, COVID-19, coronavirus, influenza, flu, bird flu, H5N1, plague, World Health Organization, vaccination (campaign), quarantine. ("WHO" alone is not used: matching ignores capitals, so "Who is…" would count.)
 3. **News: if the headline has none of these words,** GDELT's themes for the article decide. The one category with the most matching themes applies, if it has at least two; on a tie, the first in the order above. The themes per category:
    - **War:** ARMEDCONFLICT, MILITARY, TERROR, REBELLION, WMD, CEASEFIRE, PEACEKEEPING, SEIGE, WB_2433_CONFLICT_AND_VIOLENCE.
    - **Politics:** ELECTION, LEGISLATION, DEMOCRACY, PROTEST, IMPEACHMENT, REFERENDUM, CONSTITUTIONAL, USPEC_POLITICS_GENERAL1, GOV_REFORM, SANCTIONS.
    - **Natural disasters:** NATURAL_DISASTER and NATURAL_DISASTER_*, ENV_DROUGHT, ENV_WILDFIRE.
    - **Economic:** ECON_*, EPU_ECONOMY, EPU_POLICY, UNEMPLOYMENT, WB_1104_MACROECONOMIC.
    - **Technology advancements:** SCIENCE, WB_133_INFORMATION_AND_COMMUNICATION_TECHNOLOGIES, CYBER_ATTACK, TECH_*.
-4. **With no category, the item is not shown.** The globe covers these five subjects only. Sport, culture and lifestyle pages are already left out by their web address (see `docs/sources.md`).
+   - **Health & outbreaks:** HEALTH_PANDEMIC, HEALTH_VACCINATION, TAX_DISEASE_*, MEDICAL_*, WB_621_HEALTH_NUTRITION_AND_POPULATION.
+4. **With no category, the item is not shown.** The globe covers these six subjects only. Sport, culture and lifestyle pages are already left out by their web address (see `docs/sources.md`).
+
+## Type of natural disaster
+
+Every natural disaster shows its type on the card, the hover label and in lists ("Earthquake · Data feed · USGS").
+
+- **Data feeds** give it themselves: USGS earthquakes are EQ; GDACS alerts carry its event type (EQ earthquake, TC tropical cyclone, FL flood, VO volcano, DR drought, WF wildfire).
+- **News** in Natural disasters takes it from the headline's words (whole words, any case). If several match, the first in this order wins, because a tsunami headline often also says "earthquake" and a cyclone headline "flood":
+  1. **TS Tsunami:** tsunami
+  2. **EQ Earthquake:** earthquake(s), quake(s), aftershock(s)
+  3. **TC Tropical cyclone:** hurricane(s), typhoon(s), cyclone(s)
+  4. **VO Volcano:** volcano(es), volcanic, eruption, erupts, erupted
+  5. **WF Wildfire:** wildfire(s), bushfire(s), forest fire(s)
+  6. **FL Flood:** flood(s), flooding, flooded, flash flood(s)
+  7. **LS Landslide:** landslide(s), mudslide(s)
+  8. **AV Avalanche:** avalanche(s)
+  9. **DR Drought:** drought(s)
+  10. **HW Heatwave:** heatwave(s), heat wave(s)
+  11. **ST Storm:** storm(s), tornado(es), blizzard(s)
+- A headline without any of these words (the category came from GDELT's themes) has no type, and none is shown.
+- When reports are grouped, the event keeps the first type it has (a data feed's leads).
+
+The labels live in `frontend/src/types.ts` (`HAZARD_LABELS`); a test keeps them in step with the pipeline's codes.
+
+## Why the headline leads
 
 The headline leads because it is what the reader sees. GDELT's themes describe the whole article, which often touches many subjects; used alone they made too many wrong categories.
 

@@ -1,5 +1,5 @@
 """USGS earthquakes: magnitude 4.5+ and "significant" earthquakes of the past week, kept for
-72 hours. Public domain; credit "U.S. Geological Survey"."""
+7 days. Public domain; credit "U.S. Geological Survey"."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ FEEDS = (
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson",
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_week.geojson",
 )
-WINDOW = timedelta(hours=72)
+WINDOW = timedelta(days=7)
 
 
 def _snippet(props: dict[str, Any], depth_km: float) -> str:

@@ -3,7 +3,7 @@ Commission's reuse policy. Alerts are automated estimates: the card says so and 
 official authorities.
 
 Kept: Orange and Red alerts of every kind, and Green alerts for earthquakes, tropical
-cyclones, floods and volcanoes, active within the last 72 hours. (Green wildfire and drought
+cyclones, floods and volcanoes, active within the last 7 days. (Green wildfire and drought
 alerts are left out: there are dozens at any time and they would bury everything else.)
 """
 
@@ -26,7 +26,7 @@ URL = (
     "https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH"
     "?eventlist=EQ;TC;FL;VO;DR;WF&alertlevel=Green;Orange;Red&fromdate={start}&todate={end}"
 )
-WINDOW = timedelta(hours=72)
+WINDOW = timedelta(days=7)
 GREEN_KEPT = frozenset({"EQ", "TC", "FL", "VO"})
 
 

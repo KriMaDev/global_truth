@@ -18,7 +18,7 @@
      to the open event's severity colour (set by main.ts). */
   --bg: #05070a;
   --panel: rgb(14 17 20 / 74%);
-  --panel-solid: rgb(12 14 17 / 94%);
+  --panel-solid: rgb(12 14 17 / 97%);
   --fg: #ebe8e1;
   --muted: #a6a8a3;
   --faint: #3a3f44;
@@ -203,14 +203,24 @@ button {
   transform: translateX(-50%);
 }
 
-/* Hover label from globe.gl (text only, see globe.ts). */
+/* globe.gl's hover box: above the map labels and badges, which three.js's label renderer
+   numbers by depth (inline z-index up to the number of labels). The fixed .globe is its own
+   stacking context, so this stays below the page's panels. No grey frame of its own, since
+   .globe-label draws one. */
+.float-tooltip-kap {
+  z-index: 100000;
+  padding: 0;
+  background: none;
+}
+
+/* Hover label from globe.gl (text only, see globe.ts). Solid, so labels never show through. */
 .globe-label {
   max-width: 18rem;
   padding: 0.45rem 0.65rem;
   border: 1px solid var(--line);
   border-left: 2px solid var(--accent);
   border-radius: 3px;
-  background: var(--panel);
+  background: var(--panel-solid);
   backdrop-filter: blur(8px);
   font-size: 0.85rem;
 }
@@ -313,6 +323,151 @@ button {
   box-shadow: 0 0 8px var(--accent);
 }
 
+/* ---------- News · Geography switch ---------- */
+
+.view-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 0;
+  font: 500 0.7rem/1.2 var(--ff-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.view-switch[hidden] {
+  display: none;
+}
+
+.view-option {
+  padding: 0.5rem 0.75rem;
+  color: var(--muted);
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.view-switch[aria-pressed="false"] .view-option[data-view="news"],
+.view-switch[aria-pressed="true"] .view-option[data-view="geo"] {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 -1px 0 var(--accent);
+}
+
+.view-switch:hover {
+  border-color: var(--accent-soft);
+}
+
+/* ---------- Geography view: map labels ---------- */
+
+.map-label {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  color: rgb(214 218 224 / 82%);
+  font: 500 0.62rem/1.2 var(--ff-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 3px rgb(0 0 0 / 95%),
+    0 0 8px rgb(0 0 0 / 80%);
+  white-space: nowrap;
+}
+
+.map-label:hover,
+.map-label:focus-visible {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Place card: facts as a two-column list. */
+.place-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.9rem;
+  margin: 0.9rem 0 0;
+  font-size: 0.85rem;
+}
+
+.place-facts dt {
+  color: var(--muted);
+  font: 500 0.66rem/1.6 var(--ff-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.place-facts dd {
+  margin: 0;
+}
+
+.place-events {
+  margin-top: 1rem;
+}
+
+.place-text {
+  margin-top: 1rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.place-events p {
+  margin: 0.3rem 0 0.6rem;
+}
+
+.map-label.kind-country {
+  color: rgb(240 242 245 / 92%);
+  font-size: 0.64rem;
+}
+
+.map-label.kind-ocean,
+.map-label.kind-sea {
+  color: rgb(150 200 240 / 78%);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+}
+
+.map-label.kind-ocean {
+  font-size: 0.72rem;
+  letter-spacing: 0.32em;
+}
+
+.map-label.kind-range,
+.map-label.kind-desert {
+  color: rgb(222 196 150 / 80%);
+  font-weight: 400;
+  font-size: 0.58rem;
+}
+
+.map-label.kind-peak {
+  color: rgb(235 220 190 / 85%);
+  font-size: 0.56rem;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+/* visibility, not opacity: hidden labels are then not painted at all (hundreds of them). */
+.map-label.is-hidden,
+.map-label.is-crowded {
+  visibility: hidden;
+}
+
+
+.legend-geo-note {
+  display: none;
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font: 400 0.7rem/1.4 var(--ff-mono);
+  letter-spacing: 0.04em;
+}
+
+.geo-view .legend-geo-note {
+  display: block;
+}
+
 /* ---------- Keyboard list of events ---------- */
 
 .event-list ul {
@@ -378,6 +533,7 @@ body:not(.no-globe) .event-list-button:focus {
   overflow-y: auto;
   padding: 1.1rem 1.3rem 1.3rem;
   animation: card-in 0.35s var(--ease-out);
+  background: var(--panel-solid);
 }
 
 @keyframes card-in {
@@ -387,24 +543,32 @@ body:not(.no-globe) .event-list-button:focus {
   }
 }
 
+/* A clear, framed close button in the accent (the event's severity colour), visible while
+   the card scrolls. */
 .card-close {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   float: right;
   display: grid;
   place-items: center;
-  width: 1.9rem;
-  height: 1.9rem;
-  margin: -0.35rem -0.55rem 0 0.5rem;
-  border: 1px solid transparent;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: -0.35rem -0.6rem 0.25rem 0.75rem;
+  border: 1px solid var(--accent);
   border-radius: 3px;
-  background: transparent;
-  font-size: 1.25rem;
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel-solid));
+  color: var(--accent);
+  font-size: 1.6rem;
+  font-weight: 600;
   line-height: 1;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-.card-close:hover {
-  border-color: var(--line);
-  color: var(--accent);
+.card-close:hover,
+.card-close:focus-visible {
+  background: color-mix(in srgb, var(--accent) 32%, var(--panel-solid));
 }
 
 .card-kind {
@@ -611,6 +775,55 @@ body:not(.no-globe) .event-list-button:focus {
   gap: 0.35rem;
 }
 
+.hud-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.rotate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: rgb(5 7 10 / 60%);
+  color: var(--fg);
+  font: 500 0.62rem/1.2 var(--ff-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.rotate-toggle[hidden] {
+  display: none;
+}
+
+.rotate-toggle:hover {
+  border-color: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Pause bars while turning, a play triangle while still. */
+.rotate-icon {
+  width: 8px;
+  height: 9px;
+  border-left: 3px solid currentColor;
+  border-right: 3px solid currentColor;
+}
+
+.rotate-toggle[aria-pressed="false"] .rotate-icon {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid currentColor;
+  border-right: 0;
+}
+
 .hud {
   margin: 0;
   color: var(--accent);
@@ -645,6 +858,372 @@ body:not(.no-globe) .event-list-button:focus {
   transition: none !important;
 }
 
+/* ---------- Filters ---------- */
+
+.topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.motion-toggle[aria-expanded="true"] {
+  color: var(--accent);
+  border-color: var(--accent-soft);
+}
+
+.filter-panel {
+  position: fixed;
+  top: 5.2rem;
+  right: var(--gutter);
+  z-index: 21;
+  width: min(26rem, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 6.5rem);
+  overflow-y: auto;
+  padding: 0.9rem 1.1rem 1.1rem;
+  background: var(--panel-solid);
+  animation: card-in 0.3s var(--ease-out);
+}
+
+.filter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filter-head .label {
+  margin: 0;
+}
+
+.filter-head .card-close {
+  position: static;
+  float: none;
+  margin: 0;
+}
+
+.filter-label {
+  margin: 1rem 0 0.45rem;
+  color: var(--muted);
+}
+
+.filter-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.filter-all {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: none;
+  color: var(--fg);
+  font: 500 0.62rem/1.2 var(--ff-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.filter-all:hover {
+  border-color: var(--accent-soft);
+  color: var(--accent);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--fg);
+}
+
+.chip-count {
+  color: var(--muted);
+  font: 400 0.7rem/1 var(--ff-mono);
+}
+
+.filter-clear {
+  margin-top: 1.1rem;
+}
+
+.place-crumbs {
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+  font: 400 0.75rem/1.6 var(--ff-mono);
+}
+
+.place-crumb {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.place-crumb.is-current {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.place-select {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--panel-solid);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.timeline-row .card-back {
+  margin: 0;
+}
+
+.timeline-row .card-back:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.timeline-slider {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.timeline-readout {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font: 400 0.7rem/1.5 var(--ff-mono);
+  letter-spacing: 0.02em;
+}
+
+.filter-clear:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.legend-summary {
+  margin: 0.4rem 0 0;
+  color: var(--accent);
+  font: 400 0.7rem/1.4 var(--ff-mono);
+  letter-spacing: 0.04em;
+}
+
+.legend-summary button {
+  margin-left: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---------- Groups: count badges and the list card ---------- */
+
+.cluster-badge {
+  min-width: 1.5rem;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--dot-color);
+  border-radius: 2px;
+  background: rgb(5 7 10 / 82%);
+  color: var(--fg);
+  font: 500 0.68rem/1.3 var(--ff-mono);
+  text-align: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    opacity 0.2s ease,
+    background 0.15s ease;
+}
+
+.cluster-badge:hover {
+  background: color-mix(in srgb, var(--dot-color) 30%, rgb(5 7 10 / 90%));
+}
+
+.cluster-badge.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card-back {
+  display: inline-block;
+  margin: 0 0 0.6rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: transparent;
+  font: 500 0.7rem/1.3 var(--ff-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.card-back:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.card-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: rgb(255 255 255 / 2%);
+  text-align: left;
+  cursor: pointer;
+}
+
+.card-list-item:hover {
+  border-color: var(--accent-soft);
+  background: rgb(255 255 255 / 5%);
+}
+
+.card-list-item .card-dot {
+  margin-top: 0.35rem;
+}
+
+.card-list-text {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.card-list-title {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.card-list-meta {
+  color: var(--muted);
+  font: 400 0.7rem/1.4 var(--ff-mono);
+  letter-spacing: 0.03em;
+}
+
+/* ---------- Document pages (legal) ---------- */
+
+body.page {
+  overflow: auto;
+  display: block;
+}
+
+.doc {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 2rem var(--gutter) 4rem;
+  line-height: 1.6;
+}
+
+.doc h1 {
+  margin: 0.5rem 0 0.25rem;
+  font: 400 1.5rem/1.3 var(--ff-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.doc h2 {
+  margin: 2.5rem 0 0.75rem;
+  font: 500 0.8rem/1.2 var(--ff-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.doc-back,
+.doc-updated {
+  margin: 0;
+  font: 400 0.75rem/1.5 var(--ff-mono);
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.doc-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 1.5rem 0 0;
+  padding: 0.8rem 1rem;
+  font: 400 0.75rem/1.4 var(--ff-mono);
+  letter-spacing: 0.04em;
+}
+
+.doc ul {
+  padding-left: 1.2rem;
+}
+
+.doc li + li {
+  margin-top: 0.4rem;
+}
+
+.doc code {
+  font-family: var(--ff-mono);
+  font-size: 0.9em;
+}
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.doc-table th,
+.doc-table td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.doc-table th {
+  font: 500 0.7rem/1.2 var(--ff-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.credits .maker {
+  font-weight: 600;
+}
+
 /* ---------- Phones ---------- */
 
 @media (max-width: 640px) {
@@ -656,9 +1235,33 @@ body:not(.no-globe) .event-list-button:focus {
     font-size: 0.6rem;
   }
 
+  /* The title on one line, the three switches in one row below it. */
+  .topbar {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .topbar-actions {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 0.4rem;
+    width: 100%;
+  }
+
   .motion-toggle {
-    padding: 0.45rem 0.65rem;
-    font-size: 0.62rem;
+    gap: 0.4rem;
+    padding: 0.45rem 0.55rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+  }
+
+  .view-switch {
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+  }
+
+  .view-option {
+    padding: 0.45rem 0.55rem;
   }
 
   .bottom {
@@ -707,12 +1310,23 @@ body:not(.no-globe) .event-list-button:focus {
     justify-items: center;
   }
 
+  .hud-row {
+    justify-content: center;
+  }
+
   .credits {
     text-align: center;
   }
 
+  /* Wide tables scroll inside themselves, never the page. */
+  .doc-table {
+    display: block;
+    overflow-x: auto;
+  }
+
   /* Just above the legend, never over it, and solid enough to read over the globe. */
-  .event-card {
+  .event-card,
+  .filter-panel {
     top: auto;
     left: var(--gutter);
     right: var(--gutter);
