@@ -16,6 +16,7 @@ import sampleEvents from "./data/sample-events.json";
 import { compareBySeverity, parseEvents } from "./events";
 import type { GlobeApp } from "./globe/globe";
 import { attachKeyboard } from "./globe/keyboard";
+import { SEVERITY_STYLES } from "./severity";
 import type { GlobeEvent } from "./types";
 import { createEventCard } from "./ui/event-card";
 import { renderEventList } from "./ui/event-list";
@@ -56,12 +57,33 @@ function updateHud(): void {
   hud.textContent = `UTC ${utc} · ${degrees(view.lat, "N", "S")} ${degrees(lng, "E", "W")} · ALT ${view.altitude.toFixed(1)}`;
 }
 
+/**
+ * The interface's accent: greyish white by default, the event's severity colour while one is
+ * open, so the brackets and highlights point at what is selected.
+ */
+function setAccent(color: string | null): void {
+  if (color) document.documentElement.style.setProperty("--accent", color);
+  else document.documentElement.style.removeProperty("--accent");
+}
+
+// The footer's height, so on phones the event card sits just above the legend.
+const footer = document.querySelector<HTMLElement>(".bottom");
+if (footer) {
+  new ResizeObserver(() => {
+    document.documentElement.style.setProperty("--bottom-h", `${footer.offsetHeight}px`);
+  }).observe(footer);
+}
+
 let app: GlobeApp | null = null;
-const card = createEventCard(byId("event-card"), () => app?.select(null));
+const card = createEventCard(byId("event-card"), () => {
+  app?.select(null);
+  setAccent(null);
+});
 
 function openEvent(event: GlobeEvent, focus: boolean): void {
   app?.select(event.id);
   app?.flyTo(event);
+  setAccent(SEVERITY_STYLES[event.severity].color);
   card.open(event, focus);
 }
 

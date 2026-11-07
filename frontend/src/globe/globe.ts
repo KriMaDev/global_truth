@@ -19,7 +19,7 @@ import { SEVERITY_STYLES } from "../severity";
 import type { GlobeEvent } from "../types";
 import { createAtmosphere } from "./atmosphere";
 import { createDayNightMaterial, setSunDirection } from "./daynight";
-import { createMarker, updateMarkers } from "./markers";
+import { createMarker, placeMarker, updateMarkers, updatePulse } from "./markers";
 import { createStars } from "./stars";
 import { sunPosition } from "./sun";
 
@@ -43,7 +43,8 @@ export interface GlobeApp {
 /** Transparent, so the page's background and grid show behind the stars. */
 const BACKGROUND = "rgba(0, 0, 0, 0)";
 const GLOBE_RADIUS = 100;
-const LIGHT_ALTITUDE = 0.012;
+/** Pillars stand on the surface (just above it, so the ground spot is not hidden). */
+const LIGHT_ALTITUDE = 0.002;
 const RING_ALTITUDE = 0.004;
 const FLY_MS = 1400;
 const STEP_MS = 350;
@@ -62,6 +63,12 @@ function textureSize(renderer: WebGLRenderer): "2k" | "4k" {
   return renderer.capabilities.maxTextureSize >= 4096 && window.innerWidth >= WIDE_SCREEN
     ? "4k"
     : "2k";
+}
+
+/** Degrees the camera stays south of a chosen event: more on portrait screens, where the
+ * card covers the lower part. */
+function viewTilt(): number {
+  return window.innerWidth < window.innerHeight ? 22 : 12;
 }
 
 /** Start further out on narrow (portrait) screens, so the whole globe fits across. */
@@ -142,7 +149,7 @@ export async function createGlobeApp(
     })
     .customThreeObjectUpdate((obj, d) => {
       const event = d as GlobeEvent;
-      Object.assign(obj.position, globe.getCoords(event.lat, event.lng, LIGHT_ALTITUDE));
+      placeMarker(obj as Group, globe.getCoords(event.lat, event.lng, LIGHT_ALTITUDE));
     })
     .customLayerLabel((d) => labelFor(d as GlobeEvent))
     .onCustomLayerClick((d) => options.onSelect(d as GlobeEvent))
@@ -190,10 +197,11 @@ export async function createGlobeApp(
   };
   controls.addEventListener("start", pauseAutoRotate);
 
-  // Pulses: one loop for every light.
+  // Pulses and pillar sizes: one loop for every light.
   const start = performance.now();
   const tick = (now: number): void => {
-    updateMarkers(markers.values(), (now - start) / 1000, camera.position.length(), reducedMotion, selectedId);
+    updatePulse((now - start) / 1000, reducedMotion);
+    updateMarkers(markers.values(), camera.position.length(), selectedId);
     window.requestAnimationFrame(tick);
   };
   window.requestAnimationFrame(tick);
@@ -211,8 +219,11 @@ export async function createGlobeApp(
 
   return {
     flyTo(event) {
+      // Look from a little south of the event, so its pillar is seen standing up and the
+      // event sits above the screen's middle, clear of the card.
       const current = globe.pointOfView();
-      move({ lat: event.lat, lng: event.lng, altitude: Math.min(current.altitude, 1.8) }, FLY_MS);
+      const lat = Math.max(-80, Math.min(80, event.lat - viewTilt()));
+      move({ lat, lng: event.lng, altitude: Math.min(current.altitude, 1.6) }, FLY_MS);
     },
     select(id) {
       selectedId = id;

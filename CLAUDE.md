@@ -35,7 +35,7 @@ Node needs `$env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;" + $env:Path`
 - Textures: `pipeline\.venv\Scripts\python tools\build_textures.py` (NASA sources cached in `.cache/textures/`; output committed).
 - Browser checks: Playwright from Star Teller's install (`Desktop\Star Teller\apps\web\node_modules\@playwright\test`, `channel: "msedge"`), from a scratchpad script; route the document response to add the CSP from `frontend/public/_headers`, since `vite preview` doesn't apply `_headers`. Headless Edge `--window-size` can't go below about 500 px, so use a 390×844 viewport for phones.
 - CSP: globe.gl 2.46.2 injects four `<style>` blocks, allowed by hash in `_headers`. After updating globe.gl, run the browser check; it prints any new hash to add. `assetsInlineLimit: 0` in vite.config.ts keeps fonts out of `data:` URLs, which the CSP blocks.
-- Look and feel: the krimadev.com design language (owner's wish, 7 Nov 2026): `.glass` panels (3px corners, fine line, blur, teal `#6fe3dc` corner brackets), Michroma title, Hanken Grotesk text, JetBrains Mono uppercase labels, a faint 64px grid behind a transparent globe canvas. Globe surface: day/night along the real terminator, GEBCO relief lit by the sun, sun-facing atmosphere. No sun glint and no clouds: on a news globe they could be read as real weather.
+- Look and feel: the krimadev.com design language (owner's wish, 7 Nov 2026): `.glass` panels (3px corners, fine line, blur, corner brackets), Michroma title, Hanken Grotesk text, JetBrains Mono uppercase labels, a faint 64px grid behind a transparent globe canvas. **Not** krimadev's teal: the accent is greyish white `#d6dae0`, and turns to the open event's severity colour (`--accent`, set in main.ts). Events are pillars of light (`globe/markers.ts`), taller/wider/faster-pulsing with severity; on phones the event card sits above the legend, never over it. Globe surface: day/night along the real terminator, GEBCO relief lit by the sun, sun-facing atmosphere. No sun glint and no clouds: on a news globe they could be read as real weather.
 
 ## How to work
 - Start every new feature in plan mode and get approval before large changes.
@@ -97,6 +97,9 @@ Respect each source's rate limits and terms. Cache aggressively. Never hammer a 
 5. News panel, source attribution, About/Sources page
 6. Polish: animations, performance, mobile, accessibility
 7. More sources, monitoring, future ideas (language selection, alerts, public RSS/JSON API, saved regions)
+
+## Geography education (owner's goal, 7 Nov 2026)
+The globe should also teach general geography. Plan it into milestone 4 (location drill-down) and beyond, e.g. country borders and names, capitals and major cities that appear as you zoom, the continent/region/country of the selected place, and a short "about this place" panel with facts from open, credited sources (e.g. Wikidata CC0, GeoNames CC BY). Facts must be sourced like the news: no unsourced text.
 
 ## Out of scope for now
 User accounts, comments, social features, paid data sources, opinion or editorial content.

@@ -3,8 +3,8 @@
 import { SEVERITY_STYLES } from "../severity";
 import { SEVERITIES } from "../types";
 
-/** Base dot size in pixels for the lowest level. */
-const DOT_PX = 8;
+/** Pillar height in pixels for the lowest level; grows like the pillars on the globe. */
+const PILLAR_PX = 7;
 
 export function pulseLabel(pulseSeconds: number | null): string {
   if (pulseSeconds === null) return "steady";
@@ -24,9 +24,10 @@ export function renderLegend(root: HTMLElement): void {
     const style = SEVERITY_STYLES[level];
     const item = document.createElement("li");
     const dot = document.createElement("span");
-    dot.className = style.pulseSeconds === null ? "legend-dot" : "legend-dot pulsing";
+    dot.className = style.pulseSeconds === null ? "legend-pillar" : "legend-pillar pulsing";
     dot.setAttribute("aria-hidden", "true");
-    dot.style.setProperty("--dot-size", `${Math.round(DOT_PX * style.size)}px`);
+    dot.style.setProperty("--pillar-h", `${Math.round(PILLAR_PX * style.size ** 1.6)}px`);
+    dot.style.setProperty("--pillar-w", `${(3 * Math.sqrt(style.size)).toFixed(1)}px`);
     dot.style.setProperty("--dot-color", style.color);
     if (style.pulseSeconds !== null) dot.style.setProperty("--pulse", `${style.pulseSeconds}s`);
     const name = document.createElement("span");

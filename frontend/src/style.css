@@ -1,3 +1,10 @@
+/* Registered so the accent can fade from one colour to another. */
+@property --accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #d6dae0;
+}
+
 /* Severity palette (Okabe-Ito, colourblind-safe). Keep in sync with docs/severity.md and
    src/severity.ts (pipeline/tests/test_severity.py checks all of them). */
 :root {
@@ -6,19 +13,23 @@
   --sev-high: #e69f00;
   --sev-critical: #d55e00;
 
-  /* The krimadev.com design language: glass panels, fine lines, a teal accent, corner
-     brackets, monospaced uppercase labels and a faint grid. */
+  /* The krimadev.com design language: glass panels, fine lines, corner brackets,
+     monospaced uppercase labels and a faint grid. The accent is a greyish white, and turns
+     to the open event's severity colour (set by main.ts). */
   --bg: #05070a;
   --panel: rgb(14 17 20 / 74%);
+  --panel-solid: rgb(12 14 17 / 94%);
   --fg: #ebe8e1;
   --muted: #a6a8a3;
   --faint: #3a3f44;
   --line: rgb(235 232 225 / 14%);
   --grid: rgb(235 232 225 / 3.5%);
-  --accent: #6fe3dc;
-  --accent-soft: rgb(111 227 220 / 22%);
+  --accent: #d6dae0;
+  --accent-soft: color-mix(in srgb, var(--accent) 24%, transparent);
   --accent-ink: #0b0c0d;
+  --link: #d6dae0;
   --ember: #f2b24c;
+  transition: --accent 0.45s ease;
 
   --ff-display: "Michroma", "Segoe UI", sans-serif;
   --ff-body: "Hanken Grotesk", system-ui, sans-serif;
@@ -58,7 +69,8 @@ body {
 }
 
 a {
-  color: var(--accent);
+  color: var(--link);
+  text-decoration-color: var(--accent);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
@@ -499,17 +511,41 @@ body:not(.no-globe) .event-list-button:focus {
   gap: 0.45rem;
 }
 
-.legend-dot {
+/* A small pillar of light, like those on the globe: taller and wider with severity. */
+.legend-pillar {
+  position: relative;
   justify-self: center;
-  width: var(--dot-size);
-  height: var(--dot-size);
-  border-radius: 50%;
-  background: var(--dot-color);
-  box-shadow: 0 0 calc(var(--dot-size) * 0.9) var(--dot-color);
+  width: 22px;
+  height: 28px;
 }
 
-.legend-dot.pulsing {
-  animation: pulse var(--pulse) ease-in-out infinite;
+.legend-pillar::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: var(--pillar-w);
+  height: var(--pillar-h);
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: linear-gradient(to top, var(--dot-color), transparent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--dot-color) 60%, transparent);
+}
+
+.legend-pillar::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 1px;
+  width: 12px;
+  height: 5px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(var(--dot-color), transparent 70%);
+}
+
+.legend-pillar.pulsing::before {
+  animation: pillar-pulse var(--pulse) ease-in-out infinite;
 }
 
 .legend-how {
@@ -546,13 +582,13 @@ body:not(.no-globe) .event-list-button:focus {
   text-align: right;
 }
 
-@keyframes pulse {
+@keyframes pillar-pulse {
   0%,
   100% {
-    transform: scale(1);
+    opacity: 1;
   }
   50% {
-    transform: scale(1.22);
+    opacity: 0.55;
   }
 }
 
@@ -630,13 +666,14 @@ body:not(.no-globe) .event-list-button:focus {
     text-align: center;
   }
 
+  /* Just above the legend, never over it, and solid enough to read over the globe. */
   .event-card {
     top: auto;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: var(--gutter);
+    right: var(--gutter);
+    bottom: calc(var(--bottom-h, 0px) - 0.75rem);
     width: auto;
-    max-height: 62dvh;
-    padding-bottom: max(1.3rem, env(safe-area-inset-bottom));
+    max-height: calc(100dvh - var(--bottom-h, 0px) - 6rem);
+    background: var(--panel-solid);
   }
 }

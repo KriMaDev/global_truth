@@ -6,14 +6,14 @@ Every event on the globe has one of four severity levels. The level comes only f
 
 ## The scale
 
-| Level | Colour | Size on globe | Pulse |
-|---|---|---|---|
-| Low | `#56B4E9` (sky blue) | smallest | none |
-| Moderate | `#F0E442` (yellow) | small | slow |
-| High | `#E69F00` (orange) | medium | medium |
-| Critical | `#D55E00` (vermillion) | largest | fast |
+| Level | Colour | Pillar of light on the globe | Pulse | Rings |
+|---|---|---|---|---|
+| Low | `#56B4E9` (sky blue) | shortest, slimmest | none | no |
+| Moderate | `#F0E442` (yellow) | short | slow | no |
+| High | `#E69F00` (orange) | tall | medium | yes |
+| Critical | `#D55E00` (vermillion) | tallest, widest | fast | yes |
 
-These are Okabe-Ito colours, chosen to be distinguishable with the common types of colour blindness. Size and pulse also change with the level, so colour is never the only signal. With reduced motion turned on, there is no pulse and size still shows the level. The legend is always visible.
+Each event is a pillar of light rising from its location. These are Okabe-Ito colours, chosen to be distinguishable with the common types of colour blindness. Height, width, pulse and rings also change with the level, so colour is never the only signal. With reduced motion turned on, there is no pulse and no rings; height and width still show the level. The legend is always visible.
 
 ## Rules by source (draft)
 
