@@ -85,8 +85,8 @@ describe("labelsFor", () => {
     expect(close).not.toContain("Small Hill 1,200 m");
   });
 
-  it("has four zoom levels", () => {
-    expect([3, 1.5, 1.2, 0.9].map(labelLevel)).toEqual([0, 1, 2, 3]);
+  it("has five zoom levels", () => {
+    expect([3, 1.5, 1.2, 0.9, 0.3].map(labelLevel)).toEqual([0, 1, 2, 3, 4]);
   });
 
   it("puts oceans first, then countries by rank, and peaks last", () => {

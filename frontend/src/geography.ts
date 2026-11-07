@@ -87,21 +87,21 @@ export function countryCounts(events: GlobeEvent[], iso2: string): Record<Severi
   return counts;
 }
 
-/** 0 when far away, up to 3 when zoomed right in. */
-export function labelLevel(altitude: number): 0 | 1 | 2 | 3 {
-  // Within the zoom limits (closest 0.5, or 0.9 on phones), every level is reachable.
+/** 0 when far away, up to 4 when zoomed right in (with NASA's sharp tiles, down to 0.15). */
+export function labelLevel(altitude: number): 0 | 1 | 2 | 3 | 4 {
   if (altitude >= 2) return 0;
   if (altitude >= 1.4) return 1;
   if (altitude >= 1) return 2;
-  return 3;
+  if (altitude >= 0.5) return 3;
+  return 4;
 }
 
 /** Highest rank shown at each level (lower rank = more important). */
 const LIMITS = {
-  country: [3, 4, 7, 7],
-  sea: [0, 1, 3, 4],
-  region: [1, 2, 3, 4],
-  peak: [1, 2, 4, 5],
+  country: [3, 4, 6, 7, 10],
+  sea: [0, 1, 3, 4, 9],
+  region: [1, 2, 3, 4, 9],
+  peak: [1, 2, 4, 5, 7],
 } as const;
 
 const formatter = new Intl.NumberFormat("en-GB");

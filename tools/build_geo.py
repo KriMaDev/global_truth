@@ -2,7 +2,7 @@
 
 Downloads once into .cache/naturalearth/ and writes, to frontend/public/geo/ (committed):
 - lines.bin: coastlines and country borders (50m), simplified, in a compact binary form;
-- countries.json: country shapes (110m), simplified, with ISO code, name, continent, region,
+- countries.json: country shapes (50m), simplified, with ISO code, name, continent, region,
   label point and label rank (for the geography view and the place drill-down);
 - labels.json: oceans and seas, mountain ranges and deserts, and major peaks, each with a
   label point and an importance rank.
@@ -28,7 +28,11 @@ USER_AGENT = "WorldNewsGlobe/0.1 (+https://globe.krimadev.com)"
 
 #: Simplification tolerances in degrees (Ramer-Douglas-Peucker).
 LINE_TOLERANCE = 0.04
-SHAPE_TOLERANCE = 0.08
+SHAPE_TOLERANCE = 0.04
+# Islands smaller than this (square degrees, about 250 km² at the equator) are left out of the
+# country shapes: too small to see coloured, and they cost the most to draw. Each country
+# always keeps its largest shape, so small island nations stay.
+MIN_ISLAND_AREA = 0.02
 
 
 def load(name: str) -> dict:
@@ -135,13 +139,26 @@ def label_point(geometry: dict) -> list[float]:
     return [round(best[1], 2), round(best[2], 2)]
 
 
+def ring_area(ring: list[list[float]]) -> float:
+    """A ring's area in square degrees (shoelace formula; sign ignored)."""
+    return (
+        abs(
+            sum(
+                x1 * y2 - x2 * y1
+                for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1], strict=True)
+            )
+        )
+        / 2
+    )
+
+
 def rounded(ring: list[list[float]]) -> list[list[float]]:
     return [[round(x, 2), round(y, 2)] for x, y in ring]
 
 
 def build_countries() -> list[dict]:
     countries = []
-    for feature in load("ne_110m_admin_0_countries")["features"]:
+    for feature in load("ne_50m_admin_0_countries")["features"]:
         p = feature["properties"]
         iso2 = p.get("ISO_A2_EH") or p.get("ISO_A2")
         if not iso2 or iso2 == "-99":
@@ -152,6 +169,13 @@ def build_countries() -> list[dict]:
             rings = [ring for ring in rings if len(ring) >= 4]
             if rings:
                 polygons.append(rings)
+        if polygons:
+            largest = max(polygons, key=lambda rings: ring_area(rings[0]))
+            polygons = [
+                rings
+                for rings in polygons
+                if rings is largest or ring_area(rings[0]) >= MIN_ISLAND_AREA
+            ]
         countries.append(
             {
                 "iso2": iso2,
@@ -167,7 +191,7 @@ def build_countries() -> list[dict]:
     return sorted(countries, key=lambda c: c["iso2"])
 
 
-MAX_PEAK_RANK = 5
+MAX_PEAK_RANK = 7
 MARINE_KINDS = {"ocean", "sea", "gulf", "bay", "strait", "channel"}
 REGION_KINDS = {"Range/mtn": "range", "Desert": "desert"}
 # Natural Earth abbreviates some range names ("APPALACHIAN MTS."); its English names are
