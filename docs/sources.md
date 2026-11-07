@@ -33,7 +33,8 @@ Candidate outlets, to be checked one by one: BBC, DW, France 24, NHK World, ABC 
 | [GeoNames](https://www.geonames.org/) | Places, provinces/states, countries | CC BY 4.0, credit "GeoNames" |
 | [Natural Earth](https://www.naturalearthdata.com/) | Country shapes | Public domain |
 | [UN M49](https://unstats.un.org/unsd/methodology/m49/) | Continents and sub-regions | UN Statistics Division, free to use |
-| NASA Blue Marble / Black Marble | Earth day and night textures | Public domain (NASA) |
+| [NASA Blue Marble Next Generation](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/) (topography and bathymetry, July 2004) | Earth day texture | Public domain; credit "NASA Earth Observatory" (shown on the page) |
+| [NASA Black Marble 2016](https://science.nasa.gov/earth/earth-observatory/earth-at-night/) (3 km) | Earth night lights texture | Public domain; credit "NASA Earth Observatory" (shown on the page) |
 
 ## Not used
 
