@@ -1,8 +1,9 @@
 /**
  * The 3D globe: globe.gl with NASA day, night and relief textures, atmosphere, stars,
  * coastlines and borders, the severity pillars (grouped where they crowd, see ../clusters.ts)
- * with their rings and count badges, auto-rotation and smooth camera moves. Loaded lazily by
- * main.ts, so the page shell appears before three.js is downloaded.
+ * with their rings and count badges, auto-rotation and smooth camera moves, and the geography
+ * view (countries coloured by severity, decluttered map labels, events as dots). Loaded lazily
+ * by main.ts, so the page shell appears before three.js is downloaded.
  */
 
 import Globe from "globe.gl";
@@ -17,8 +18,15 @@ import {
   type WebGLRenderer,
 } from "three";
 import { clusterDegrees, clusterEvents, clusterOf, type Cluster } from "../clusters";
+import {
+  labelLevel,
+  labelPriority,
+  labelsFor,
+  type GeographyData,
+  type MapLabel,
+} from "../geography";
 import { SEVERITY_STYLES } from "../severity";
-import type { GlobeEvent } from "../types";
+import type { GlobeEvent, Severity } from "../types";
 import { createAtmosphere } from "./atmosphere";
 import { createDayNightMaterial, setSunDirection } from "./daynight";
 import { createLines, parseLines } from "./lines";
@@ -33,6 +41,10 @@ export interface GlobeAppOptions {
   onSelect: (cluster: Cluster) => void;
   /** Called with the camera's position whenever it moves (for the readout). */
   onView?: (view: { lat: number; lng: number; altitude: number }) => void;
+  /** Geography view: a country was clicked. */
+  onCountry?: (iso2: string) => void;
+  /** Geography view: the lines shown under a country's name when hovering it. */
+  describeCountry?: (iso2: string) => string[];
 }
 
 export interface GlobeApp {
@@ -45,6 +57,9 @@ export interface GlobeApp {
   /** Highlights the pillar holding this event (or group), or none. */
   select(id: string | null): void;
   setReducedMotion(on: boolean): void;
+  /** The geography view (countries coloured by severity, map labels) with this data, or the
+   * news view with null. Call again whenever the filtered events change. */
+  setGeography(data: GeographyData | null, severities: Map<string, Severity>): void;
   rotateBy(degreesLng: number, degreesLat: number): void;
   zoomBy(factor: number): void;
 }
@@ -58,6 +73,16 @@ const LIGHT_ALTITUDE = 0.002;
 const LINE_ALTITUDE = 0.0012;
 const RING_ALTITUDE = 0.004;
 const BADGE_ALTITUDE = 0.004;
+/** Country shapes in the geography view sit just above the coastlines. */
+const COUNTRY_ALTITUDE = 0.0035;
+/** Map labels this close to the globe's edge (cosine of the angle from the view's centre)
+ * are hidden: they would be squeezed together there. */
+const LABEL_EDGE = 0.3;
+const DECLUTTER_MS = 120;
+/** Screen space a count badge keeps clear of labels (half width, half height in px). */
+const BADGE_HALF: [number, number] = [14, 10];
+/** Panels that map labels keep clear of. */
+const LABEL_OBSTACLES = ".brand h1, .preview-note, .topbar-actions > *, .legend, .bottom-right > *";
 const FLY_MS = 1400;
 const STEP_MS = 350;
 const AUTO_ROTATE_SPEED = 0.35;
@@ -119,6 +144,34 @@ function labelFor(cluster: Cluster): HTMLElement {
   return label;
 }
 
+/** What the one HTML layer holds: group count badges and, in the geography view, map labels. */
+type HtmlItem =
+  | { type: "badge"; cluster: Cluster; lat: number; lng: number }
+  | { type: "label"; label: MapLabel; lat: number; lng: number };
+
+/** A map label (country, ocean, sea, range, desert, peak): text only, not clickable. */
+function mapLabelFor(label: MapLabel): HTMLElement {
+  const element = document.createElement("div");
+  element.className = `map-label kind-${label.kind}`;
+  element.textContent = label.kind === "peak" ? `▲ ${label.text}` : label.text;
+  element.setAttribute("aria-hidden", "true");
+  return element;
+}
+
+interface CountryFeature {
+  iso2: string;
+  name: string;
+  geometry: { type: "MultiPolygon"; coordinates: number[][][][] };
+}
+
+/** A country's tint: its severity colour, or a faint neutral glass without events. */
+function countryColor(severity: Severity | undefined): string {
+  if (!severity) return "rgba(214, 218, 224, 0.05)";
+  const hex = SEVERITY_STYLES[severity].color;
+  const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
+  return `rgba(${r}, ${g}, ${b}, 0.45)`;
+}
+
 /** The count badge at the foot of a group's pillar: a clear click target for the group.
  * Not in the Tab order (keyboard users reach every event through the event list). */
 function badgeFor(cluster: Cluster, onSelect: (cluster: Cluster) => void): HTMLElement {
@@ -145,6 +198,13 @@ export async function createGlobeApp(
   let events = options.events;
   let degrees = -1;
   let clusters: Cluster[] = [];
+  let geography: GeographyData | null = null;
+  let countryFeatures: CountryFeature[] = [];
+  let labelsAt = -1;
+  /** The HTML layer's items, badges first, then labels by importance (for decluttering). */
+  let htmlItems: HtmlItem[] = [];
+  const labelElements = new Map<HtmlItem, HTMLElement>();
+  const labelSizes = new WeakMap<HTMLElement, [number, number]>();
 
   // No grow-in animation: the atmosphere is a separate object and would not grow with it.
   const globe = new Globe(container, {
@@ -192,25 +252,129 @@ export async function createGlobeApp(
     .ringRepeatPeriod(
       (d: object) => (SEVERITY_STYLES[(d as Cluster).severity].pulseSeconds ?? 2) * 1000,
     )
-    .htmlLat((d) => (d as Cluster).lat)
-    .htmlLng((d) => (d as Cluster).lng)
+    .htmlLat((d) => (d as HtmlItem).lat)
+    .htmlLng((d) => (d as HtmlItem).lng)
     .htmlAltitude(BADGE_ALTITUDE)
-    .htmlElement((d) => badgeFor(d as Cluster, options.onSelect))
+    .htmlElement((d) => {
+      const item = d as HtmlItem;
+      if (item.type === "badge") return badgeFor(item.cluster, options.onSelect);
+      const element = mapLabelFor(item.label);
+      labelElements.set(item, element);
+      return element;
+    })
+    .polygonSideColor(() => "rgba(0, 0, 0, 0)")
+    .polygonStrokeColor(() => "rgba(214, 218, 224, 0.3)")
+    .polygonAltitude(COUNTRY_ALTITUDE)
+    .polygonsTransitionDuration(0)
+    .polygonLabel((d) => {
+      const country = d as CountryFeature;
+      const label = document.createElement("div");
+      label.className = "globe-label";
+      const title = document.createElement("strong");
+      title.textContent = country.name;
+      label.append(title);
+      for (const line of options.describeCountry?.(country.iso2) ?? []) {
+        const span = document.createElement("span");
+        span.textContent = line;
+        label.append(span);
+      }
+      return label;
+    })
+    .onPolygonClick((d) => options.onCountry?.((d as CountryFeature).iso2))
     .htmlElementVisibilityModifier((el, isVisible) => {
       el.classList.toggle("is-hidden", !isVisible);
     })
     .htmlTransitionDuration(0);
+
+  /** Rings pulse in the news view only (and never with reduced motion). */
+  const ringClusters = (): Cluster[] =>
+    reducedMotion || geography ? [] : clusters.filter((c) => SEVERITY_STYLES[c.severity].rings);
+
+  /** The group badges and, in the geography view, the map labels for the current zoom. */
+  const refreshHtml = (): void => {
+    const items: HtmlItem[] = clusters
+      .filter((c) => c.events.length > 1)
+      .map((cluster) => ({ type: "badge", cluster, lat: cluster.lat, lng: cluster.lng }));
+    if (geography) {
+      const labels = labelsFor(globe.pointOfView().altitude, geography);
+      labels.sort((a, b) => labelPriority(a) - labelPriority(b));
+      for (const label of labels) items.push({ type: "label", label, lat: label.lat, lng: label.lng });
+    }
+    labelElements.clear();
+    htmlItems = items;
+    globe.htmlElementsData(items);
+  };
+
+  /**
+   * Hides map labels that would overlap a more important one or a count badge, or that sit
+   * near the globe's edge. Labels are placed in order of importance, so the most important
+   * always shows.
+   */
+  const declutter = (): void => {
+    const view = camera.position.clone().normalize();
+    // The page's own panels (title, switches, legend, readout) are taken first, so labels
+    // never sit behind them, and labels must fit inside the globe's area.
+    const area = container.getBoundingClientRect();
+    const placed: [number, number, number, number][] = [];
+    for (const panel of document.querySelectorAll<HTMLElement>(LABEL_OBSTACLES)) {
+      const r = panel.getBoundingClientRect();
+      if (r.width > 0) placed.push([r.left - area.left, r.top - area.top, r.right - area.left, r.bottom - area.top]);
+    }
+    const inside = (box: [number, number, number, number]): boolean =>
+      box[0] >= 0 && box[1] >= 0 && box[2] <= area.width && box[3] <= area.height;
+    const free = (box: [number, number, number, number]): boolean =>
+      !placed.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1]);
+    for (const item of htmlItems) {
+      const point = globe.getCoords(item.lat, item.lng, BADGE_ALTITUDE);
+      const facing =
+        (point.x * view.x + point.y * view.y + point.z * view.z) /
+        Math.hypot(point.x, point.y, point.z);
+      const screen = globe.getScreenCoords(item.lat, item.lng, BADGE_ALTITUDE);
+      if (item.type === "badge") {
+        if (facing > 0) {
+          const [w, h] = BADGE_HALF;
+          placed.push([screen.x - w, screen.y - h, screen.x + w, screen.y + h]);
+        }
+        continue;
+      }
+      const element = labelElements.get(item);
+      if (!element) continue;
+      let size = labelSizes.get(element);
+      if (!size && element.offsetWidth > 0) {
+        size = [element.offsetWidth / 2 + 4, element.offsetHeight / 2 + 2];
+        labelSizes.set(element, size);
+      }
+      // On its point if there is room, else just below or above it (e.g. clear of a badge).
+      let box: [number, number, number, number] | null = null;
+      let shift = 0;
+      if (size && facing > LABEL_EDGE) {
+        for (const dy of [0, size[1] * 2, -size[1] * 2]) {
+          const y = screen.y + dy;
+          const candidate: [number, number, number, number] = [
+            screen.x - size[0], y - size[1], screen.x + size[0], y + size[1],
+          ];
+          if (inside(candidate) && free(candidate)) {
+            box = candidate;
+            shift = dy;
+            break;
+          }
+        }
+      }
+      element.classList.toggle("is-crowded", box === null);
+      element.style.translate = shift ? `0 ${shift}px` : "";
+      if (box) placed.push(box);
+    }
+  };
 
   /** Rebuilds the pillars, rings and badges for the current events and grouping. */
   const regroup = (): void => {
     clusters = clusterEvents(events, degrees);
     pillars.dispose();
     pillars = new PillarField(clusters, pillarCoords);
+    pillars.setFlat(geography !== null);
     globe.scene().add(pillars.group);
-    globe
-      .customLayerData(clusters)
-      .ringsData(reducedMotion ? [] : clusters.filter((c) => SEVERITY_STYLES[c.severity].rings))
-      .htmlElementsData(clusters.filter((c) => c.events.length > 1));
+    globe.customLayerData(clusters).ringsData(ringClusters());
+    refreshHtml();
   };
 
   /** Regroups only when the zoom crosses a grouping step. */
@@ -238,6 +402,10 @@ export async function createGlobeApp(
 
   globe.onZoom((pov) => {
     regroupForAltitude(pov.altitude);
+    if (geography && labelLevel(pov.altitude) !== labelsAt) {
+      labelsAt = labelLevel(pov.altitude);
+      refreshHtml();
+    }
     options.onView?.(pov);
   });
 
@@ -271,7 +439,12 @@ export async function createGlobeApp(
 
   // Pulses and pillar sizes: one loop for every light.
   const start = performance.now();
+  let lastDeclutter = 0;
   const tick = (now: number): void => {
+    if (geography && now - lastDeclutter > DECLUTTER_MS) {
+      lastDeclutter = now;
+      declutter();
+    }
     pillars.pulse((now - start) / 1000, reducedMotion);
     const highlighted = selectedId ? (clusterOf(clusters, selectedId)?.id ?? selectedId) : null;
     pillars.update(camera.position.length(), highlighted);
@@ -312,7 +485,28 @@ export async function createGlobeApp(
     setReducedMotion(on) {
       reducedMotion = on;
       controls.autoRotate = !on && selectedId === null;
-      globe.ringsData(on ? [] : clusters.filter((c) => SEVERITY_STYLES[c.severity].rings));
+      globe.ringsData(ringClusters());
+    },
+    setGeography(data, severities) {
+      const switched = (data === null) !== (geography === null);
+      geography = data;
+      if (data && countryFeatures.length === 0) {
+        countryFeatures = data.countries.map((c) => ({
+          iso2: c.iso2,
+          name: c.name,
+          geometry: { type: "MultiPolygon", coordinates: c.polygons },
+        }));
+      }
+      // A new accessor function makes globe.gl recolour the existing shapes.
+      globe
+        .polygonCapColor((d) => countryColor(severities.get((d as CountryFeature).iso2)))
+        .polygonsData(data ? countryFeatures : []);
+      if (switched) {
+        pillars.setFlat(data !== null);
+        globe.ringsData(ringClusters());
+        labelsAt = labelLevel(globe.pointOfView().altitude);
+        refreshHtml();
+      }
     },
     rotateBy(degreesLng, degreesLat) {
       const p = globe.pointOfView();

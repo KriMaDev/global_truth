@@ -178,6 +178,8 @@ export class PillarField {
   private readonly hits = new Map<string, Mesh>();
   private lastZoom = -1;
   private lastSelected: string | null = null;
+  /** In the geography view, pillars shrink to small dots (still clickable). */
+  private flat = false;
 
   /** One pillar per group (see ../clusters.ts); `coords` turns latitude and longitude into
    * a point on the globe's surface. */
@@ -247,6 +249,12 @@ export class PillarField {
     hit.quaternion.setFromUnitVectors(UP, hit.position.clone().normalize());
   }
 
+  /** Small dots instead of pillars (geography view), or pillars again. */
+  setFlat(on: boolean): void {
+    this.flat = on;
+    this.lastZoom = -1;
+  }
+
   /** Advances the shared pulse; with reduced motion the pillars stay still. */
   pulse(seconds: number, reducedMotion: boolean): void {
     for (const [severity, level] of this.levels) {
@@ -272,8 +280,8 @@ export class PillarField {
       const size = Math.sqrt(SEVERITY_STYLES[severity].size);
       level.anchors.forEach((anchor, index) => {
         const selected = anchor.cluster.id === selectedId ? SELECTED_SCALE : 1;
-        const width = size * zoom * selected * anchor.widen;
-        const height = pillarHeight(severity) * heightZoom * selected;
+        const width = size * zoom * selected * anchor.widen * (this.flat ? 0.75 : 1);
+        const height = pillarHeight(severity) * heightZoom * selected * (this.flat ? 0.12 : 1);
         for (const part of level.parts) {
           if (part.kind === "spot") scale.setScalar(width);
           else scale.set(width, height, width);

@@ -90,9 +90,7 @@ def lines_of(collection: dict) -> list[list[list[float]]]:
 
 
 def write_lines(coast: list, borders: list) -> int:
-    simplified = [
-        [simplify(line, LINE_TOLERANCE) for line in group] for group in (coast, borders)
-    ]
+    simplified = [[simplify(line, LINE_TOLERANCE) for line in group] for group in (coast, borders)]
     simplified = [[line for line in group if len(line) >= 2] for group in simplified]
     data = bytearray(b"WNGL")
     data += struct.pack("<II", len(simplified[0]), len(simplified[1]))
@@ -170,34 +168,54 @@ def build_countries() -> list[dict]:
 
 MARINE_KINDS = {"ocean", "sea", "gulf", "bay", "strait", "channel"}
 REGION_KINDS = {"Range/mtn": "range", "Desert": "desert"}
+# Natural Earth abbreviates some range names ("APPALACHIAN MTS."); its English names are
+# sometimes wrong for ranges, so the original names are kept and only spelled out.
+ABBREVIATIONS = {
+    "MTS.": "MOUNTAINS",
+    "Mts.": "Mountains",
+    "RA.": "RANGE",
+    "Ra.": "Range",
+    "CORD.": "CORDILLERA",
+}
+
+
+def sea_name(properties: dict) -> str:
+    """English names for seas ("Gulf of California", not "Golfo de California"); oceans keep
+    their own, which tell the North and South parts apart."""
+    if properties.get("featurecla") == "ocean":
+        return properties["name"]
+    return properties.get("name_en") or properties["name"]
+
+
+def region_name(name: str) -> str:
+    """Spells out abbreviations and drops double spaces."""
+    return " ".join(ABBREVIATIONS.get(word, word) for word in name.split())
 
 
 def build_labels() -> dict:
     seas = [
         {
-            "name": f["properties"]["name"],
+            "name": sea_name(f["properties"]),
             "kind": f["properties"]["featurecla"],
             "rank": f["properties"].get("scalerank", 5),
             "at": label_point(f["geometry"]),
         }
         for f in load("ne_50m_geography_marine_polys")["features"]
-        if f["properties"].get("featurecla") in MARINE_KINDS
-        and f["properties"].get("name")
+        if f["properties"].get("featurecla") in MARINE_KINDS and f["properties"].get("name")
     ]
     regions = [
         {
-            "name": f["properties"]["NAME"],
+            "name": region_name(f["properties"]["NAME"]),
             "kind": REGION_KINDS[f["properties"]["FEATURECLA"]],
             "rank": f["properties"].get("SCALERANK", 5),
             "at": label_point(f["geometry"]),
         }
         for f in load("ne_50m_geography_regions_polys")["features"]
-        if f["properties"].get("FEATURECLA") in REGION_KINDS
-        and f["properties"].get("NAME")
+        if f["properties"].get("FEATURECLA") in REGION_KINDS and f["properties"].get("NAME")
     ]
     peaks = [
         {
-            "name": f["properties"]["name"],
+            "name": f["properties"].get("name_en") or f["properties"]["name"],
             "elevation": int(f["properties"]["elevation"]),
             "rank": f["properties"].get("scalerank", 5),
             "at": [round(c, 2) for c in f["geometry"]["coordinates"][:2]],

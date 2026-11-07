@@ -29,6 +29,7 @@ import { createFilterPanel, type Counts } from "./ui/filter-panel";
 import { createTimeline } from "./ui/timeline";
 import { createPlacePicker } from "./ui/place-picker";
 import { placeAltitude, placeCenter } from "./places";
+import { countryCounts, countrySeverity, type GeographyData } from "./geography";
 import type { GlobeApp } from "./globe/globe";
 import { attachKeyboard } from "./globe/keyboard";
 import { SEVERITY_STYLES } from "./severity";
@@ -284,14 +285,99 @@ function applyFilters(): void {
     filters = defaultFilters();
     applyFilters();
   });
-  window.history.replaceState(null, "", window.location.pathname + toQuery(filters));
+  window.history.replaceState(null, "", window.location.pathname + withView(toQuery(filters)));
   if (app) {
     app.setEvents(events);
+    if (geoView && geoData) app.setGeography(geoData, countrySeverity(events));
     renderEventList(list, events, listHandlers);
     if (allEvents.length > 0 && !loadingHistory) {
       notice(events.length === 0 ? "No events match these filters." : null);
     }
   }
+}
+
+/**
+ * The geography view: countries coloured by their events' severity, map labels, events as
+ * small dots. Its data (Natural Earth, about 150 KB) loads the first time it is opened.
+ */
+let geoView = new URLSearchParams(window.location.search).get("view") === "geo";
+let geoData: GeographyData | null = null;
+const geoToggle = byId<HTMLButtonElement>("geo-toggle");
+
+/** Adds the view to a filter query ("?cat=war" → "?cat=war&view=geo"). */
+function withView(query: string): string {
+  if (!geoView) return query;
+  return query ? `${query}&view=geo` : "?view=geo";
+}
+
+async function loadGeography(): Promise<GeographyData> {
+  const [countries, labels] = await Promise.all([
+    fetchJson("/geo/countries.json"),
+    fetchJson("/geo/labels.json"),
+  ]);
+  const parts = labels as Partial<GeographyData["labels"]> | null;
+  if (!Array.isArray(countries) || !parts) throw new Error("geography files are malformed");
+  return {
+    countries: countries as GeographyData["countries"],
+    labels: { seas: parts.seas ?? [], regions: parts.regions ?? [], peaks: parts.peaks ?? [] },
+  };
+}
+
+async function setGeoView(on: boolean): Promise<void> {
+  geoView = on;
+  geoToggle.setAttribute("aria-pressed", String(on));
+  document.body.classList.toggle("geo-view", on);
+  if (on && !geoData) {
+    try {
+      notice("Loading the map…");
+      geoData = await loadGeography();
+      notice(null);
+    } catch (error) {
+      console.warn("Geography unavailable:", error);
+      notice("The geography view couldn't be loaded. Please try again later.");
+      geoView = false;
+      geoToggle.setAttribute("aria-pressed", "false");
+      document.body.classList.remove("geo-view");
+      return;
+    }
+  }
+  app?.setGeography(geoView ? geoData : null, countrySeverity(events));
+  applyFilters();
+}
+
+/** The lines under a country's name when hovering it in the geography view. */
+function describeCountry(iso2: string): string[] {
+  const country = geoData?.countries.find((c) => c.iso2 === iso2);
+  const lines: string[] = [];
+  const where = [country?.continent, country?.region].filter(Boolean).join(" · ");
+  if (where) lines.push(where);
+  const counts = countryCounts(events, iso2);
+  const total = SEVERITIES.reduce((sum, s) => sum + counts[s], 0);
+  if (total === 0) {
+    lines.push("No events in the current filters");
+  } else {
+    const parts = [...SEVERITIES]
+      .reverse()
+      .filter((s) => counts[s] > 0)
+      .map((s) => `${counts[s]} ${SEVERITY_STYLES[s].label.toLowerCase()}`);
+    lines.push(`${total} event${total === 1 ? "" : "s"}: ${parts.join(", ")} · click to filter`);
+  }
+  return lines;
+}
+
+/** A country was clicked: filter to it (when it has events) and fly to its name. */
+function chooseCountry(iso2: string): void {
+  const country = geoData?.countries.find((c) => c.iso2 === iso2);
+  const { from, to } = windowOf(filters, Date.now());
+  const match = allEvents.find((e) => {
+    const time = Date.parse(e.published);
+    return e.geo?.country_code === iso2 && e.geo.continent && e.geo.region && time >= from && time <= to;
+  });
+  if (match?.geo?.continent && match.geo.region) {
+    filters = { ...filters, place: [match.geo.continent, match.geo.region, iso2] };
+    applyFilters();
+  }
+  if (country) app?.flyOver(country.label[1], country.label[0], placeAltitude(3));
 }
 
 function openEvent(event: GlobeEvent, focus: boolean, back?: () => void): void {
@@ -367,7 +453,12 @@ async function start(): Promise<void> {
         view = pov;
         updateHud();
       },
+      onCountry: chooseCountry,
+      describeCountry,
     });
+    geoToggle.hidden = false;
+    geoToggle.addEventListener("click", () => void setGeoView(!geoView));
+    if (geoView) void setGeoView(true);
     window.setInterval(updateHud, 30_000);
     attachKeyboard(container, app);
     status.hidden = true;

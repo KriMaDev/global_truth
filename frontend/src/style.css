@@ -313,6 +313,109 @@ button {
   box-shadow: 0 0 8px var(--accent);
 }
 
+/* ---------- News · Geography switch ---------- */
+
+.view-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 0;
+  font: 500 0.7rem/1.2 var(--ff-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.view-switch[hidden] {
+  display: none;
+}
+
+.view-option {
+  padding: 0.5rem 0.75rem;
+  color: var(--muted);
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.view-switch[aria-pressed="false"] .view-option[data-view="news"],
+.view-switch[aria-pressed="true"] .view-option[data-view="geo"] {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 -1px 0 var(--accent);
+}
+
+.view-switch:hover {
+  border-color: var(--accent-soft);
+}
+
+/* ---------- Geography view: map labels ---------- */
+
+.map-label {
+  color: rgb(214 218 224 / 82%);
+  font: 500 0.62rem/1.2 var(--ff-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 3px rgb(0 0 0 / 95%),
+    0 0 8px rgb(0 0 0 / 80%);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.map-label.kind-country {
+  color: rgb(240 242 245 / 92%);
+  font-size: 0.64rem;
+}
+
+.map-label.kind-ocean,
+.map-label.kind-sea {
+  color: rgb(150 200 240 / 78%);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+}
+
+.map-label.kind-ocean {
+  font-size: 0.72rem;
+  letter-spacing: 0.32em;
+}
+
+.map-label.kind-range,
+.map-label.kind-desert {
+  color: rgb(222 196 150 / 80%);
+  font-weight: 400;
+  font-size: 0.58rem;
+}
+
+.map-label.kind-peak {
+  color: rgb(235 220 190 / 85%);
+  font-size: 0.56rem;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+.map-label.is-hidden,
+.map-label.is-crowded {
+  opacity: 0;
+}
+
+.reduce-motion .map-label {
+  transition: none;
+}
+
+.legend-geo-note {
+  display: none;
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font: 400 0.7rem/1.4 var(--ff-mono);
+  letter-spacing: 0.04em;
+}
+
+.geo-view .legend-geo-note {
+  display: block;
+}
+
 /* ---------- Keyboard list of events ---------- */
 
 .event-list ul {
@@ -1007,9 +1110,33 @@ body.page {
     font-size: 0.6rem;
   }
 
+  /* The title on one line, the three switches in one row below it. */
+  .topbar {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .topbar-actions {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 0.4rem;
+    width: 100%;
+  }
+
   .motion-toggle {
-    padding: 0.45rem 0.65rem;
-    font-size: 0.62rem;
+    gap: 0.4rem;
+    padding: 0.45rem 0.55rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+  }
+
+  .view-switch {
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+  }
+
+  .view-option {
+    padding: 0.45rem 0.55rem;
   }
 
   .bottom {

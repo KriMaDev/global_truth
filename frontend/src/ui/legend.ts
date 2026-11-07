@@ -53,7 +53,12 @@ export function renderLegend(root: HTMLElement): void {
   summary.setAttribute("aria-live", "polite");
   summary.hidden = true;
 
-  root.replaceChildren(heading, list, link, summary);
+  // Shown in the geography view only (by CSS, body.geo-view).
+  const geoNote = document.createElement("p");
+  geoNote.className = "legend-geo-note";
+  geoNote.textContent = "Countries take the colour of their most severe event";
+
+  root.replaceChildren(heading, list, geoNote, link, summary);
 }
 
 /** "Showing 37 of 412 events · Clear filters" while filters are on; hidden otherwise. */
