@@ -21,6 +21,30 @@ Six categories, which can be combined: **War**, **Politics**, **Natural disaster
    - **Health & outbreaks:** HEALTH_PANDEMIC, HEALTH_VACCINATION, TAX_DISEASE_*, MEDICAL_*, WB_621_HEALTH_NUTRITION_AND_POPULATION.
 4. **With no category, the item is not shown.** The globe covers these six subjects only. Sport, culture and lifestyle pages are already left out by their web address (see `docs/sources.md`).
 
+## Type of natural disaster
+
+Every natural disaster shows its type on the card, the hover label and in lists ("Earthquake · Data feed · USGS").
+
+- **Data feeds** give it themselves: USGS earthquakes are EQ; GDACS alerts carry its event type (EQ earthquake, TC tropical cyclone, FL flood, VO volcano, DR drought, WF wildfire).
+- **News** in Natural disasters takes it from the headline's words (whole words, any case). If several match, the first in this order wins, because a tsunami headline often also says "earthquake" and a cyclone headline "flood":
+  1. **TS Tsunami:** tsunami
+  2. **EQ Earthquake:** earthquake(s), quake(s), aftershock(s)
+  3. **TC Tropical cyclone:** hurricane(s), typhoon(s), cyclone(s)
+  4. **VO Volcano:** volcano(es), volcanic, eruption, erupts, erupted
+  5. **WF Wildfire:** wildfire(s), bushfire(s), forest fire(s)
+  6. **FL Flood:** flood(s), flooding, flooded, flash flood(s)
+  7. **LS Landslide:** landslide(s), mudslide(s)
+  8. **AV Avalanche:** avalanche(s)
+  9. **DR Drought:** drought(s)
+  10. **HW Heatwave:** heatwave(s), heat wave(s)
+  11. **ST Storm:** storm(s), tornado(es), blizzard(s)
+- A headline without any of these words (the category came from GDELT's themes) has no type, and none is shown.
+- When reports are grouped, the event keeps the first type it has (a data feed's leads).
+
+The labels live in `frontend/src/types.ts` (`HAZARD_LABELS`); a test keeps them in step with the pipeline's codes.
+
+## Why the headline leads
+
 The headline leads because it is what the reader sees. GDELT's themes describe the whole article, which often touches many subjects; used alone they made too many wrong categories.
 
 An AI-assisted classifier may be added later. If it is, it will be documented here, and items it classifies will say so.

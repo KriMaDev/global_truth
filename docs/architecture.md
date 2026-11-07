@@ -103,7 +103,7 @@ Everything from a feed is rendered as text (`textContent`), never as HTML. The s
 | `categories` | list of `war`, `politics`, `natural-disasters`, `economic`, `technology`, `health` | `docs/categories.md` |
 | `kind` | `data-feed` \| `news` | Verified data feed or news report (`sample` only in the preview data) |
 | `feed` | `usgs` \| `gdacs` \| `gdelt` | Which source led |
-| `hazard` | string or null | GDACS/USGS hazard code: EQ, TC, FL, VO, DR, WF |
+| `hazard` | string or null | Type of natural disaster: GDACS/USGS code (EQ, TC, FL, VO, DR, WF) for data feeds; for news, from the headline (also TS, LS, AV, HW, ST); see `docs/categories.md` |
 | `published` | ISO 8601 | When the source published it; for news, when GDELT first saw it |
 | `first_seen` | ISO 8601 | When our pipeline first saw it |
 | `coverage` | integer ≥ 1 | How many different outlets or providers report it |

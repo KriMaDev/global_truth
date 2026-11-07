@@ -6,7 +6,7 @@
 
 import type { Cluster } from "../clusters";
 import { SEVERITY_STYLES } from "../severity";
-import { CATEGORY_LABELS, KIND_LABELS, type GlobeEvent } from "../types";
+import { CATEGORY_LABELS, KIND_LABELS, hazardLabel, type GlobeEvent } from "../types";
 
 export interface EventCard {
   /** One event's card; `back`, if given, adds "Back to the list". */
@@ -33,11 +33,26 @@ function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 function kindLine(event: GlobeEvent): string {
-  const kind = KIND_LABELS[event.kind];
+  const hazard = hazardLabel(event);
+  let line = KIND_LABELS[event.kind];
   if (event.kind === "data-feed" && event.feed && FEED_NAMES[event.feed]) {
-    return `${kind} · ${FEED_NAMES[event.feed]}`;
+    line = `${line} · ${FEED_NAMES[event.feed]}`;
   }
-  return kind;
+  return hazard ? `${hazard} · ${line}` : line;
+}
+
+/** "Natural disasters (earthquake), Politics". */
+function categoryLine(event: GlobeEvent): string {
+  const hazard = hazardLabel(event);
+  return (
+    event.categories
+      .map((c) =>
+        c === "natural-disasters" && hazard
+          ? `${CATEGORY_LABELS[c]} (${hazard.toLowerCase()})`
+          : CATEGORY_LABELS[c],
+      )
+      .join(", ") || "No category"
+  );
 }
 
 function placeLine(event: GlobeEvent): string {
@@ -149,7 +164,7 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
     const meta = el("ul", "card-meta");
     meta.append(
       severity,
-      el("li", "", event.categories.map((c) => CATEGORY_LABELS[c]).join(", ") || "No category"),
+      el("li", "", categoryLine(event)),
       when,
     );
 
@@ -191,7 +206,14 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
         el(
           "span",
           "card-list-meta",
-          `${SEVERITY_STYLES[event.severity].label} · ${event.sources[0]?.name ?? KIND_LABELS[event.kind]} · ${timeFormat.format(new Date(event.published))}`,
+          [
+            hazardLabel(event),
+            SEVERITY_STYLES[event.severity].label,
+            event.sources[0]?.name ?? KIND_LABELS[event.kind],
+            timeFormat.format(new Date(event.published)),
+          ]
+            .filter(Boolean)
+            .join(" · "),
         ),
       );
       button.append(dot, text);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import sampleEvents from "./data/sample-events.json";
 import { compareBySeverity, isGlobeEvent, parseEvents } from "./events";
-import { CATEGORIES, SEVERITIES, type GlobeEvent } from "./types";
+import { CATEGORIES, SEVERITIES, hazardLabel, type GlobeEvent } from "./types";
 
 const valid: GlobeEvent = {
   id: "x-1",
@@ -110,5 +110,15 @@ describe("sample data", () => {
   it("covers every severity level and every category", () => {
     expect(new Set(events.map((e) => e.severity))).toEqual(new Set(SEVERITIES));
     expect(new Set(events.flatMap((e) => e.categories))).toEqual(new Set(CATEGORIES));
+  });
+});
+
+describe("hazardLabel", () => {
+  it("names the disaster type, and nothing for unknown or missing codes", () => {
+    expect(hazardLabel({ hazard: "EQ" })).toBe("Earthquake");
+    expect(hazardLabel({ hazard: "TC" })).toBe("Tropical cyclone");
+    expect(hazardLabel({ hazard: "XX" })).toBeNull();
+    expect(hazardLabel({ hazard: null })).toBeNull();
+    expect(hazardLabel({})).toBeNull();
   });
 });

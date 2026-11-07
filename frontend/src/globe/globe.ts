@@ -27,7 +27,7 @@ import {
   type MapLabel,
 } from "../geography";
 import { SEVERITY_STYLES } from "../severity";
-import type { GlobeEvent, Severity } from "../types";
+import { hazardLabel, type GlobeEvent, type Severity } from "../types";
 import { createAtmosphere } from "./atmosphere";
 import { createDayNightMaterial, setSunDirection } from "./daynight";
 import { createLines, parseLines } from "./lines";
@@ -139,7 +139,9 @@ function labelFor(cluster: Cluster): HTMLElement {
     meta.textContent = `Most severe: ${SEVERITY_STYLES[cluster.severity].label} · click to list them`;
   } else {
     title.textContent = cluster.lead.title;
-    meta.textContent = `${SEVERITY_STYLES[cluster.severity].label} · ${cluster.lead.place}`;
+    meta.textContent = [hazardLabel(cluster.lead), SEVERITY_STYLES[cluster.severity].label, cluster.lead.place]
+      .filter(Boolean)
+      .join(" · ");
   }
   label.append(title, meta);
   return label;

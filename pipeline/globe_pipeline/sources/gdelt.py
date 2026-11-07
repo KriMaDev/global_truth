@@ -19,7 +19,7 @@ import zipfile
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from ..categorize import categorize_news
+from ..categorize import categorize_news, hazard_of
 from ..geocode import Gazetteer, place_name
 from ..http import FetchError, get
 from ..models import Event, Geo, Source
@@ -197,6 +197,7 @@ def parse_rows(text: str, gazetteer: Gazetteer, now: datetime) -> tuple[list[Eve
             categories=categories,
             kind="news",
             feed=ID,
+            hazard=hazard_of(title) if "natural-disasters" in categories else None,
             published=published,
             first_seen=now,
             sources=[Source(outlet.name, url, outlet.state_affiliated)],

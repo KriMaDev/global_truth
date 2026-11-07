@@ -81,13 +81,15 @@ def same_story(a: Event, b: Event) -> bool:
 
 
 def merge(primary: Event, other: Event) -> Event:
-    """`primary` with `other`'s sources, categories and (if higher) severity added."""
+    """`primary` with `other`'s sources, categories, (if higher) severity and (if it has
+    none) disaster type added."""
     urls = {source.url for source in primary.sources}
     primary.sources.extend(s for s in other.sources if s.url not in urls)
     primary.categories = sorted(set(primary.categories) | set(other.categories))
     if other.severity > primary.severity:
         primary.severity, primary.severity_reason = other.severity, other.severity_reason
     primary.first_seen = min(primary.first_seen, other.first_seen)
+    primary.hazard = primary.hazard or other.hazard
     return primary
 
 

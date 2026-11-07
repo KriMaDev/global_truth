@@ -263,6 +263,37 @@ def theme_hits(themes: list[str]) -> dict[str, int]:
     }
 
 
+#: The type of a natural disaster named in a news headline, as a hazard code (GDACS's codes
+#: where it has one). The first match in this order wins: a tsunami headline often also says
+#: "earthquake", a cyclone one "flood".
+HAZARD_WORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("TS", ("tsunami",)),
+    ("EQ", ("earthquake", "earthquakes", "quake", "quakes", "aftershock", "aftershocks")),
+    ("TC", ("hurricane", "hurricanes", "typhoon", "typhoons", "cyclone", "cyclones")),
+    ("VO", ("volcano", "volcanoes", "volcanic", "eruption", "erupts", "erupted")),
+    ("WF", ("wildfire", "wildfires", "bushfire", "bushfires", "forest fire", "forest fires")),
+    ("FL", ("flood", "floods", "flooding", "flooded", "flash flood", "flash floods")),
+    ("LS", ("landslide", "landslides", "mudslide", "mudslides")),
+    ("AV", ("avalanche", "avalanches")),
+    ("DR", ("drought", "droughts")),
+    ("HW", ("heatwave", "heatwaves", "heat wave", "heat waves")),
+    ("ST", ("storm", "storms", "tornado", "tornadoes", "blizzard", "blizzards")),
+)
+
+_HAZARD_PATTERNS = [
+    (code, re.compile(r"\b(?:" + "|".join(re.escape(w) for w in words) + r")\b", re.I))
+    for code, words in HAZARD_WORDS
+]
+
+
+def hazard_of(headline: str) -> str | None:
+    """The disaster type a headline names (see HAZARD_WORDS), or None."""
+    for code, pattern in _HAZARD_PATTERNS:
+        if pattern.search(headline):
+            return code
+    return None
+
+
 def categorize_news(headline: str, themes: list[str]) -> list[str]:
     """The categories of a news item (possibly several, possibly none)."""
     words = keyword_hits(headline)
