@@ -14,7 +14,9 @@ An interactive, visually stunning 3D globe that shows current world events as gl
 - [x] Architecture and stack approved by the owner (7 Nov 2026; plan summarised in `docs/architecture.md`)
 - [x] Milestone 1: skeleton live at https://globe.krimadev.com (7 Nov 2026), repo https://github.com/KriMaDev/global_truth (public), CI green
 - [x] Milestone 2 built (7 Nov 2026): globe with sample events, day/night, severity lights, legend, card, keyboard, reduce motion, no-WebGL list. **On `main` but NOT deployed** (owner's decision: no sample/fake news in public). **Do not run `npm run deploy` until milestone 3 replaces the sample data with real data.** Awaiting the owner's review on localhost.
-- [ ] Milestone 3: live pipeline (start in plan mode)
+- [x] Milestone 3 built (7 Nov 2026): pipeline (USGS, GDACS, GDELT GKG with a 32-outlet allowlist; GeoNames/M49 places; documented category and severity rules with reasons; grouping; 72 h window), frontend on real data, `update.yml` (off until repo variable `LIVE=true`). **Not live yet**: needs the owner's Cloudflare token as GitHub secrets and the owner's "go live".
+- Decisions for M3 (7 Nov 2026): news via GDELT GKG files (not its throttled search API) from allowlisted outlets only; headline + outlet + time + link, **no snippets** (outlet RSS terms unclear, EU press publishers' right). News is placed only where its headline names a place. Outlet RSS with snippets later, outlet by outlet with permission.
+- [ ] Milestone 4: drill-down, category filters, geography view (start in plan mode)
 - Commits in this repo use the GitHub noreply address (repo-local git config), never the Gmail address.
 - Deploying by hand needs `$env:CLOUDFLARE_ACCOUNT_ID` set to the account ID in krimadev_rebuild's NOTES.md (the OAuth login can't list accounts on its own).
 
@@ -30,7 +32,7 @@ An interactive, visually stunning 3D globe that shows current world events as gl
 ## Commands (Windows)
 Node needs `$env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;" + $env:Path` in PowerShell.
 - Frontend: `npm ci`, `npm run dev`, `npm run build` (type check + build to `frontend/dist`), `npm run deploy` (asks first: it is public).
-- Pipeline (in `pipeline/`): `.venv\Scripts\python -m pytest`, `.venv\Scripts\ruff check .`, `.venv\Scripts\ruff format --check .`.
+- Pipeline (in `pipeline/`): `.venv\Scripts\python -m pytest`, `.venv\Scripts\ruff check .`, `.venv\Scripts\ruff format --check .`. Real data: `python tools\build_gazetteer.py` once, then `python -m globe_pipeline.run --out ..\frontend\public\data` (add `--previous ""` for a fresh start; default reads the live site). Never commit `frontend/public/data/` or `.cache/` (git-ignored). Tests use synthetic fixtures only: never commit real headlines.
 - Frontend tests: `npm test` (vitest). Preview the build: `npm run preview` (port 4173).
 - Textures: `pipeline\.venv\Scripts\python tools\build_textures.py` (NASA sources cached in `.cache/textures/`; output committed).
 - Browser checks: Playwright from Star Teller's install (`Desktop\Star Teller\apps\web\node_modules\@playwright\test`, `channel: "msedge"`), from a scratchpad script; route the document response to add the CSP from `frontend/public/_headers`, since `vite preview` doesn't apply `_headers`. Headless Edge `--window-size` can't go below about 500 px, so use a 390×844 viewport for phones.

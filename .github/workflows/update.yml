@@ -1,0 +1,65 @@
+name: Update data and deploy
+
+# Every 30 minutes: run the pipeline, build the site with the fresh data, deploy to
+# Cloudflare. Switched off until the repository variable LIVE is "true" (Settings ->
+# Secrets and variables -> Actions -> Variables), so nothing goes public by accident.
+
+on:
+  schedule:
+    # Minutes 7 and 37, away from the top of the hour when GitHub's scheduler is busiest.
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never two runs at once: each run builds on the data the previous one published.
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: vars.LIVE == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Month (the gazetteer is rebuilt monthly)
+        id: month
+        run: echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Gazetteer cache
+        id: gazetteer
+        uses: actions/cache@v4
+        with:
+          path: .cache/gazetteer
+          key: gazetteer-${{ steps.month.outputs.month }}-${{ hashFiles('pipeline/globe_pipeline/data/m49.csv', 'pipeline/tools/build_gazetteer.py') }}
+
+      - name: Build the gazetteer (GeoNames, once a month)
+        if: steps.gazetteer.outputs.cache-hit != 'true'
+        run: python pipeline/tools/build_gazetteer.py
+
+      - name: Run the pipeline
+        working-directory: pipeline
+        run: python -m globe_pipeline.run --out ../frontend/public/data
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Deploy to Cloudflare
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

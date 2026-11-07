@@ -3,17 +3,20 @@
 No server runs all the time. A Python pipeline runs on a schedule and writes static JSON. The site is plain files served by Cloudflare.
 
 ```
-GitHub Actions (cron, every 30 min)
-  └─ Python pipeline: fetch → normalize → group duplicates → geocode → categorize → severity
-       └─ writes data/*.json → frontend build + data → wrangler deploy
+GitHub Actions (.github/workflows/update.yml, every 30 min, once LIVE is on)
+  └─ Python pipeline (pipeline/globe_pipeline/run.py, standard library only)
+       sources: USGS · GDACS · GDELT GKG (allowlisted outlets)
+       → place (GeoNames + UN M49) → categorize → severity → group duplicates
+       → merge with the last published data, keep 72 h → events.json, feeds.json
+  └─ npm run build (frontend + data) → wrangler deploy
 Cloudflare Workers static assets @ globe.krimadev.com
-  └─ browser: Vite + TypeScript + globe.gl (three.js) reads /data/*.json
+  └─ browser: Vite + TypeScript + globe.gl (three.js) reads /data/events.json
 ```
 
 - **Cost and speed.** Static files cost nothing to host and are cached at Cloudflare's edge.
-- **Public data.** `/data/*.json` are public URLs, which also serves as the open JSON API.
-- **Failures stay contained.** Each source is fetched on its own. If one fails, its last good data is kept and `feeds.json` marks it stale with the time of its last success.
-- **State between runs.** Each run reads the previous `events.json` from the live site to keep a rolling 72-hour window and the time each story was first seen.
+- **Public data.** `/data/events.json` and `/data/feeds.json` are public URLs, which also serve as an open JSON API.
+- **Failures stay contained.** Each source is fetched on its own. If one fails, its last good events are kept, and `feeds.json` gives it status `error` with the time of its last success.
+- **State between runs.** Each run reads the previous `events.json` and `feeds.json` from the live site. That keeps news for 72 hours, keeps the time each story was first seen, and keeps GDELT's cursor (the last 15-minute file read). With nothing published yet, it starts fresh with the last 6 hours.
 - **Fallback.** If redeploying every 30 minutes ever causes trouble, `data/` moves to a free R2 bucket.
 
 ## Layout
@@ -22,44 +25,80 @@ Cloudflare Workers static assets @ globe.krimadev.com
 |---|---|
 | Web app (Vite, TypeScript, globe.gl) | `frontend/` |
 | Data pipeline (Python 3.13) | `pipeline/globe_pipeline/`, tests in `pipeline/tests/` |
-| Data-building tools (gazetteer) | `pipeline/tools/` |
+| Data-building tools (gazetteer, M49 table) | `pipeline/tools/` |
 | Docs | `docs/` |
-| CI and scheduled updates | `.github/workflows/` |
+| CI and scheduled updates | `.github/workflows/ci.yml`, `.github/workflows/update.yml` |
 | Hosting config | `wrangler.jsonc`, `frontend/public/_headers` |
+
+## Pipeline
+
+| Step | Module | Rules in |
+|---|---|---|
+| Fetch (polite, retries, generic User-Agent) | `http.py` | `docs/sources.md` |
+| USGS, GDACS, GDELT | `sources/usgs.py`, `sources/gdacs.py`, `sources/gdelt.py` | `docs/sources.md` |
+| Outlet allowlist and headline clean-up | `outlets.py` | `docs/sources.md` |
+| Places | `geocode.py` | below |
+| Categories | `categorize.py` | `docs/categories.md` |
+| Severity | `severity.py` | `docs/severity.md` |
+| Grouping duplicates | `cluster.py` | below |
+| Output, previous data | `output.py`, `run.py` | below |
+
+**Places.**
+- **The hierarchy:** continent (GeoNames), region (UN M49, its intermediate region where there is one, e.g. "South America", else its sub-region, e.g. "Western Europe"), country, province/state (GeoNames admin1) and city.
+- **Points (USGS, GDACS, and GDELT's coordinates):**
+  - The city is the most populous place within 30 km, else the nearest place within 75 km.
+  - Within 250 km, the event is at region level ("Valparaiso, Chile").
+  - Further away it is "remote" (sea, desert, ice), and the source's own place text is shown.
+  - The coordinates decide the country, not a source's country code.
+- **News** is placed only where its headline names a place:
+  1. A place the headline names itself: the most specific one (city, then region, then country).
+  2. Else a country the headline names as part of a place (GDELT records adjectives too: "Russian" names Russia), at country level.
+  3. Else the article is not placed on the globe, because guessing from the article's body too often picks the wrong country.
+
+**Grouping duplicates.**
+- **News:** two reports are the same story if they are in the same country, within 24 hours, and their headlines share at least 3 meaningful words making up at least 60% of the shorter headline's words. Stop-words and simple endings are ignored, so "killed" and "kills" match.
+- **Earthquakes:** a GDACS earthquake within 30 minutes and 150 km of a USGS one is the same earthquake.
+- **The merged event** keeps the earliest report's headline (USGS's for earthquakes), lists every source, takes the highest severity and the union of categories.
+
+**Balance.** At most 30 news events per outlet (`outlets.MAX_EVENTS_PER_OUTLET`): the most severe, most widely reported and newest are kept.
 
 ## Frontend
 
 | Part | Path |
 |---|---|
-| Page shell: legend, motion switch, card, keyboard list; loads the globe lazily | `frontend/src/main.ts` |
-| Globe (globe.gl on three.js): setup, day/night shader, sun position, stars, lights | `frontend/src/globe/` |
+| Page shell: loads the data, legend, motion switch, card, keyboard list; loads the globe lazily | `frontend/src/main.ts` |
+| Globe (globe.gl on three.js): setup, day/night and relief shader, sun position, atmosphere, stars | `frontend/src/globe/` |
+| Pillars of light, drawn instanced (about 12 draw calls in all), with invisible hit columns | `frontend/src/globe/markers.ts` |
 | Severity look (colour, size, pulse, rings) | `frontend/src/severity.ts` |
 | Event shape and checks (untrusted input is validated, malformed events dropped) | `frontend/src/types.ts`, `frontend/src/events.ts` |
 | Earth textures (NASA, public domain), 2K for phones, 4K for wide screens | `frontend/public/textures/`, made by `tools/build_textures.py` |
 
-Everything from a feed is rendered as text (`textContent`), never as HTML.
+Everything from a feed is rendered as text (`textContent`), never as HTML. The sample events (`frontend/src/data/sample-events.json`) are used only in unit tests and in `npm run dev` when there is no pipeline data.
 
-## Event format
+## Published data
 
-Each event in `events.json` (and in the preview's `frontend/src/data/sample-events.json`):
+### `data/events.json`
+`{ "generated", "window_hours": 72, "counts": {severity: n}, "events": [...] }`, most severe first, then newest. Each event:
 
 | Field | Type | Meaning |
 |---|---|---|
-| `id` | string | Stable id |
-| `title` | string ≤ 300 | The original headline, never rewritten |
-| `snippet` | string ≤ 280 | Short snippet from the source, never the full text |
-| `place` | string | Human-readable place, e.g. "Tokyo, Japan" |
+| `id` | string | Stable id (`usgs:…`, `gdacs:…`, `gdelt:…`) |
+| `title` | string ≤ 300 | The headline as published (outlet name removed from the end), or the data feed's own title |
+| `snippet` | string ≤ 280 | Empty for news. For data feeds, a factual line from the feed's fields |
+| `place` | string | Readable place, e.g. "Sanaa, Yemen" |
 | `lat`, `lng` | number | Position in degrees |
-| `severity` | `low` \| `moderate` \| `high` \| `critical` | See docs/severity.md |
-| `categories` | list of `war`, `politics`, `natural-disasters`, `economic`, `technology` | Can be empty |
-| `kind` | `data-feed` \| `news` \| `sample` | Verified data feed, news report, or preview sample |
-| `published` | ISO 8601 string | When the source published it |
-| `sources` | list of `{name, url}` | Every outlet covering it (http/https links only) |
+| `severity` | `low` \| `moderate` \| `high` \| `critical` | `docs/severity.md` |
+| `severity_reason` | string | Why, in plain words |
+| `categories` | list of `war`, `politics`, `natural-disasters`, `economic`, `technology` | `docs/categories.md` |
+| `kind` | `data-feed` \| `news` | Verified data feed or news report (`sample` only in the preview data) |
+| `feed` | `usgs` \| `gdacs` \| `gdelt` | Which source led |
+| `hazard` | string or null | GDACS/USGS hazard code: EQ, TC, FL, VO, DR, WF |
+| `published` | ISO 8601 | When the source published it; for news, when GDELT first saw it |
+| `first_seen` | ISO 8601 | When our pipeline first saw it |
+| `coverage` | integer ≥ 1 | How many different outlets or providers report it |
+| `sources` | list of `{name, url, state_affiliated}` | Every report, with a link |
+| `geo` | `{continent, region, country, country_code, admin1, city, precision}` | The place hierarchy; `precision` is `city`, `region`, `country` or `remote` |
+| `location_method` | `source` \| `machine-coded` | Coordinates from the feed, or worked out by GDELT from the text |
 
-## Published data (from milestone 3)
-
-| File | Content |
-|---|---|
-| `data/events.json` | Stories: headline, snippet, sources, time, place hierarchy, coordinates, categories, severity, coverage |
-| `data/feeds.json` | Each feed: last success, last attempt, status, item count |
-| `data/places.json` | Continent → region → country → province → city, with counts |
+### `data/feeds.json`
+`{ "generated", "feeds": [{id, name, kind, homepage, status, last_attempt, last_success, count, note?, stats?}], "gdelt_cursor" }`
