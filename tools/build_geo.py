@@ -160,12 +160,14 @@ def build_countries() -> list[dict]:
                 "region": p.get("SUBREGION"),
                 "label": [round(p["LABEL_X"], 2), round(p["LABEL_Y"], 2)],
                 "rank": p.get("LABELRANK", 5),
+                "wikidata": p.get("WIKIDATAID") or None,
                 "polygons": polygons,
             }
         )
     return sorted(countries, key=lambda c: c["iso2"])
 
 
+MAX_PEAK_RANK = 5
 MARINE_KINDS = {"ocean", "sea", "gulf", "bay", "strait", "channel"}
 REGION_KINDS = {"Range/mtn": "range", "Desert": "desert"}
 # Natural Earth abbreviates some range names ("APPALACHIAN MTS."); its English names are
@@ -198,6 +200,7 @@ def build_labels() -> dict:
             "name": sea_name(f["properties"]),
             "kind": f["properties"]["featurecla"],
             "rank": f["properties"].get("scalerank", 5),
+            "wikidata": f["properties"].get("wikidataid") or None,
             "at": label_point(f["geometry"]),
         }
         for f in load("ne_50m_geography_marine_polys")["features"]
@@ -208,6 +211,7 @@ def build_labels() -> dict:
             "name": region_name(f["properties"]["NAME"]),
             "kind": REGION_KINDS[f["properties"]["FEATURECLA"]],
             "rank": f["properties"].get("SCALERANK", 5),
+            "wikidata": f["properties"].get("WIKIDATAID") or None,
             "at": label_point(f["geometry"]),
         }
         for f in load("ne_50m_geography_regions_polys")["features"]
@@ -218,12 +222,15 @@ def build_labels() -> dict:
             "name": f["properties"].get("name_en") or f["properties"]["name"],
             "elevation": int(f["properties"]["elevation"]),
             "rank": f["properties"].get("scalerank", 5),
+            "wikidata": f["properties"].get("wikidataid") or None,
             "at": [round(c, 2) for c in f["geometry"]["coordinates"][:2]],
         }
         for f in load("ne_10m_geography_regions_elevation_points")["features"]
         if f["properties"].get("featurecla") == "mountain"
         and f["properties"].get("name")
         and f["properties"].get("elevation")
+        # Less important peaks are never shown (frontend/src/geography.ts, LIMITS.peak).
+        and f["properties"].get("scalerank", 9) <= MAX_PEAK_RANK
     ]
     peaks.sort(key=lambda p: -p["elevation"])
     return {"seas": unique(seas), "regions": unique(regions), "peaks": unique(peaks)}
