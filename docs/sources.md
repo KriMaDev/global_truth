@@ -1,6 +1,6 @@
 # Sources
 
-Every source is checked before it is added: it must be free, and its terms must allow what we show. Each row records when that check was made. The public About / Sources page (milestone 5) is generated from this list, and a test keeps the outlet table below in step with `pipeline/globe_pipeline/outlets.py`.
+Every source is checked before it is added: it must be free, and its terms must allow what we show. Each row records when that check was made. The public [Legal & sources page](https://globe.krimadev.com/legal/) (`frontend/legal/index.html`) lists them for visitors, and tests keep the outlet tables here and on that page in step with `pipeline/globe_pipeline/outlets.py`.
 
 **Labels shown in the app**
 - **Data feed:** structured data from a scientific or official body (USGS, GDACS).
@@ -12,8 +12,9 @@ Every source is checked before it is added: it must be free, and its terms must 
 
 | Source | What | Terms (checked) | Credit | Refresh | Status |
 |---|---|---|---|---|---|
-| [USGS Earthquake Hazards](https://earthquake.usgs.gov/earthquakes/feed/) | Earthquakes M4.5+ and "significant" ones, past week, kept 72 h | USGS-produced data is U.S. public domain; credit is requested ([policy](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits), 2026-11-07) | "U.S. Geological Survey" | 30 min | Live (M3) |
+| [USGS Earthquake Hazards](https://earthquake.usgs.gov/earthquakes/feed/) | Earthquakes M4.5+ and "significant" ones, past week, kept 7 days | USGS-produced data is U.S. public domain; credit is requested ([policy](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits), 2026-11-07) | "U.S. Geological Survey" | 30 min | Live (M3) |
 | [GDACS](https://www.gdacs.org/) | Disaster alerts: Orange and Red of every kind; Green for earthquakes, cyclones, floods and volcanoes (Green wildfires and droughts left out: dozens at any time) | CC BY 4.0 under the European Commission's reuse policy, which GDACS's copyright notice points to ([EC legal notice](https://commission.europa.eu/legal-notice_en), 2026-11-07). Alerts are automated and indicative, not a substitute for official alerts ([terms](https://www.gdacs.org/About/termofuse.aspx)). Changes indicated: our severity is derived from the GDACS alert level | "GDACS (European Commission JRC, UN OCHA)" | 30 min | Live (M3) |
+| [WHO Disease Outbreak News](https://www.who.int/emergencies/disease-outbreak-news) | Verified outbreak reports, for the Health & outbreaks category | WHO content is CC BY-NC-SA 3.0 IGO (non-commercial, with credit); API and terms to be checked before use | "World Health Organization" | – | Idea (M7) |
 | [NASA EONET v3](https://eonet.gsfc.nasa.gov/) | Natural events (wildfires, storms, volcanoes) | Open API, no key; "for visualization and general information purposes" (2026-11-07) | "NASA EONET" | 60 min | Planned (M7) |
 
 ## News
@@ -34,7 +35,7 @@ Only articles from these outlets appear. GDELT reads far more sites; the allowli
 - **Private:** privately owned (companies, trusts, non-profits).
 - **Intergovernmental:** the news service of an intergovernmental organisation.
 
-**Balance:** at most 30 news events led by any one outlet in the 72-hour window (the most severe, most widely reported and newest are kept). Without it, one prolific outlet can cover a country in lights.
+**Balance:** at most 15 news events led by any one outlet per UTC day (the most severe, most widely reported and newest are kept). Without it, one prolific outlet can cover a country in lights.
 
 | Outlet | Domain | Country | Ownership |
 |---|---|---|---|
@@ -79,7 +80,7 @@ Only articles from these outlets appear. GDELT reads far more sites; the allowli
 |---|---|---|
 | [GeoNames](https://www.geonames.org/) (`cities15000`, `countryInfo`, `admin1CodesASCII`) | Places, provinces/states, countries | CC BY 4.0, credit "GeoNames" |
 | [UN M49](https://unstats.un.org/unsd/methodology/m49/overview/) | Regions (e.g. Western Europe) | UN Statistics Division, free to use with credit; saved in `pipeline/globe_pipeline/data/m49.csv` by `pipeline/tools/fetch_m49.py` |
-| [Natural Earth](https://www.naturalearthdata.com/) | Country shapes, seas, mountains (milestone 4) | Public domain |
+| [Natural Earth](https://www.naturalearthdata.com/) (50m coastlines and land borders, 110m countries, 50m marine and geography regions, 10m elevation points) | Coastlines and borders, country shapes and names, seas, mountain ranges, deserts and peaks; made by `tools/build_geo.py` into `frontend/public/geo/` | Public domain (credit appreciated, given on the Legal & sources page) |
 | [NASA Blue Marble Next Generation](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/) (topography and bathymetry, July 2004) | Earth day texture | Public domain; credit "NASA Earth Observatory" (shown on the page) |
 | [NASA Black Marble 2016](https://science.nasa.gov/earth/earth-observatory/earth-at-night/) (3 km) | Earth night lights texture | Public domain; credit "NASA Earth Observatory" (shown on the page) |
 | [NASA Earth Observatory topography](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/topography-bathymetry-maps/) (GEBCO_08 land elevation, 5400×2700) | Relief shading on the globe | Imagery by Jesse Allen, NASA Earth Observatory, using data from GEBCO (British Oceanographic Data Centre); credited on the page |

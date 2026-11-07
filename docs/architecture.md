@@ -7,16 +7,18 @@ GitHub Actions (.github/workflows/update.yml, every 30 min, once LIVE is on)
   └─ Python pipeline (pipeline/globe_pipeline/run.py, standard library only)
        sources: USGS · GDACS · GDELT GKG (allowlisted outlets)
        → place (GeoNames + UN M49) → categorize → severity → group duplicates
-       → merge with the last published data, keep 72 h → events.json, feeds.json
+       → merge with the last published data, keep 7 days
+       → events.json (last 72 h), days/YYYY-MM-DD.json + days/index.json (7 days), feeds.json
   └─ npm run build (frontend + data) → wrangler deploy
 Cloudflare Workers static assets @ globe.krimadev.com
-  └─ browser: Vite + TypeScript + globe.gl (three.js) reads /data/events.json
+  └─ browser: Vite + TypeScript + globe.gl (three.js) reads /data/events.json,
+     and a day file only when the timeline reaches back to that day
 ```
 
 - **Cost and speed.** Static files cost nothing to host and are cached at Cloudflare's edge.
-- **Public data.** `/data/events.json` and `/data/feeds.json` are public URLs, which also serve as an open JSON API.
+- **Public data.** `/data/events.json`, `/data/days/` and `/data/feeds.json` are public URLs, which also serve as an open JSON API.
 - **Failures stay contained.** Each source is fetched on its own. If one fails, its last good events are kept, and `feeds.json` gives it status `error` with the time of its last success.
-- **State between runs.** Each run reads the previous `events.json` and `feeds.json` from the live site. That keeps news for 72 hours, keeps the time each story was first seen, and keeps GDELT's cursor (the last 15-minute file read). With nothing published yet, it starts fresh with the last 6 hours.
+- **State between runs.** Each run reads the previous `days/index.json`, the day files it lists, `events.json` and `feeds.json` from the live site. That keeps events for 7 days, keeps the time each story was first seen, and keeps GDELT's cursor (the last 15-minute file read). With nothing published yet, it starts fresh with the last 6 hours.
 - **Fallback.** If redeploying every 30 minutes ever causes trouble, `data/` moves to a free R2 bucket.
 
 ## Layout
@@ -26,6 +28,8 @@ Cloudflare Workers static assets @ globe.krimadev.com
 | Web app (Vite, TypeScript, globe.gl) | `frontend/` |
 | Data pipeline (Python 3.13) | `pipeline/globe_pipeline/`, tests in `pipeline/tests/` |
 | Data-building tools (gazetteer, M49 table) | `pipeline/tools/` |
+| Asset-building tools (Earth textures; Natural Earth lines, countries and labels) | `tools/build_textures.py`, `tools/build_geo.py` |
+| Legal & sources page (second page of the Vite build) | `frontend/legal/index.html`, `frontend/src/legal.ts` |
 | Docs | `docs/` |
 | CI and scheduled updates | `.github/workflows/ci.yml`, `.github/workflows/update.yml` |
 | Hosting config | `wrangler.jsonc`, `frontend/public/_headers` |
@@ -60,7 +64,7 @@ Cloudflare Workers static assets @ globe.krimadev.com
 - **Earthquakes:** a GDACS earthquake within 30 minutes and 150 km of a USGS one is the same earthquake.
 - **The merged event** keeps the earliest report's headline (USGS's for earthquakes), lists every source, takes the highest severity and the union of categories.
 
-**Balance.** At most 30 news events per outlet (`outlets.MAX_EVENTS_PER_OUTLET`): the most severe, most widely reported and newest are kept.
+**Balance.** At most 15 news events per outlet per UTC day (`outlets.MAX_EVENTS_PER_OUTLET`): the most severe, most widely reported and newest are kept.
 
 ## Frontend
 
@@ -68,7 +72,14 @@ Cloudflare Workers static assets @ globe.krimadev.com
 |---|---|
 | Page shell: loads the data, legend, motion switch, card, keyboard list; loads the globe lazily | `frontend/src/main.ts` |
 | Globe (globe.gl on three.js): setup, day/night and relief shader, sun position, atmosphere, stars | `frontend/src/globe/` |
-| Pillars of light, drawn instanced (about 12 draw calls in all), with invisible hit columns | `frontend/src/globe/markers.ts` |
+| Pillars of light, drawn instanced (about 12 draw calls in all), with invisible hit columns; small dots in the geography view | `frontend/src/globe/markers.ts` |
+| Groups: pillars closer than 4°, 2° or 1° (by zoom; none when zoomed right in) merge into one, led by the most severe event, with a count badge; clicking opens a list | `frontend/src/clusters.ts` |
+| Filters (category, severity, place, time window), kept in the web address (`cat`, `sev`, `place`, `range`, `end`, `view`) | `frontend/src/filters.ts`, `frontend/src/ui/filter-panel.ts` |
+| Place drill-down (continent → region → country → province/state → city), built from the events' `geo` | `frontend/src/places.ts`, `frontend/src/ui/place-picker.ts` |
+| Timeline: 6 h, 24 h, 3 days, 7 days, and an "ending at" slider; loads day files on demand | `frontend/src/ui/timeline.ts`, `frontend/src/main.ts` |
+| Coastlines and borders (Natural Earth 50m), brighter on the night side | `frontend/src/globe/lines.ts`, `frontend/public/geo/lines.bin` |
+| Geography view: countries coloured by severity (rule in `docs/severity.md`), labels for countries, oceans, seas, ranges, deserts and peaks by zoom, decluttered on screen | `frontend/src/geography.ts`, `frontend/src/globe/globe.ts`, `frontend/public/geo/countries.json`, `labels.json` |
+| Footer version (build date and commit, set by Vite from git or `GITHUB_SHA`) | `frontend/vite.config.ts` |
 | Severity look (colour, size, pulse, rings) | `frontend/src/severity.ts` |
 | Event shape and checks (untrusted input is validated, malformed events dropped) | `frontend/src/types.ts`, `frontend/src/events.ts` |
 | Earth textures (NASA, public domain), 2K for phones, 4K for wide screens | `frontend/public/textures/`, made by `tools/build_textures.py` |
@@ -89,7 +100,7 @@ Everything from a feed is rendered as text (`textContent`), never as HTML. The s
 | `lat`, `lng` | number | Position in degrees |
 | `severity` | `low` \| `moderate` \| `high` \| `critical` | `docs/severity.md` |
 | `severity_reason` | string | Why, in plain words |
-| `categories` | list of `war`, `politics`, `natural-disasters`, `economic`, `technology` | `docs/categories.md` |
+| `categories` | list of `war`, `politics`, `natural-disasters`, `economic`, `technology`, `health` | `docs/categories.md` |
 | `kind` | `data-feed` \| `news` | Verified data feed or news report (`sample` only in the preview data) |
 | `feed` | `usgs` \| `gdacs` \| `gdelt` | Which source led |
 | `hazard` | string or null | GDACS/USGS hazard code: EQ, TC, FL, VO, DR, WF |
@@ -99,6 +110,10 @@ Everything from a feed is rendered as text (`textContent`), never as HTML. The s
 | `sources` | list of `{name, url, state_affiliated}` | Every report, with a link |
 | `geo` | `{continent, region, country, country_code, admin1, city, precision}` | The place hierarchy; `precision` is `city`, `region`, `country` or `remote` |
 | `location_method` | `source` \| `machine-coded` | Coordinates from the feed, or worked out by GDELT from the text |
+
+### `data/days/`
+- `days/index.json`: `{ "generated", "window_hours": 168, "days": [{day, file, count}] }`, newest day first.
+- `days/YYYY-MM-DD.json`: `{ "generated", "day", "events": [...] }`, every event published on that UTC day, in the same shape as above. Only the last 7 days are kept; older files are removed.
 
 ### `data/feeds.json`
 `{ "generated", "feeds": [{id, name, kind, homepage, status, last_attempt, last_success, count, note?, stats?}], "gdelt_cursor" }`

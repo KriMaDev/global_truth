@@ -56,7 +56,7 @@ Deploying is described in [docs/deploy.md](docs/deploy.md).
 1. ✅ Plan, stack and skeleton, placeholder live (7 Nov 2026)
 2. ✅ Globe with sample events and severity lights (on `main`, not deployed: the live site keeps the placeholder until real data)
 3. ✅ Live data pipeline: USGS, GDACS, GDELT news from 32 allowlisted outlets; places, categories, severity, grouping (live since 7 Nov 2026)
-4. Location drill-down and category filters; a geography view (countries coloured by severity, names of countries, oceans, seas and mountains)
+4. ✅ (on the `milestone-4` branch, awaiting review) Filters for type, severity and place (drill-down), a 7-day timeline, grouped pillars, coastlines and borders at night, a Health & outbreaks category, a geography view (countries coloured by severity, names of countries, oceans, seas and mountains), a footer with version and a Legal & sources page
 5. News panel, source attribution, About / Sources page
 6. Polish: animations, performance, mobile, accessibility
 7. More sources, monitoring, public API, alerts, languages
