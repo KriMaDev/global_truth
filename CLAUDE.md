@@ -12,8 +12,10 @@ An interactive, visually stunning 3D globe that shows current world events as gl
 ## Current status
 - [x] Studied star-teller deployment setup (7 Nov 2026)
 - [x] Architecture and stack approved by the owner (7 Nov 2026; plan summarised in `docs/architecture.md`)
-- [ ] Project skeleton deployed as placeholder (skeleton built and checked locally; GitHub repo and first deploy await the owner's go)
-- [ ] Update this checklist as milestones are completed
+- [x] Milestone 1: skeleton live at https://globe.krimadev.com (7 Nov 2026), repo https://github.com/KriMaDev/global_truth (public), CI green
+- [ ] Milestone 2: globe with static sample events and severity lights (next; start in plan mode)
+- Commits in this repo use the GitHub noreply address (repo-local git config), never the Gmail address.
+- Deploying by hand needs `$env:CLOUDFLARE_ACCOUNT_ID` set to the account ID in krimadev_rebuild's NOTES.md (the OAuth login can't list accounts on its own).
 
 ## Decisions (7 Nov 2026)
 - **Hosting: Cloudflare, not here.now.** Star Teller is a static site on here.now with `stars → CNAME fallback.here.now`, but the here.now account is on the free plan and its single custom domain is used by stars.krimadev.com. So this site runs like krimadev.com: a Cloudflare Worker with static assets only (`wrangler.jsonc`, Worker `world-news-globe`), custom-domain route `globe.krimadev.com`, zone on Cloudflare, `wrangler login` done on this PC. Deploy steps: `docs/deploy.md`.

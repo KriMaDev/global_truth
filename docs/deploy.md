@@ -6,6 +6,7 @@ The site is a Cloudflare Worker with static assets only, named `world-news-globe
 
 ```powershell
 $env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;" + $env:Path
+$env:CLOUDFLARE_ACCOUNT_ID = "<account ID from the Cloudflare dashboard>"
 npm ci
 npm run deploy        # builds frontend/dist, then `wrangler deploy`
 ```

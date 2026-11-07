@@ -47,7 +47,7 @@ Deploying is described in [docs/deploy.md](docs/deploy.md).
 | CI and scheduled updates | `.github/workflows/` |
 
 ## Roadmap
-1. Plan, stack and skeleton, placeholder live (in progress)
+1. ✅ Plan, stack and skeleton, placeholder live (7 Nov 2026)
 2. Globe with sample events and severity lights
 3. Live data pipeline (USGS, GDACS, first RSS feeds)
 4. Location drill-down and category filters
