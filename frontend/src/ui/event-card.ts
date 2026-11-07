@@ -4,11 +4,15 @@
  * text nodes only, since every field comes from outside.
  */
 
+import type { Cluster } from "../clusters";
 import { SEVERITY_STYLES } from "../severity";
 import { CATEGORY_LABELS, KIND_LABELS, type GlobeEvent } from "../types";
 
 export interface EventCard {
-  open(event: GlobeEvent, focus: boolean): void;
+  /** One event's card; `back`, if given, adds "Back to the list". */
+  open(event: GlobeEvent, focus: boolean, back?: () => void): void;
+  /** A group's list of events. */
+  openList(cluster: Cluster, focus: boolean, onPick: (event: GlobeEvent) => void): void;
   close(): void;
   readonly openId: string | null;
 }
@@ -100,16 +104,32 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
     if (e.key === "Escape") close();
   });
 
-  const open = (event: GlobeEvent, focus: boolean): void => {
+  const closeButton = (): HTMLButtonElement => {
+    const button = el("button", "card-close", "×");
+    button.type = "button";
+    button.setAttribute("aria-label", "Close");
+    button.addEventListener("click", close);
+    return button;
+  };
+
+  const rememberFocus = (focus: boolean): void => {
+    if (returnFocus === null && focus && document.activeElement instanceof HTMLElement) {
+      returnFocus = document.activeElement;
+    }
+  };
+
+  const open = (event: GlobeEvent, focus: boolean, back?: () => void): void => {
     const style = SEVERITY_STYLES[event.severity];
     openId = event.id;
-    returnFocus = focus && document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    rememberFocus(focus);
 
-    const closeButton = el("button", "card-close", "×");
-    closeButton.type = "button";
-    closeButton.setAttribute("aria-label", "Close");
-    closeButton.addEventListener("click", close);
-
+    const parts: HTMLElement[] = [closeButton()];
+    if (back) {
+      const backButton = el("button", "card-back", "← Back to the list");
+      backButton.type = "button";
+      backButton.addEventListener("click", back);
+      parts.push(backButton);
+    }
     const kind = el("p", `card-kind kind-${event.kind}`, kindLine(event));
     const title = el("h2", "card-title", event.title);
     title.id = "event-card-title";
@@ -133,7 +153,7 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
       when,
     );
 
-    const parts: HTMLElement[] = [closeButton, kind, title, el("p", "card-place", placeLine(event)), meta];
+    parts.push(kind, title, el("p", "card-place", placeLine(event)), meta);
     if (event.severity_reason) parts.push(el("p", "card-reason", `Why ${style.label.toLowerCase()}: ${event.severity_reason}`));
     if (event.snippet) parts.push(el("p", "card-snippet", event.snippet));
     const noteLines = notes(event);
@@ -146,11 +166,55 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
 
     root.replaceChildren(...parts);
     root.hidden = false;
+    root.scrollTop = 0;
+    if (focus) title.focus();
+  };
+
+  /** A group's card: every event in it, most severe first; choosing one opens its card. */
+  const openList = (cluster: Cluster, focus: boolean, onPick: (event: GlobeEvent) => void): void => {
+    openId = cluster.id;
+    rememberFocus(focus);
+    const style = SEVERITY_STYLES[cluster.severity];
+    const title = el("h2", "card-title", `${cluster.events.length} events near ${cluster.lead.place}`);
+    title.id = "event-card-title";
+    title.tabIndex = -1;
+    const list = el("ul", "card-list");
+    for (const event of cluster.events) {
+      const button = el("button", "card-list-item");
+      button.type = "button";
+      const dot = el("span", "card-dot");
+      dot.setAttribute("aria-hidden", "true");
+      dot.style.setProperty("--dot-color", SEVERITY_STYLES[event.severity].color);
+      const text = el("span", "card-list-text");
+      text.append(
+        el("span", "card-list-title", event.title),
+        el(
+          "span",
+          "card-list-meta",
+          `${SEVERITY_STYLES[event.severity].label} · ${event.sources[0]?.name ?? KIND_LABELS[event.kind]} · ${timeFormat.format(new Date(event.published))}`,
+        ),
+      );
+      button.append(dot, text);
+      button.addEventListener("click", () => onPick(event));
+      const item = el("li", "");
+      item.append(button);
+      list.append(item);
+    }
+    root.replaceChildren(
+      closeButton(),
+      el("p", "card-kind", `Group · ${cluster.events.length} events`),
+      title,
+      el("p", "card-reason", `Most severe here: ${style.label}. Events within a short distance are grouped; zoom in to separate them.`),
+      list,
+    );
+    root.hidden = false;
+    root.scrollTop = 0;
     if (focus) title.focus();
   };
 
   return {
     open,
+    openList,
     close,
     get openId() {
       return openId;

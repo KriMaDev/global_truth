@@ -14,6 +14,7 @@ import "@fontsource/jetbrains-mono/400.css";
 import "@fontsource/jetbrains-mono/500.css";
 import "./style.css";
 import { compareBySeverity, parseEvents } from "./events";
+import type { Cluster } from "./clusters";
 import type { GlobeApp } from "./globe/globe";
 import { attachKeyboard } from "./globe/keyboard";
 import { SEVERITY_STYLES } from "./severity";
@@ -121,11 +122,29 @@ const card = createEventCard(byId("event-card"), () => {
   setAccent(null);
 });
 
-function openEvent(event: GlobeEvent, focus: boolean): void {
+function openEvent(event: GlobeEvent, focus: boolean, back?: () => void): void {
   app?.select(event.id);
-  app?.flyTo(event);
+  if (!back) app?.flyTo(event);
   setAccent(SEVERITY_STYLES[event.severity].color);
-  card.open(event, focus);
+  card.open(event, focus, back);
+}
+
+/** A pillar was chosen: one event opens its card, a group opens its list. */
+function openCluster(cluster: Cluster, focus: boolean): void {
+  if (cluster.events.length === 1) {
+    openEvent(cluster.lead, focus);
+    return;
+  }
+  app?.select(cluster.id);
+  app?.flyTo(cluster);
+  setAccent(SEVERITY_STYLES[cluster.severity].color);
+  card.openList(cluster, focus, (event) =>
+    openEvent(event, true, () => {
+      app?.select(cluster.id);
+      setAccent(SEVERITY_STYLES[cluster.severity].color);
+      card.openList(cluster, true, (again) => openEvent(again, true, () => openCluster(cluster, true)));
+    }),
+  );
 }
 
 function showList(message: string): void {
@@ -168,7 +187,7 @@ async function start(): Promise<void> {
     app = await createGlobeApp(container, {
       events,
       reducedMotion: initialReducedMotion(),
-      onSelect: (event) => openEvent(event, false),
+      onSelect: (cluster) => openCluster(cluster, false),
       onView: (pov) => {
         view = pov;
         updateHud();

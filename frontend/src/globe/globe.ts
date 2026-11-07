@@ -1,7 +1,8 @@
 /**
- * The 3D globe: globe.gl with NASA day, night and relief textures, atmosphere, stars, the severity
- * lights and rings, auto-rotation and smooth camera moves. Loaded lazily by main.ts, so the
- * page shell appears before three.js is downloaded.
+ * The 3D globe: globe.gl with NASA day, night and relief textures, atmosphere, stars,
+ * coastlines and borders, the severity pillars (grouped where they crowd, see ../clusters.ts)
+ * with their rings and count badges, auto-rotation and smooth camera moves. Loaded lazily by
+ * main.ts, so the page shell appears before three.js is downloaded.
  */
 
 import Globe from "globe.gl";
@@ -15,11 +16,12 @@ import {
   type Vector3,
   type WebGLRenderer,
 } from "three";
+import { clusterDegrees, clusterEvents, clusterOf, type Cluster } from "../clusters";
 import { SEVERITY_STYLES } from "../severity";
 import type { GlobeEvent } from "../types";
 import { createAtmosphere } from "./atmosphere";
-import { createLines, parseLines } from "./lines";
 import { createDayNightMaterial, setSunDirection } from "./daynight";
+import { createLines, parseLines } from "./lines";
 import { PillarField } from "./markers";
 import { createStars } from "./stars";
 import { sunPosition } from "./sun";
@@ -27,14 +29,20 @@ import { sunPosition } from "./sun";
 export interface GlobeAppOptions {
   events: GlobeEvent[];
   reducedMotion: boolean;
-  /** Called when a light is clicked or tapped. */
-  onSelect: (event: GlobeEvent) => void;
+  /** Called when a pillar (one event, or a group of several) is clicked or tapped. */
+  onSelect: (cluster: Cluster) => void;
   /** Called with the camera's position whenever it moves (for the readout). */
   onView?: (view: { lat: number; lng: number; altitude: number }) => void;
 }
 
 export interface GlobeApp {
-  flyTo(event: GlobeEvent): void;
+  /** Shows these events (after filtering), regrouped for the current zoom. */
+  setEvents(events: GlobeEvent[]): void;
+  /** Flies to an event (or group lead), seen from a little south so its pillar stands up. */
+  flyTo(target: { lat: number; lng: number }): void;
+  /** Flies straight over a point at a given altitude (for places). */
+  flyOver(lat: number, lng: number, altitude: number): void;
+  /** Highlights the pillar holding this event (or group), or none. */
   select(id: string | null): void;
   setReducedMotion(on: boolean): void;
   rotateBy(degreesLng: number, degreesLat: number): void;
@@ -49,6 +57,7 @@ const LIGHT_ALTITUDE = 0.002;
 /** Coastlines and borders sit just above the surface, under the pillars. */
 const LINE_ALTITUDE = 0.0012;
 const RING_ALTITUDE = 0.004;
+const BADGE_ALTITUDE = 0.004;
 const FLY_MS = 1400;
 const STEP_MS = 350;
 const AUTO_ROTATE_SPEED = 0.35;
@@ -87,22 +96,44 @@ async function loadTexture(url: string, renderer: WebGLRenderer, color = true): 
   return texture;
 }
 
-function ringColor(event: GlobeEvent): (t: number) => string {
-  const hex = SEVERITY_STYLES[event.severity].color;
+function ringColor(cluster: Cluster): (t: number) => string {
+  const hex = SEVERITY_STYLES[cluster.severity].color;
   const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
   return (t) => `rgba(${r}, ${g}, ${b}, ${((1 - t) * 0.75).toFixed(3)})`;
 }
 
 /** A hover label built from text nodes only: titles come from outside sources. */
-function labelFor(event: GlobeEvent): HTMLElement {
+function labelFor(cluster: Cluster): HTMLElement {
   const label = document.createElement("div");
   label.className = "globe-label";
   const title = document.createElement("strong");
-  title.textContent = event.title;
   const meta = document.createElement("span");
-  meta.textContent = `${SEVERITY_STYLES[event.severity].label} · ${event.place}`;
+  if (cluster.events.length > 1) {
+    title.textContent = `${cluster.events.length} events near ${cluster.lead.place}`;
+    meta.textContent = `Most severe: ${SEVERITY_STYLES[cluster.severity].label} · click to list them`;
+  } else {
+    title.textContent = cluster.lead.title;
+    meta.textContent = `${SEVERITY_STYLES[cluster.severity].label} · ${cluster.lead.place}`;
+  }
   label.append(title, meta);
   return label;
+}
+
+/** The count badge at the foot of a group's pillar: a clear click target for the group.
+ * Not in the Tab order (keyboard users reach every event through the event list). */
+function badgeFor(cluster: Cluster, onSelect: (cluster: Cluster) => void): HTMLElement {
+  const badge = document.createElement("button");
+  badge.type = "button";
+  badge.className = "cluster-badge";
+  badge.tabIndex = -1;
+  badge.textContent = String(cluster.events.length);
+  badge.title = `${cluster.events.length} events near ${cluster.lead.place}`;
+  badge.style.setProperty("--dot-color", SEVERITY_STYLES[cluster.severity].color);
+  badge.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onSelect(cluster);
+  });
+  return badge;
 }
 
 export async function createGlobeApp(
@@ -111,7 +142,9 @@ export async function createGlobeApp(
 ): Promise<GlobeApp> {
   let reducedMotion = options.reducedMotion;
   let selectedId: string | null = null;
-  const ringEvents = options.events.filter((e) => SEVERITY_STYLES[e.severity].rings);
+  let events = options.events;
+  let degrees = -1;
+  let clusters: Cluster[] = [];
 
   // No grow-in animation: the atmosphere is a separate object and would not grow with it.
   const globe = new Globe(container, {
@@ -138,30 +171,55 @@ export async function createGlobeApp(
   resize();
   window.addEventListener("resize", resize);
 
-  // Pillars are drawn in batches; globe.gl's custom layer holds only their invisible hit columns.
-  const pillars = new PillarField(options.events, (lat, lng) => globe.getCoords(lat, lng, LIGHT_ALTITUDE));
-  globe.scene().add(pillars.group);
+  const pillarCoords = (lat: number, lng: number) => globe.getCoords(lat, lng, LIGHT_ALTITUDE);
+  let pillars = new PillarField([], pillarCoords);
 
   globe
     .backgroundColor(BACKGROUND)
     .globeMaterial(material)
     .showAtmosphere(false)
-    .customLayerData(options.events)
-    .customThreeObject((d) => pillars.hitTarget(d as GlobeEvent))
+    .customThreeObject((d) => pillars.hitTarget(d as Cluster))
     .customThreeObjectUpdate((obj, d) => {
-      const event = d as GlobeEvent;
-      pillars.placeHitTarget(obj as Mesh, globe.getCoords(event.lat, event.lng, LIGHT_ALTITUDE));
+      const cluster = d as Cluster;
+      pillars.placeHitTarget(obj as Mesh, globe.getCoords(cluster.lat, cluster.lng, LIGHT_ALTITUDE));
     })
-    .customLayerLabel((d) => labelFor(d as GlobeEvent))
-    .onCustomLayerClick((d) => options.onSelect(d as GlobeEvent))
+    .customLayerLabel((d) => labelFor(d as Cluster))
+    .onCustomLayerClick((d) => options.onSelect(d as Cluster))
     .ringAltitude(RING_ALTITUDE)
-    .ringColor((d: object) => ringColor(d as GlobeEvent))
-    .ringMaxRadius((d) => ((d as GlobeEvent).severity === "critical" ? 5 : 3.2))
-    .ringPropagationSpeed((d) => ((d as GlobeEvent).severity === "critical" ? 3.2 : 2))
+    .ringColor((d: object) => ringColor(d as Cluster))
+    .ringMaxRadius((d) => ((d as Cluster).severity === "critical" ? 5 : 3.2))
+    .ringPropagationSpeed((d) => ((d as Cluster).severity === "critical" ? 3.2 : 2))
     .ringRepeatPeriod(
-      (d: object) => (SEVERITY_STYLES[(d as GlobeEvent).severity].pulseSeconds ?? 2) * 1000,
+      (d: object) => (SEVERITY_STYLES[(d as Cluster).severity].pulseSeconds ?? 2) * 1000,
     )
-    .ringsData(reducedMotion ? [] : ringEvents);
+    .htmlLat((d) => (d as Cluster).lat)
+    .htmlLng((d) => (d as Cluster).lng)
+    .htmlAltitude(BADGE_ALTITUDE)
+    .htmlElement((d) => badgeFor(d as Cluster, options.onSelect))
+    .htmlElementVisibilityModifier((el, isVisible) => {
+      el.classList.toggle("is-hidden", !isVisible);
+    })
+    .htmlTransitionDuration(0);
+
+  /** Rebuilds the pillars, rings and badges for the current events and grouping. */
+  const regroup = (): void => {
+    clusters = clusterEvents(events, degrees);
+    pillars.dispose();
+    pillars = new PillarField(clusters, pillarCoords);
+    globe.scene().add(pillars.group);
+    globe
+      .customLayerData(clusters)
+      .ringsData(reducedMotion ? [] : clusters.filter((c) => SEVERITY_STYLES[c.severity].rings))
+      .htmlElementsData(clusters.filter((c) => c.events.length > 1));
+  };
+
+  /** Regroups only when the zoom crosses a grouping step. */
+  const regroupForAltitude = (altitude: number): void => {
+    const next = clusterDegrees(altitude);
+    if (next === degrees) return;
+    degrees = next;
+    regroup();
+  };
 
   const camera = globe.camera() as PerspectiveCamera;
   globe.scene().add(createStars(2000, Math.min(camera.far * 0.8, 20_000)));
@@ -169,16 +227,19 @@ export async function createGlobeApp(
 
   // Coastlines and borders: loaded after the globe shows; the globe works without them.
   void fetch("/geo/lines.bin")
-    .then((response) => (response.ok ? response.arrayBuffer() : Promise.reject(new Error(`HTTP ${response.status}`))))
+    .then((response) =>
+      response.ok ? response.arrayBuffer() : Promise.reject(new Error(`HTTP ${response.status}`)),
+    )
     .then((buffer) => {
       const coords = (lat: number, lng: number) => globe.getCoords(lat, lng, LINE_ALTITUDE);
       for (const lines of createLines(parseLines(buffer), coords, sunVector)) globe.scene().add(lines);
     })
     .catch((error: unknown) => console.warn("Coastlines and borders unavailable:", error));
-  if (options.onView) {
-    const onView = options.onView;
-    globe.onZoom((pov) => onView(pov));
-  }
+
+  globe.onZoom((pov) => {
+    regroupForAltitude(pov.altitude);
+    options.onView?.(pov);
+  });
 
   // The sun, now and every minute.
   const updateSun = (): void => {
@@ -191,6 +252,7 @@ export async function createGlobeApp(
   // Open on the side where the day meets the night.
   const sun = sunPosition(new Date());
   globe.pointOfView({ lat: 22, lng: sun.lng + 40, altitude: startAltitude() });
+  regroupForAltitude(globe.pointOfView().altitude);
   options.onView?.(globe.pointOfView());
 
   // Auto-rotation: slow, off with reduced motion, paused by any interaction.
@@ -211,7 +273,8 @@ export async function createGlobeApp(
   const start = performance.now();
   const tick = (now: number): void => {
     pillars.pulse((now - start) / 1000, reducedMotion);
-    pillars.update(camera.position.length(), selectedId);
+    const highlighted = selectedId ? (clusterOf(clusters, selectedId)?.id ?? selectedId) : null;
+    pillars.update(camera.position.length(), highlighted);
     window.requestAnimationFrame(tick);
   };
   window.requestAnimationFrame(tick);
@@ -228,12 +291,19 @@ export async function createGlobeApp(
   };
 
   return {
-    flyTo(event) {
-      // Look from a little south of the event, so its pillar is seen standing up and the
-      // event sits above the screen's middle, clear of the card.
+    setEvents(next) {
+      events = next;
+      regroup();
+    },
+    flyTo(target) {
+      // Look from a little south of the target, so its pillar is seen standing up and it
+      // sits above the screen's middle, clear of the card.
       const current = globe.pointOfView();
-      const lat = Math.max(-80, Math.min(80, event.lat - viewTilt()));
-      move({ lat, lng: event.lng, altitude: Math.min(current.altitude, 1.6) }, FLY_MS);
+      const lat = Math.max(-80, Math.min(80, target.lat - viewTilt()));
+      move({ lat, lng: target.lng, altitude: Math.min(current.altitude, 1.6) }, FLY_MS);
+    },
+    flyOver(lat, lng, altitude) {
+      move({ lat, lng, altitude: Math.max(MIN_ALTITUDE, Math.min(MAX_ALTITUDE, altitude)) }, FLY_MS);
     },
     select(id) {
       selectedId = id;
@@ -242,7 +312,7 @@ export async function createGlobeApp(
     setReducedMotion(on) {
       reducedMotion = on;
       controls.autoRotate = !on && selectedId === null;
-      globe.ringsData(on ? [] : ringEvents);
+      globe.ringsData(on ? [] : clusters.filter((c) => SEVERITY_STYLES[c.severity].rings));
     },
     rotateBy(degreesLng, degreesLat) {
       const p = globe.pointOfView();

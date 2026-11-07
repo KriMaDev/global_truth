@@ -29,13 +29,14 @@ import {
   type BufferGeometry,
 } from "three";
 import { SEVERITY_STYLES } from "../severity";
-import { SEVERITIES, type GlobeEvent, type Severity } from "../types";
+import type { Cluster } from "../clusters";
+import { SEVERITIES, type Severity } from "../types";
 
 /** World units; the globe's radius is 100. */
 const BASE_HEIGHT = 8;
-const CORE_RADIUS = 0.45;
-const GLOW_RADIUS = 2.1;
-const SPOT_SIZE = 6.5;
+const CORE_RADIUS = 0.36;
+const GLOW_RADIUS = 1.7;
+const SPOT_SIZE = 5.2;
 const HIT_RADIUS = 2.6;
 /** Camera distance at which pillars have their base width. */
 const REFERENCE_DISTANCE = 350;
@@ -148,9 +149,16 @@ const hitGeometry = new CylinderGeometry(HIT_RADIUS, HIT_RADIUS, 1, 8).translate
 const hitMaterial = new MeshBasicMaterial();
 
 interface Anchor {
-  event: GlobeEvent;
+  cluster: Cluster;
   position: Vector3;
   turn: Quaternion;
+  /** Groups of several events are a little wider (at most +60%). */
+  widen: number;
+}
+
+/** How much wider a group's pillar is than a single event's. */
+export function groupWidening(count: number): number {
+  return count > 1 ? 1 + Math.min(0.6, Math.log10(count) * 0.45) : 1;
 }
 
 interface Level {
@@ -171,19 +179,25 @@ export class PillarField {
   private lastZoom = -1;
   private lastSelected: string | null = null;
 
-  /** `coords` turns latitude and longitude into a point on the globe's surface. */
+  /** One pillar per group (see ../clusters.ts); `coords` turns latitude and longitude into
+   * a point on the globe's surface. */
   constructor(
-    events: GlobeEvent[],
+    clusters: Cluster[],
     coords: (lat: number, lng: number) => { x: number; y: number; z: number },
   ) {
     this.group.name = "pillars";
     for (const severity of SEVERITIES) {
-      const anchors = events
-        .filter((e) => e.severity === severity)
-        .map((event) => {
-          const p = coords(event.lat, event.lng);
+      const anchors = clusters
+        .filter((c) => c.severity === severity)
+        .map((cluster) => {
+          const p = coords(cluster.lat, cluster.lng);
           const position = new Vector3(p.x, p.y, p.z);
-          return { event, position, turn: new Quaternion().setFromUnitVectors(UP, position.clone().normalize()) };
+          return {
+            cluster,
+            position,
+            turn: new Quaternion().setFromUnitVectors(UP, position.clone().normalize()),
+            widen: groupWidening(cluster.events.length),
+          };
         });
       if (anchors.length === 0) continue;
       const core = new ShaderMaterial({ uniforms: uniformsFor(severity, 2.0), vertexShader: beamVertex, fragmentShader: beamFragment, ...lightBlending });
@@ -208,14 +222,23 @@ export class PillarField {
     }
   }
 
-  /** The invisible, easy-to-hit column for one event (for globe.gl's custom layer). */
-  hitTarget(event: GlobeEvent): Mesh {
+  /** The invisible, easy-to-hit column for one group (for globe.gl's custom layer). */
+  hitTarget(cluster: Cluster): Mesh {
     const hit = new Mesh(hitGeometry, hitMaterial);
     hit.visible = false;
-    hit.name = `event:${event.id}`;
-    hit.userData.event = event;
-    this.hits.set(event.id, hit);
+    hit.name = `pillar:${cluster.id}`;
+    this.hits.set(cluster.id, hit);
+    this.lastZoom = -1; // size the new column on the next frame
     return hit;
+  }
+
+  /** Frees this field's GPU resources (the geometries are shared and kept). */
+  dispose(): void {
+    for (const level of this.levels.values()) {
+      for (const part of level.parts) part.mesh.dispose();
+      for (const material of level.materials) material.dispose();
+    }
+    this.group.removeFromParent();
   }
 
   /** Places an event's hit column on the surface, standing straight outwards. */
@@ -248,8 +271,8 @@ export class PillarField {
     for (const [severity, level] of this.levels) {
       const size = Math.sqrt(SEVERITY_STYLES[severity].size);
       level.anchors.forEach((anchor, index) => {
-        const selected = anchor.event.id === selectedId ? SELECTED_SCALE : 1;
-        const width = size * zoom * selected;
+        const selected = anchor.cluster.id === selectedId ? SELECTED_SCALE : 1;
+        const width = size * zoom * selected * anchor.widen;
         const height = pillarHeight(severity) * heightZoom * selected;
         for (const part of level.parts) {
           if (part.kind === "spot") scale.setScalar(width);
@@ -257,7 +280,7 @@ export class PillarField {
           matrix.compose(anchor.position, anchor.turn, scale);
           part.mesh.setMatrixAt(index, matrix);
         }
-        this.hits.get(anchor.event.id)?.scale.set(width, height, width);
+        this.hits.get(anchor.cluster.id)?.scale.set(width, height, width);
       });
       for (const part of level.parts) part.mesh.instanceMatrix.needsUpdate = true;
     }

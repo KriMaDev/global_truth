@@ -378,6 +378,7 @@ body:not(.no-globe) .event-list-button:focus {
   overflow-y: auto;
   padding: 1.1rem 1.3rem 1.3rem;
   animation: card-in 0.35s var(--ease-out);
+  background: var(--panel-solid);
 }
 
 @keyframes card-in {
@@ -651,6 +652,97 @@ body:not(.no-globe) .event-list-button:focus {
 .reduce-motion *::after {
   animation: none !important;
   transition: none !important;
+}
+
+/* ---------- Groups: count badges and the list card ---------- */
+
+.cluster-badge {
+  min-width: 1.5rem;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--dot-color);
+  border-radius: 2px;
+  background: rgb(5 7 10 / 82%);
+  color: var(--fg);
+  font: 500 0.68rem/1.3 var(--ff-mono);
+  text-align: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    opacity 0.2s ease,
+    background 0.15s ease;
+}
+
+.cluster-badge:hover {
+  background: color-mix(in srgb, var(--dot-color) 30%, rgb(5 7 10 / 90%));
+}
+
+.cluster-badge.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card-back {
+  display: inline-block;
+  margin: 0 0 0.6rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: transparent;
+  font: 500 0.7rem/1.3 var(--ff-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.card-back:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.card-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: rgb(255 255 255 / 2%);
+  text-align: left;
+  cursor: pointer;
+}
+
+.card-list-item:hover {
+  border-color: var(--accent-soft);
+  background: rgb(255 255 255 / 5%);
+}
+
+.card-list-item .card-dot {
+  margin-top: 0.35rem;
+}
+
+.card-list-text {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.card-list-title {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.card-list-meta {
+  color: var(--muted);
+  font: 400 0.7rem/1.4 var(--ff-mono);
+  letter-spacing: 0.03em;
 }
 
 /* ---------- Document pages (legal) ---------- */
