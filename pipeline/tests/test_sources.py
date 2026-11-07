@@ -1,0 +1,188 @@
+"""The three sources, on synthetic data in each feed's format (no real headlines)."""
+
+from datetime import timedelta
+
+from globe_pipeline.outlets import OUTLETS, clean_headline, outlet_for_url
+from globe_pipeline.sources import gdacs, gdelt, usgs
+
+
+def usgs_feature(fid: str, mag: float, lat: float, lng: float, minutes_ago: int, now, alert=None):
+    return {
+        "id": fid,
+        "properties": {
+            "mag": mag,
+            "place": "10 km N of Somewhere",
+            "time": int((now - timedelta(minutes=minutes_ago)).timestamp() * 1000),
+            "alert": alert,
+            "title": f"M {mag} - 10 km N of Somewhere",
+            "url": f"https://earthquake.usgs.gov/earthquakes/eventpage/{fid}",
+            "tsunami": 0,
+            "type": "earthquake",
+        },
+        "geometry": {"coordinates": [lng, lat, 12.0]},
+    }
+
+
+def test_usgs_parse_window_dedupe_and_fields(gazetteer, now) -> None:
+    recent = usgs_feature("a1", 6.2, 42.7, 23.3, 30, now)
+    old = usgs_feature("a2", 5.0, 42.7, 23.3, 60 * 80, now)
+    events = usgs.parse([{"features": [recent, old]}, {"features": [recent]}], gazetteer, now)
+    assert [e.id for e in events] == ["usgs:a1"]
+    event = events[0]
+    assert event.severity.label == "high"
+    assert event.title == "M 6.2 - 10 km N of Somewhere"
+    assert event.place == "10 km N of Somewhere"
+    assert event.geo.country == "Bulgaria"
+    assert event.kind == "data-feed" and event.hazard == "EQ"
+    assert event.snippet.startswith("Magnitude 6.2, depth 12 km")
+
+
+def test_usgs_remote_point(gazetteer, now) -> None:
+    event = usgs.parse(
+        [{"features": [usgs_feature("r", 4.8, -18.2, -12.9, 5, now)]}], gazetteer, now
+    )[0]
+    assert event.geo.precision == "remote"
+    assert event.geo.country is None
+
+
+def gdacs_feature(kind: str, level: str, now, lat=15.4, lng=44.2):
+    return {
+        "geometry": {"coordinates": [lng, lat]},
+        "properties": {
+            "eventtype": kind,
+            "eventid": 99,
+            "name": f"Sample {kind} event",
+            "alertlevel": level,
+            "country": "Yemen",
+            "iso3": "YEM",
+            "fromdate": (now - timedelta(hours=5)).strftime("%Y-%m-%dT%H:%M:%S"),
+            "todate": (now - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%S"),
+            "severitydata": {"severitytext": "Magnitude 5.9M, Depth:10km"},
+            "source": "NEIC",
+            "url": {"report": "https://www.gdacs.org/report.aspx?eventid=99"},
+        },
+    }
+
+
+def test_gdacs_keep_rules() -> None:
+    assert gdacs.keep({"alertlevel": "Orange", "eventtype": "WF"})
+    assert gdacs.keep({"alertlevel": "Green", "eventtype": "EQ"})
+    assert not gdacs.keep({"alertlevel": "Green", "eventtype": "WF"})
+    assert not gdacs.keep({"alertlevel": "Green", "eventtype": "DR"})
+
+
+def test_gdacs_parse(gazetteer, now) -> None:
+    events = gdacs.parse(
+        {"features": [gdacs_feature("FL", "Red", now), gdacs_feature("WF", "Green", now)]},
+        gazetteer,
+        now,
+    )
+    assert len(events) == 1
+    event = events[0]
+    assert event.id == "gdacs:FL99"
+    assert event.severity.label == "critical"
+    assert "derived" in event.severity_reason
+    assert event.geo.city == "Sanaa"
+    assert event.sources[0].name == "GDACS"
+
+
+def gkg_row(
+    url: str, title: str, locations: str, themes: str = "", date: str = "20261107113000"
+) -> str:
+    fields = [""] * 27
+    fields[1] = date
+    fields[3] = "example"
+    fields[4] = url
+    fields[7] = themes
+    fields[10] = locations
+    fields[26] = f"<PAGE_TITLE>{title}</PAGE_TITLE>"
+    return "\t".join(fields)
+
+
+YEMEN = (
+    "1#Yemen#YM#YM##15#48#YM#40;4#Sanaa, Amanat Al Asimah, Yemen#YM#YM26##15.3547#44.2067#-1#120"
+)
+
+
+def test_gdelt_row_becomes_a_placed_news_event(gazetteer, now) -> None:
+    # No listed war word in the headline ("strike" is ambiguous), so GDELT's themes decide.
+    row = gkg_row(
+        "https://www.dw.com/en/sample/a-1",
+        "Sample: 22 killed in strike near Sanaa – DW",
+        YEMEN,
+        "ARMEDCONFLICT;MILITARY;KILL",
+    )
+    events, unplaced = gdelt.parse_rows(row, gazetteer, now)
+    assert unplaced == 0
+    event = events[0]
+    assert event.title == "Sample: 22 killed in strike near Sanaa"
+    assert event.place == "Sanaa, Yemen"
+    assert event.geo.precision == "city"
+    assert event.severity.label == "high"
+    assert event.categories == ["war"]
+    assert event.location_method == "machine-coded"
+    assert event.sources[0].name == "DW"
+    assert event.snippet == ""
+
+
+def test_gdelt_ignores_outlets_not_on_the_allowlist(gazetteer, now) -> None:
+    row = gkg_row("https://example.com/news/1", "Sample: 22 killed in strike near Sanaa", YEMEN)
+    assert gdelt.parse_rows(row, gazetteer, now) == ([], 0)
+
+
+def test_gdelt_country_named_by_adjective_is_country_level(gazetteer, now) -> None:
+    locations = "1#Russian#RS#RS##60#100#RS#10;4#Gay, Orenburg, Russia#RS#RS55##51.47#58.45#-1#300"
+    row = gkg_row(
+        "https://www.aljazeera.com/news/1",
+        "Sample: traders avoid Russian diesel exports",
+        locations,
+        "ECON_TRADE",
+    )
+    event = gdelt.parse_rows(row, gazetteer, now)[0][0]
+    assert event.geo.precision == "country"
+    assert event.geo.country == "Russia"
+
+
+def test_gdelt_unnamed_place_is_not_placed(gazetteer, now) -> None:
+    row = gkg_row(
+        "https://www.aljazeera.com/news/2", "Sample: who will lead the troops next year?", YEMEN
+    )
+    events, unplaced = gdelt.parse_rows(row, gazetteer, now)
+    assert events == [] and unplaced == 1
+
+
+def test_gdelt_coordinates_decide_the_country(gazetteer, now) -> None:
+    # GDELT tags Gaza with Israel's FIPS code; the coordinates say Palestinian Territory.
+    locations = "4#Gaza, Gaza Strip, Israel#IS#IS00##31.5#34.47#-1#50"
+    row = gkg_row(
+        "https://www.aljazeera.com/news/3", "Sample: storm floods tents in Gaza", locations
+    )
+    event = gdelt.parse_rows(row, gazetteer, now)[0][0]
+    assert event.geo.country == "Palestinian Territory"
+
+
+def test_gdelt_stamps_to_fetch(now) -> None:
+    latest = gdelt.parse_stamp("20261107120000")
+    stamps = gdelt.stamps_to_fetch(gdelt.parse_stamp("20261107113000"), latest)
+    assert [gdelt.stamp(s) for s in stamps] == ["20261107114500", "20261107120000"]
+    assert len(gdelt.stamps_to_fetch(None, latest)) == gdelt.MAX_FILES
+
+
+def test_outlet_matching_and_paths() -> None:
+    assert outlet_for_url("https://www.bbc.co.uk/news/world-1").name == "BBC News"
+    assert outlet_for_url("https://www.bbc.co.uk/sport/football/1") is None
+    assert outlet_for_url("https://www.dw.com/de/thema/a-1") is None  # German edition
+    assert outlet_for_url("https://www.thehindu.com/news/cities/x/1.ece") is None
+    assert outlet_for_url("https://notbbc.co.uk.example.com/news") is None
+
+
+def test_headline_cleaning_removes_only_the_outlet_name() -> None:
+    guardian = next(o for o in OUTLETS if o.name == "The Guardian")
+    xinhua = next(o for o in OUTLETS if o.name == "Xinhua")
+    jazeera = next(o for o in OUTLETS if o.name == "Al Jazeera")
+    assert (
+        clean_headline("Floods hit city | World news | The Guardian", guardian) == "Floods hit city"
+    )
+    assert clean_headline("Talks resume: officials-Xinhua", xinhua) == "Talks resume: officials"
+    assert clean_headline("Ship hit | Iran War News | Al Jazeera", jazeera) == "Ship hit"
+    assert clean_headline("Guardian angels honoured", guardian) == "Guardian angels honoured"

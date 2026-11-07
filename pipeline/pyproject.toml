@@ -21,3 +21,6 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF"]
+# RUF001: feeds use typographic dashes, curly quotes and non-Latin letters on purpose.
+# SIM905: a word list written as one split string reads better than a long list literal.
+ignore = ["RUF001", "SIM905"]

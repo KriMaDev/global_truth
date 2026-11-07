@@ -1,1 +1,2 @@
-# Runtime dependencies, pinned. Added in milestone 3 (httpx, feedparser).
+# Runtime dependencies: none. The pipeline uses only Python's standard library
+# (urllib, zipfile, json, csv), so nothing is installed for the scheduled runs.
