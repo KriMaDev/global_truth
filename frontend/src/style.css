@@ -360,7 +360,6 @@ button {
     0 0 8px rgb(0 0 0 / 80%);
   white-space: nowrap;
   pointer-events: none;
-  transition: opacity 0.25s ease;
 }
 
 .map-label.kind-country {
@@ -395,14 +394,12 @@ button {
   text-transform: none;
 }
 
+/* visibility, not opacity: hidden labels are then not painted at all (hundreds of them). */
 .map-label.is-hidden,
 .map-label.is-crowded {
-  opacity: 0;
+  visibility: hidden;
 }
 
-.reduce-motion .map-label {
-  transition: none;
-}
 
 .legend-geo-note {
   display: none;

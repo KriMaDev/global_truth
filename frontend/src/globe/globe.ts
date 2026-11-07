@@ -8,6 +8,7 @@
 
 import Globe from "globe.gl";
 import {
+  MeshBasicMaterial,
   NoColorSpace,
   SRGBColorSpace,
   TextureLoader,
@@ -164,12 +165,25 @@ interface CountryFeature {
   geometry: { type: "MultiPolygon"; coordinates: number[][][][] };
 }
 
-/** A country's tint: its severity colour, or a faint neutral glass without events. */
-function countryColor(severity: Severity | undefined): string {
-  if (!severity) return "rgba(214, 218, 224, 0.05)";
-  const hex = SEVERITY_STYLES[severity].color;
-  const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
-  return `rgba(${r}, ${g}, ${b}, 0.45)`;
+/**
+ * A country's tint: its severity colour, or a faint neutral glass without events. Five
+ * shared, unlit materials for all countries (one each would cost a lot per frame), and
+ * unlit so the colours read the same on the night side.
+ */
+const countryMaterials = new Map<Severity | "none", MeshBasicMaterial>();
+function countryMaterial(severity: Severity | undefined): MeshBasicMaterial {
+  const key = severity ?? "none";
+  let material = countryMaterials.get(key);
+  if (!material) {
+    material = new MeshBasicMaterial({
+      color: severity ? SEVERITY_STYLES[severity].color : "#d6dae0",
+      transparent: true,
+      opacity: severity ? 0.42 : 0.05,
+      depthWrite: false,
+    });
+    countryMaterials.set(key, material);
+  }
+  return material;
 }
 
 /** The count badge at the foot of a group's pillar: a clear click target for the group.
@@ -262,8 +276,9 @@ export async function createGlobeApp(
       labelElements.set(item, element);
       return element;
     })
-    .polygonSideColor(() => "rgba(0, 0, 0, 0)")
-    .polygonStrokeColor(() => "rgba(214, 218, 224, 0.3)")
+    // Flat shapes: no sides, and no outline (the borders are drawn already, see ./lines.ts).
+    .polygonSideColor(() => "")
+    .polygonStrokeColor(() => "")
     .polygonAltitude(COUNTRY_ALTITUDE)
     .polygonsTransitionDuration(0)
     .polygonLabel((d) => {
@@ -499,7 +514,7 @@ export async function createGlobeApp(
       }
       // A new accessor function makes globe.gl recolour the existing shapes.
       globe
-        .polygonCapColor((d) => countryColor(severities.get((d as CountryFeature).iso2)))
+        .polygonCapMaterial((d) => countryMaterial(severities.get((d as CountryFeature).iso2)))
         .polygonsData(data ? countryFeatures : []);
       if (switched) {
         pillars.setFlat(data !== null);
