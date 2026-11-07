@@ -120,10 +120,13 @@ function updateHud(): void {
 }
 
 /** A message that stays visible over the globe (loading problems, empty data), or none. */
-function notice(message: string | null): void {
+let noticeTimer = 0;
+function notice(message: string | null, hideAfterMs?: number): void {
+  window.clearTimeout(noticeTimer);
   status.textContent = message ?? "";
   status.classList.add("notice");
   status.hidden = message === null;
+  if (message !== null && hideAfterMs) noticeTimer = window.setTimeout(() => notice(null), hideAfterMs);
 }
 
 /**
@@ -308,7 +311,11 @@ function applyFilters(): void {
     if (geoView && geoData) app.setGeography(geoData, countrySeverity(events));
     renderEventList(list, events, listHandlers);
     if (allEvents.length > 0 && !loadingHistory) {
-      notice(events.length === 0 ? "No events match these filters." : null);
+      // A short hint when filters leave nothing, unless a whole group was switched off on
+      // purpose ("All off"); the legend keeps saying "Showing 0 of …" with a Clear link.
+      const deliberate = filters.categories.size === 0 || filters.severities.size === 0;
+      if (events.length === 0 && !deliberate) notice("No events match these filters.", 5000);
+      else if (status.textContent === "No events match these filters.") notice(null);
     }
   }
 }

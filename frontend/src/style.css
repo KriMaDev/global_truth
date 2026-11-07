@@ -203,14 +203,24 @@ button {
   transform: translateX(-50%);
 }
 
-/* Hover label from globe.gl (text only, see globe.ts). */
+/* globe.gl's hover box: above the map labels and badges, which three.js's label renderer
+   numbers by depth (inline z-index up to the number of labels). The fixed .globe is its own
+   stacking context, so this stays below the page's panels. No grey frame of its own, since
+   .globe-label draws one. */
+.float-tooltip-kap {
+  z-index: 100000;
+  padding: 0;
+  background: none;
+}
+
+/* Hover label from globe.gl (text only, see globe.ts). Solid, so labels never show through. */
 .globe-label {
   max-width: 18rem;
   padding: 0.45rem 0.65rem;
   border: 1px solid var(--line);
   border-left: 2px solid var(--accent);
   border-radius: 3px;
-  background: var(--panel);
+  background: var(--panel-solid);
   backdrop-filter: blur(8px);
   font-size: 0.85rem;
 }
