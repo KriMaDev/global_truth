@@ -3,7 +3,7 @@
  * so every field is checked before use and anything malformed is dropped, not shown.
  */
 
-import { CATEGORIES, KINDS, SEVERITIES, type GlobeEvent } from "./types";
+import { CATEGORIES, KINDS, PRECISIONS, SEVERITIES, type GlobeEvent } from "./types";
 
 const MAX_TITLE = 300;
 const MAX_SNIPPET = 280;
@@ -27,7 +27,39 @@ function isHttpUrl(value: unknown): value is string {
 }
 
 function isSource(value: unknown): boolean {
-  return isRecord(value) && isText(value.name, 120) && isHttpUrl(value.url);
+  return (
+    isRecord(value) &&
+    isText(value.name, 120) &&
+    isHttpUrl(value.url) &&
+    (value.state_affiliated === undefined || typeof value.state_affiliated === "boolean")
+  );
+}
+
+function isNullableText(value: unknown): boolean {
+  return value === null || (typeof value === "string" && value.length <= 200);
+}
+
+function isGeo(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return (
+    ["continent", "region", "country", "country_code", "admin1", "city"].every((key) =>
+      isNullableText(value[key]),
+    ) && (PRECISIONS as readonly unknown[]).includes(value.precision)
+  );
+}
+
+/** Optional fields: absent, or well formed. */
+function hasValidExtras(value: Record<string, unknown>): boolean {
+  const { severity_reason, feed, hazard, first_seen, coverage, geo, location_method } = value;
+  return (
+    (severity_reason === undefined || isText(severity_reason, 200)) &&
+    (feed === undefined || isText(feed, 20)) &&
+    (hazard === undefined || isNullableText(hazard)) &&
+    (first_seen === undefined || (typeof first_seen === "string" && !Number.isNaN(Date.parse(first_seen)))) &&
+    (coverage === undefined || (Number.isInteger(coverage) && (coverage as number) >= 1)) &&
+    (geo === undefined || isGeo(geo)) &&
+    (location_method === undefined || location_method === "source" || location_method === "machine-coded")
+  );
 }
 
 /** True when `value` is a complete, well-formed event. */
@@ -54,7 +86,9 @@ export function isGlobeEvent(value: unknown): value is GlobeEvent {
     typeof published === "string" &&
     !Number.isNaN(Date.parse(published)) &&
     Array.isArray(sources) &&
-    sources.every(isSource)
+    sources.length > 0 === (kind !== "sample") &&
+    sources.every(isSource) &&
+    hasValidExtras(value)
   );
 }
 

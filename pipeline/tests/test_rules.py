@@ -97,6 +97,14 @@ def test_news_severity(headline: str, expected: Severity) -> None:
     assert reason
 
 
+def test_reasons_quote_the_headline() -> None:
+    assert news_severity("Airstrike kills 22 people")[1] == "Headline reports 22 deaths"
+    assert news_severity("Three dead after storm")[1] == "Headline reports three deaths"
+    assert news_severity("Dozens killed as crisis mounts")[1] == (
+        'Headline reports "Dozens" of deaths (counted as 24)'
+    )
+
+
 def test_headline_words_decide_categories() -> None:
     assert categorize_news(
         "Troops advance as ceasefire collapses", ["ECON_INFLATION", "ECON_TAXATION"]

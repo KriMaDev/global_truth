@@ -110,6 +110,8 @@ NUMBER_WORDS = {
     "hundreds": 200,
     "thousands": 2000,
 }
+#: Words that give no exact count; the reason quotes them with the value they count as.
+VAGUE_NUMBERS = frozenset({"a dozen", "dozens", "scores", "hundreds", "thousands"})
 _NUMBER = r"(\d[\d,]*|" + "|".join(sorted(NUMBER_WORDS, key=len, reverse=True)) + r")"
 _CASUALTY_PATTERNS = (
     # "at least 12 killed", "12 people dead", "dozens of civilians killed", "30 die"
@@ -156,28 +158,36 @@ def _to_number(text: str) -> int:
     return int(word.replace(",", ""))
 
 
-def casualties_in(headline: str) -> int | None:
-    """The largest number of deaths a headline reports, or None."""
-    found = [
-        _to_number(match.group(1))
+def _casualty_matches(headline: str) -> list[tuple[int, str]]:
+    """Every death count in a headline, as (number, the headline's own words for it)."""
+    return [
+        (_to_number(match.group(1)), match.group(1))
         for pattern in _CASUALTY_PATTERNS
         for match in pattern.finditer(headline)
     ]
-    return max(found) if found else None
+
+
+def casualties_in(headline: str) -> int | None:
+    """The largest number of deaths a headline reports, or None."""
+    found = _casualty_matches(headline)
+    return max(number for number, _ in found) if found else None
 
 
 def news_severity(headline: str) -> Rated:
     """Deaths reported in the headline: 1+ moderate, 10+ high, 100+ critical. Otherwise a
     listed hazard term gives moderate, and anything else is low."""
-    deaths = casualties_in(headline)
-    if deaths is not None and deaths >= 1:
+    found = _casualty_matches(headline)
+    if found:
+        deaths, words = max(found)
         if deaths >= 100:
             level = Severity.CRITICAL
         elif deaths >= 10:
             level = Severity.HIGH
         else:
             level = Severity.MODERATE
-        return level, f"Headline reports {deaths:,} or more deaths"
+        if words.lower() in VAGUE_NUMBERS:
+            return level, f'Headline reports "{words}" of deaths (counted as {deaths:,})'
+        return level, f"Headline reports {words.lower()} deaths"
     lowered = headline.lower()
     for term in HAZARD_TERMS:
         if term in lowered:

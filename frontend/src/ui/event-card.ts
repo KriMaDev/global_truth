@@ -1,6 +1,7 @@
 /**
- * The card for one event: headline as published, place, severity, categories, time, snippet
- * and its sources. Built from text nodes only, since every field comes from outside.
+ * The card for one event: the headline as published, place, severity and why, categories,
+ * time, any snippet, notes on where it comes from, and every source with a link. Built from
+ * text nodes only, since every field comes from outside.
  */
 
 import { SEVERITY_STYLES } from "../severity";
@@ -14,6 +15,8 @@ export interface EventCard {
 
 const timeFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
+const FEED_NAMES: Record<string, string> = { usgs: "USGS", gdacs: "GDACS", gdelt: "GDELT" };
+
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   className: string,
@@ -25,13 +28,41 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+function kindLine(event: GlobeEvent): string {
+  const kind = KIND_LABELS[event.kind];
+  if (event.kind === "data-feed" && event.feed && FEED_NAMES[event.feed]) {
+    return `${kind} · ${FEED_NAMES[event.feed]}`;
+  }
+  return kind;
+}
+
+function placeLine(event: GlobeEvent): string {
+  if (event.geo?.precision === "country") return `${event.place} (country level)`;
+  if (event.geo?.precision === "remote") return `${event.place} (remote area or at sea)`;
+  return event.place;
+}
+
+/** Plain notes on where the event comes from, so the reader can judge it. */
+function notes(event: GlobeEvent): string[] {
+  const lines: string[] = [];
+  if (event.kind === "news") {
+    lines.push(`Headline as published by ${event.sources[0]?.name ?? "the outlet"}.`);
+    if (event.location_method === "machine-coded") {
+      lines.push("Location machine-coded by GDELT from the article.");
+    }
+  }
+  if (event.feed === "gdacs" || event.sources.some((s) => s.name === "GDACS")) {
+    lines.push("GDACS alerts are automated estimates. Check official national authorities.");
+  }
+  if (event.kind === "sample") lines.push("No source: this is sample data for the preview.");
+  return lines;
+}
+
 function sourcesBlock(event: GlobeEvent): HTMLElement {
   const block = el("div", "card-sources");
-  if (event.sources.length === 0) {
-    block.append(el("p", "card-note", "No source: this is sample data for the preview."));
-    return block;
-  }
-  block.append(el("h3", "card-subtitle", event.sources.length === 1 ? "Source" : "Sources"));
+  if (event.sources.length === 0) return block;
+  const count = event.coverage ?? event.sources.length;
+  block.append(el("h3", "card-subtitle", count > 1 ? `Reported by ${count}` : "Source"));
   const list = el("ul", "card-source-list");
   for (const source of event.sources) {
     const link = el("a", "", source.name);
@@ -40,6 +71,11 @@ function sourcesBlock(event: GlobeEvent): HTMLElement {
     link.rel = "noopener noreferrer";
     const item = el("li", "");
     item.append(link);
+    if (source.state_affiliated) {
+      const badge = el("span", "badge-state", "State-affiliated");
+      badge.title = "Funded and editorially controlled by a government (see Sources)";
+      item.append(" ", badge);
+    }
     list.append(item);
   }
   block.append(list);
@@ -74,7 +110,7 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
     closeButton.setAttribute("aria-label", "Close");
     closeButton.addEventListener("click", close);
 
-    const kind = el("p", `card-kind kind-${event.kind}`, KIND_LABELS[event.kind]);
+    const kind = el("p", `card-kind kind-${event.kind}`, kindLine(event));
     const title = el("h2", "card-title", event.title);
     title.id = "event-card-title";
     title.tabIndex = -1;
@@ -97,15 +133,18 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
       when,
     );
 
-    root.replaceChildren(
-      closeButton,
-      kind,
-      title,
-      el("p", "card-place", event.place),
-      meta,
-      el("p", "card-snippet", event.snippet),
-      sourcesBlock(event),
-    );
+    const parts: HTMLElement[] = [closeButton, kind, title, el("p", "card-place", placeLine(event)), meta];
+    if (event.severity_reason) parts.push(el("p", "card-reason", `Why ${style.label.toLowerCase()}: ${event.severity_reason}`));
+    if (event.snippet) parts.push(el("p", "card-snippet", event.snippet));
+    const noteLines = notes(event);
+    if (noteLines.length) {
+      const box = el("div", "card-notes");
+      for (const line of noteLines) box.append(el("p", "card-note", line));
+      parts.push(box);
+    }
+    parts.push(sourcesBlock(event));
+
+    root.replaceChildren(...parts);
     root.hidden = false;
     if (focus) title.focus();
   };

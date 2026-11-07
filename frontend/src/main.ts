@@ -1,7 +1,8 @@
 /**
- * The page shell: legend, motion switch, event card and keyboard list appear at once; the 3D
- * globe (three.js, the largest part) is loaded afterwards. Without WebGL, or if the globe
- * fails, the events are shown as a plain list instead, so the page always works.
+ * The page shell: legend, motion switch, event card and keyboard list appear at once; the
+ * events (/data/events.json, written by the pipeline) and the 3D globe (three.js, the largest
+ * part) load afterwards. Without WebGL, or if the globe fails, the events are shown as a plain
+ * list instead; if the events cannot be loaded, the globe still shows and says so.
  */
 
 // The same fonts as krimadev.com (SIL Open Font License): Michroma for the title,
@@ -12,7 +13,6 @@ import "@fontsource/hanken-grotesk/600.css";
 import "@fontsource/jetbrains-mono/400.css";
 import "@fontsource/jetbrains-mono/500.css";
 import "./style.css";
-import sampleEvents from "./data/sample-events.json";
 import { compareBySeverity, parseEvents } from "./events";
 import type { GlobeApp } from "./globe/globe";
 import { attachKeyboard } from "./globe/keyboard";
@@ -38,7 +38,39 @@ function hasWebGL(): boolean {
   }
 }
 
-const events = parseEvents(sampleEvents).sort(compareBySeverity);
+interface Loaded {
+  events: GlobeEvent[];
+  /** When the pipeline wrote the data (ISO), or null for sample data. */
+  generated: string | null;
+  sample: boolean;
+}
+
+async function fetchJson(url: string): Promise<unknown> {
+  const response = await fetch(url, { cache: "no-cache" });
+  if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+  return response.json();
+}
+
+/** The latest events; in development without pipeline data, the sample events instead. */
+async function loadEvents(): Promise<Loaded> {
+  try {
+    const doc = (await fetchJson("/data/events.json")) as { generated?: unknown; events?: unknown };
+    return {
+      events: parseEvents(doc?.events).sort(compareBySeverity),
+      generated: typeof doc?.generated === "string" ? doc.generated : null,
+      sample: false,
+    };
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      const { default: sample } = await import("./data/sample-events.json");
+      return { events: parseEvents(sample).sort(compareBySeverity), generated: null, sample: true };
+    }
+    throw error;
+  }
+}
+
+let events: GlobeEvent[] = [];
+let dataTime: string | null = null;
 const container = byId<HTMLDivElement>("globe");
 const status = byId<HTMLParagraphElement>("status");
 const list = byId<HTMLElement>("event-list");
@@ -50,11 +82,20 @@ function degrees(value: number, positive: string, negative: string): string {
   return `${Math.abs(value).toFixed(1)}°${value >= 0 ? positive : negative}`;
 }
 
-/** The readout: the UTC time the day/night line is drawn for, and where the camera looks. */
+/** The readout: the UTC time the day/night line is drawn for, when the data was updated,
+ * and where the camera looks. */
 function updateHud(): void {
   const utc = new Date().toISOString().slice(11, 16);
+  const data = dataTime ? ` · DATA ${new Date(dataTime).toISOString().slice(11, 16)}` : "";
   const lng = ((((view.lng + 180) % 360) + 360) % 360) - 180;
-  hud.textContent = `UTC ${utc} · ${degrees(view.lat, "N", "S")} ${degrees(lng, "E", "W")} · ALT ${view.altitude.toFixed(1)}`;
+  hud.textContent = `UTC ${utc}${data} · ${degrees(view.lat, "N", "S")} ${degrees(lng, "E", "W")} · ALT ${view.altitude.toFixed(1)}`;
+}
+
+/** A message that stays visible over the globe (loading problems, empty data). */
+function notice(message: string): void {
+  status.textContent = message;
+  status.classList.add("notice");
+  status.hidden = false;
 }
 
 /**
@@ -98,10 +139,17 @@ async function start(): Promise<void> {
   renderLegend(byId("legend"));
   setupMotionToggle(byId<HTMLButtonElement>("motion-toggle"), (on) => app?.setReducedMotion(on));
 
-  if (events.length === 0) {
-    status.textContent = "No events to show right now.";
-    return;
+  let loadFailed = false;
+  try {
+    const loaded = await loadEvents();
+    events = loaded.events;
+    dataTime = loaded.generated;
+    if (loaded.sample) byId("preview-note").hidden = false;
+  } catch (error) {
+    console.error(error);
+    loadFailed = true;
   }
+
   if (!hasWebGL()) {
     showList("This browser cannot show the 3D globe, so the events are listed instead.");
     return;
@@ -128,6 +176,8 @@ async function start(): Promise<void> {
     });
     status.hidden = true;
     container.classList.add("ready");
+    if (loadFailed) notice("Couldn't load the latest events. Please try again in a few minutes.");
+    else if (events.length === 0) notice("No events in the last 72 hours.");
   } catch (error) {
     console.error(error);
     showList("The 3D globe could not start, so the events are listed instead.");

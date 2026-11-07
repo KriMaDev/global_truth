@@ -9,7 +9,7 @@ import {
   NoColorSpace,
   SRGBColorSpace,
   TextureLoader,
-  type Group,
+  type Mesh,
   type PerspectiveCamera,
   type Texture,
   type Vector3,
@@ -19,7 +19,7 @@ import { SEVERITY_STYLES } from "../severity";
 import type { GlobeEvent } from "../types";
 import { createAtmosphere } from "./atmosphere";
 import { createDayNightMaterial, setSunDirection } from "./daynight";
-import { createMarker, placeMarker, updateMarkers, updatePulse } from "./markers";
+import { PillarField } from "./markers";
 import { createStars } from "./stars";
 import { sunPosition } from "./sun";
 
@@ -108,7 +108,6 @@ export async function createGlobeApp(
 ): Promise<GlobeApp> {
   let reducedMotion = options.reducedMotion;
   let selectedId: string | null = null;
-  const markers = new Map<string, Group>();
   const ringEvents = options.events.filter((e) => SEVERITY_STYLES[e.severity].rings);
 
   // No grow-in animation: the atmosphere is a separate object and would not grow with it.
@@ -136,20 +135,19 @@ export async function createGlobeApp(
   resize();
   window.addEventListener("resize", resize);
 
+  // Pillars are drawn in batches; globe.gl's custom layer holds only their invisible hit columns.
+  const pillars = new PillarField(options.events, (lat, lng) => globe.getCoords(lat, lng, LIGHT_ALTITUDE));
+  globe.scene().add(pillars.group);
+
   globe
     .backgroundColor(BACKGROUND)
     .globeMaterial(material)
     .showAtmosphere(false)
     .customLayerData(options.events)
-    .customThreeObject((d) => {
-      const event = d as GlobeEvent;
-      const marker = createMarker(event);
-      markers.set(event.id, marker);
-      return marker;
-    })
+    .customThreeObject((d) => pillars.hitTarget(d as GlobeEvent))
     .customThreeObjectUpdate((obj, d) => {
       const event = d as GlobeEvent;
-      placeMarker(obj as Group, globe.getCoords(event.lat, event.lng, LIGHT_ALTITUDE));
+      pillars.placeHitTarget(obj as Mesh, globe.getCoords(event.lat, event.lng, LIGHT_ALTITUDE));
     })
     .customLayerLabel((d) => labelFor(d as GlobeEvent))
     .onCustomLayerClick((d) => options.onSelect(d as GlobeEvent))
@@ -200,8 +198,8 @@ export async function createGlobeApp(
   // Pulses and pillar sizes: one loop for every light.
   const start = performance.now();
   const tick = (now: number): void => {
-    updatePulse((now - start) / 1000, reducedMotion);
-    updateMarkers(markers.values(), camera.position.length(), selectedId);
+    pillars.pulse((now - start) / 1000, reducedMotion);
+    pillars.update(camera.position.length(), selectedId);
     window.requestAnimationFrame(tick);
   };
   window.requestAnimationFrame(tick);

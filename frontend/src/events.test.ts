@@ -36,6 +36,37 @@ describe("isGlobeEvent", () => {
     expect(isGlobeEvent({ ...valid, ...change })).toBe(false);
   });
 
+  it("accepts the pipeline's full format", () => {
+    const full = {
+      ...valid,
+      severity_reason: "Headline reports 22 or more deaths",
+      feed: "gdelt",
+      hazard: null,
+      first_seen: "2026-11-07T10:05:00Z",
+      coverage: 2,
+      geo: {
+        continent: "Europe",
+        region: "Eastern Europe",
+        country: "Bulgaria",
+        country_code: "BG",
+        admin1: null,
+        city: "Sofia",
+        precision: "city",
+      },
+      location_method: "machine-coded",
+      sources: [{ name: "Example News", url: "https://example.com/a", state_affiliated: true }],
+    };
+    expect(isGlobeEvent(full)).toBe(true);
+    expect(isGlobeEvent({ ...full, geo: { ...full.geo, precision: "street" } })).toBe(false);
+    expect(isGlobeEvent({ ...full, coverage: 0 })).toBe(false);
+    expect(isGlobeEvent({ ...full, location_method: "guessed" })).toBe(false);
+  });
+
+  it("requires a source for real events and none for samples", () => {
+    expect(isGlobeEvent({ ...valid, sources: [] })).toBe(false);
+    expect(isGlobeEvent({ ...valid, kind: "sample", sources: [] })).toBe(true);
+  });
+
   it("drops malformed events and keeps the rest", () => {
     expect(parseEvents([valid, { ...valid, lat: "north" }, null])).toEqual([valid]);
     expect(parseEvents({ not: "a list" })).toEqual([]);

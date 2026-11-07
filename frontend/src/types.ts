@@ -30,6 +30,22 @@ export const KIND_LABELS: Record<EventKind, string> = {
 export interface EventSource {
   name: string;
   url: string;
+  /** Funded and editorially controlled by a government (docs/sources.md). */
+  state_affiliated?: boolean;
+}
+
+export const PRECISIONS = ["city", "region", "country", "remote"] as const;
+export type Precision = (typeof PRECISIONS)[number];
+
+/** Where an event is, as a place hierarchy (for drill-down and the geography view). */
+export interface EventGeo {
+  continent: string | null;
+  region: string | null;
+  country: string | null;
+  country_code: string | null;
+  admin1: string | null;
+  city: string | null;
+  precision: Precision;
 }
 
 export interface GlobeEvent {
@@ -45,7 +61,30 @@ export interface GlobeEvent {
   severity: Severity;
   categories: Category[];
   kind: EventKind;
-  /** ISO 8601 time the source published it. */
+  /** ISO 8601 time the source published it (for news: when GDELT first saw it). */
   published: string;
   sources: EventSource[];
+  /** Why it has this severity, in plain words (docs/severity.md). */
+  severity_reason?: string;
+  /** Which feed it came from: "usgs", "gdacs" or "gdelt". */
+  feed?: string;
+  hazard?: string | null;
+  first_seen?: string;
+  /** How many different outlets or providers report it. */
+  coverage?: number;
+  geo?: EventGeo;
+  /** "source": coordinates from the feed; "machine-coded": worked out from the text. */
+  location_method?: "source" | "machine-coded";
+}
+
+/** One source's health, from feeds.json. */
+export interface FeedStatus {
+  id: string;
+  name: string;
+  kind: string;
+  homepage: string;
+  status: string;
+  last_success?: string;
+  last_attempt?: string;
+  count?: number;
 }

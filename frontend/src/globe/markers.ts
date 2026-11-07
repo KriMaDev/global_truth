@@ -4,24 +4,29 @@
  * pulsing with severity (see ../severity.ts); globe.gl's ring layer adds outward rings for
  * high and critical events (see globe.ts).
  *
- * Materials are shared per severity level and pulse in the shader, so a thousand events
- * still cost a handful of materials.
+ * Drawn with instancing: all pillars of one severity share one mesh per part, so a thousand
+ * events cost twelve draw calls. Clicking and hovering use a separate invisible column per
+ * event, handed to globe.gl's custom layer (hidden objects are still hit-tested, and the
+ * globe itself blocks events on its far side).
  */
 
 import {
   AddEquation,
+  Color,
   CustomBlending,
   CylinderGeometry,
   DoubleSide,
   Group,
+  InstancedMesh,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   OneFactor,
   PlaneGeometry,
-  ShaderMaterial,
-  Color,
   Quaternion,
+  ShaderMaterial,
   Vector3,
+  type BufferGeometry,
 } from "three";
 import { SEVERITY_STYLES } from "../severity";
 import { SEVERITIES, type GlobeEvent, type Severity } from "../types";
@@ -59,8 +64,14 @@ const beamVertex = /* glsl */ `
 
   void main() {
     vUv = uv;
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    vec3 viewNormal = normalize(normalMatrix * normal);
+    vec4 local = vec4(position, 1.0);
+    vec3 n = normal;
+    #ifdef USE_INSTANCING
+      local = instanceMatrix * local;
+      n = mat3(instanceMatrix) * n;
+    #endif
+    vec4 mv = modelViewMatrix * local;
+    vec3 viewNormal = normalize(normalMatrix * n);
     // 1 where the surface faces the camera (the beam's middle), 0 at its edges.
     vFacing = abs(dot(viewNormal, normalize(-mv.xyz)));
     gl_Position = projectionMatrix * mv;
@@ -90,6 +101,18 @@ const beamFragment = /* glsl */ `
   }
 `;
 
+const spotVertex = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    vec4 local = vec4(position, 1.0);
+    #ifdef USE_INSTANCING
+      local = instanceMatrix * local;
+    #endif
+    gl_Position = projectionMatrix * modelViewMatrix * local;
+  }
+`;
+
 const spotFragment = /* glsl */ `
   uniform vec3 color;
   uniform float time;
@@ -107,20 +130,6 @@ const spotFragment = /* glsl */ `
   }
 `;
 
-const spotVertex = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-interface LevelMaterials {
-  core: ShaderMaterial;
-  glow: ShaderMaterial;
-  spot: ShaderMaterial;
-}
-
 function uniformsFor(severity: Severity, strength: number) {
   return {
     color: { value: new Color(SEVERITY_STYLES[severity].color) },
@@ -130,111 +139,127 @@ function uniformsFor(severity: Severity, strength: number) {
   };
 }
 
-const materials = new Map<Severity, LevelMaterials>();
-
-function materialsFor(severity: Severity): LevelMaterials {
-  let set = materials.get(severity);
-  if (!set) {
-    set = {
-      core: new ShaderMaterial({
-        uniforms: uniformsFor(severity, 2.0),
-        vertexShader: beamVertex,
-        fragmentShader: beamFragment,
-        ...lightBlending,
-      }),
-      glow: new ShaderMaterial({
-        uniforms: uniformsFor(severity, 0.7),
-        vertexShader: beamVertex,
-        fragmentShader: beamFragment,
-        ...lightBlending,
-      }),
-      spot: new ShaderMaterial({
-        uniforms: uniformsFor(severity, 1),
-        vertexShader: spotVertex,
-        fragmentShader: spotFragment,
-        side: DoubleSide,
-        ...lightBlending,
-      }),
-    };
-    materials.set(severity, set);
-  }
-  return set;
-}
-
-/** An invisible, wider column so a thin pillar is easy to click or tap. */
-const hitMaterial = new MeshBasicMaterial({ colorWrite: false, depthWrite: false });
-
 // Shared geometries, built standing on the ground (y = 0) and 1 unit tall, so scaling y
 // sets the height.
 const coreGeometry = new CylinderGeometry(CORE_RADIUS, CORE_RADIUS * 0.6, 1, 10, 1, true).translate(0, 0.5, 0);
 const glowGeometry = new CylinderGeometry(GLOW_RADIUS * 0.55, GLOW_RADIUS, 1, 20, 1, true).translate(0, 0.5, 0);
 const spotGeometry = new PlaneGeometry(SPOT_SIZE, SPOT_SIZE).rotateX(-Math.PI / 2).translate(0, 0.05, 0);
 const hitGeometry = new CylinderGeometry(HIT_RADIUS, HIT_RADIUS, 1, 8).translate(0, 0.5, 0);
+const hitMaterial = new MeshBasicMaterial();
 
-/** The pillar for one event, standing on the local +Y axis. */
-export function createMarker(event: GlobeEvent): Group {
-  const set = materialsFor(event.severity);
-  const marker = new Group();
-  marker.name = `event:${event.id}`;
-  marker.userData.event = event;
+interface Anchor {
+  event: GlobeEvent;
+  position: Vector3;
+  turn: Quaternion;
+}
 
-  const spot = new Mesh(spotGeometry, set.spot);
-  spot.name = "spot";
-  const glow = new Mesh(glowGeometry, set.glow);
-  glow.name = "glow";
-  const core = new Mesh(coreGeometry, set.core);
-  core.name = "core";
-  const hit = new Mesh(hitGeometry, hitMaterial);
-  hit.name = "hit";
-  for (const part of [spot, glow, core]) part.renderOrder = 2;
-  marker.add(spot, glow, core, hit);
-  return marker;
+interface Level {
+  anchors: Anchor[];
+  parts: { mesh: InstancedMesh; kind: "beam" | "spot" }[];
+  materials: ShaderMaterial[];
 }
 
 const UP = new Vector3(0, 1, 0);
-const outward = new Vector3();
-const turn = new Quaternion();
+const matrix = new Matrix4();
+const scale = new Vector3();
 
-/** Places a pillar at `position` (on the globe's surface), standing straight outwards. */
-export function placeMarker(marker: Group, position: { x: number; y: number; z: number }): void {
-  marker.position.set(position.x, position.y, position.z);
-  outward.set(position.x, position.y, position.z).normalize();
-  marker.quaternion.copy(turn.setFromUnitVectors(UP, outward));
-}
+/** Every pillar on the globe, drawn in a handful of instanced meshes. */
+export class PillarField {
+  readonly group = new Group();
+  private readonly levels = new Map<Severity, Level>();
+  private readonly hits = new Map<string, Mesh>();
+  private lastZoom = -1;
+  private lastSelected: string | null = null;
 
-/** Advances the shared pulse; with reduced motion the pillars stay still. */
-export function updatePulse(seconds: number, reducedMotion: boolean): void {
-  for (const level of SEVERITIES) {
-    const set = materials.get(level);
-    if (!set) continue;
-    const period = reducedMotion ? 0 : (SEVERITY_STYLES[level].pulseSeconds ?? 0);
-    for (const material of [set.core, set.glow, set.spot]) {
-      material.uniforms.time.value = seconds;
-      material.uniforms.period.value = period;
+  /** `coords` turns latitude and longitude into a point on the globe's surface. */
+  constructor(
+    events: GlobeEvent[],
+    coords: (lat: number, lng: number) => { x: number; y: number; z: number },
+  ) {
+    this.group.name = "pillars";
+    for (const severity of SEVERITIES) {
+      const anchors = events
+        .filter((e) => e.severity === severity)
+        .map((event) => {
+          const p = coords(event.lat, event.lng);
+          const position = new Vector3(p.x, p.y, p.z);
+          return { event, position, turn: new Quaternion().setFromUnitVectors(UP, position.clone().normalize()) };
+        });
+      if (anchors.length === 0) continue;
+      const core = new ShaderMaterial({ uniforms: uniformsFor(severity, 2.0), vertexShader: beamVertex, fragmentShader: beamFragment, ...lightBlending });
+      const glow = new ShaderMaterial({ uniforms: uniformsFor(severity, 0.7), vertexShader: beamVertex, fragmentShader: beamFragment, ...lightBlending });
+      const spot = new ShaderMaterial({ uniforms: uniformsFor(severity, 1), vertexShader: spotVertex, fragmentShader: spotFragment, side: DoubleSide, ...lightBlending });
+      const make = (geometry: BufferGeometry, material: ShaderMaterial): InstancedMesh => {
+        const mesh = new InstancedMesh(geometry, material, anchors.length);
+        mesh.frustumCulled = false;
+        mesh.renderOrder = 2;
+        this.group.add(mesh);
+        return mesh;
+      };
+      this.levels.set(severity, {
+        anchors,
+        parts: [
+          { mesh: make(spotGeometry, spot), kind: "spot" },
+          { mesh: make(glowGeometry, glow), kind: "beam" },
+          { mesh: make(coreGeometry, core), kind: "beam" },
+        ],
+        materials: [core, glow, spot],
+      });
     }
   }
-}
 
-/**
- * Sets every pillar's size for this frame: its severity, the camera's distance (pillars
- * stay slim when zooming in and visible when zooming out) and the selection.
- */
-export function updateMarkers(
-  markers: Iterable<Group>,
-  cameraDistance: number,
-  selectedId: string | null,
-): void {
-  const zoom = Math.min(1.3, Math.max(0.3, cameraDistance / REFERENCE_DISTANCE));
-  const heightZoom = Math.min(1.2, Math.max(0.5, zoom));
-  for (const marker of markers) {
-    const event = marker.userData.event as GlobeEvent;
-    const style = SEVERITY_STYLES[event.severity];
-    const selected = event.id === selectedId ? SELECTED_SCALE : 1;
-    const width = Math.sqrt(style.size) * zoom * selected;
-    const height = pillarHeight(event.severity) * heightZoom * selected;
-    for (const part of marker.children) {
-      if (part.name === "spot") part.scale.setScalar(Math.sqrt(style.size) * zoom * selected);
-      else part.scale.set(width, height, width);
+  /** The invisible, easy-to-hit column for one event (for globe.gl's custom layer). */
+  hitTarget(event: GlobeEvent): Mesh {
+    const hit = new Mesh(hitGeometry, hitMaterial);
+    hit.visible = false;
+    hit.name = `event:${event.id}`;
+    hit.userData.event = event;
+    this.hits.set(event.id, hit);
+    return hit;
+  }
+
+  /** Places an event's hit column on the surface, standing straight outwards. */
+  placeHitTarget(hit: Mesh, position: { x: number; y: number; z: number }): void {
+    hit.position.set(position.x, position.y, position.z);
+    hit.quaternion.setFromUnitVectors(UP, hit.position.clone().normalize());
+  }
+
+  /** Advances the shared pulse; with reduced motion the pillars stay still. */
+  pulse(seconds: number, reducedMotion: boolean): void {
+    for (const [severity, level] of this.levels) {
+      const period = reducedMotion ? 0 : (SEVERITY_STYLES[severity].pulseSeconds ?? 0);
+      for (const material of level.materials) {
+        material.uniforms.time.value = seconds;
+        material.uniforms.period.value = period;
+      }
+    }
+  }
+
+  /**
+   * Sizes every pillar for the camera's distance (slim when zoomed in, visible when zoomed
+   * out) and the selection. Only recomputed when either changes noticeably.
+   */
+  update(cameraDistance: number, selectedId: string | null): void {
+    const zoom = Math.min(1.3, Math.max(0.3, cameraDistance / REFERENCE_DISTANCE));
+    if (Math.abs(zoom - this.lastZoom) < 0.005 && selectedId === this.lastSelected) return;
+    this.lastZoom = zoom;
+    this.lastSelected = selectedId;
+    const heightZoom = Math.min(1.2, Math.max(0.5, zoom));
+    for (const [severity, level] of this.levels) {
+      const size = Math.sqrt(SEVERITY_STYLES[severity].size);
+      level.anchors.forEach((anchor, index) => {
+        const selected = anchor.event.id === selectedId ? SELECTED_SCALE : 1;
+        const width = size * zoom * selected;
+        const height = pillarHeight(severity) * heightZoom * selected;
+        for (const part of level.parts) {
+          if (part.kind === "spot") scale.setScalar(width);
+          else scale.set(width, height, width);
+          matrix.compose(anchor.position, anchor.turn, scale);
+          part.mesh.setMatrixAt(index, matrix);
+        }
+        this.hits.get(anchor.event.id)?.scale.set(width, height, width);
+      });
+      for (const part of level.parts) part.mesh.instanceMatrix.needsUpdate = true;
     }
   }
 }

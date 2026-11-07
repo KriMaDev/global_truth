@@ -181,6 +181,23 @@ button {
   text-transform: uppercase;
 }
 
+/* A message over the ready globe (data could not load, or there is none). */
+.status.notice {
+  top: 6rem;
+  z-index: 12;
+  transform: translateX(-50%);
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--ember);
+  border-radius: 3px;
+  background: var(--panel-solid);
+  color: var(--fg);
+}
+
+.preview-note[hidden] {
+  display: none;
+}
+
 .no-globe .status {
   top: 6rem;
   transform: translateX(-50%);
@@ -446,6 +463,34 @@ body:not(.no-globe) .event-list-button:focus {
 
 .card-snippet {
   margin: 0 0 0.9rem;
+}
+
+.card-reason {
+  margin: -0.4rem 0 0.9rem;
+  color: var(--muted);
+  font: 400 0.75rem/1.5 var(--ff-mono);
+  letter-spacing: 0.02em;
+}
+
+.card-notes {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0 0 0.9rem;
+  padding: 0.55rem 0.7rem;
+  border-left: 2px solid var(--accent);
+  background: rgb(255 255 255 / 3%);
+}
+
+.badge-state {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--ember);
+  border-radius: 2px;
+  color: var(--ember);
+  font: 500 0.62rem/1.4 var(--ff-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  vertical-align: 0.1em;
 }
 
 .card-subtitle {
