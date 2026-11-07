@@ -18,7 +18,7 @@
      to the open event's severity colour (set by main.ts). */
   --bg: #05070a;
   --panel: rgb(14 17 20 / 74%);
-  --panel-solid: rgb(12 14 17 / 94%);
+  --panel-solid: rgb(12 14 17 / 97%);
   --fg: #ebe8e1;
   --muted: #a6a8a3;
   --faint: #3a3f44;
@@ -654,6 +654,111 @@ body:not(.no-globe) .event-list-button:focus {
   transition: none !important;
 }
 
+/* ---------- Filters ---------- */
+
+.topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.motion-toggle[aria-expanded="true"] {
+  color: var(--accent);
+  border-color: var(--accent-soft);
+}
+
+.filter-panel {
+  position: fixed;
+  top: 5.2rem;
+  right: var(--gutter);
+  z-index: 21;
+  width: min(26rem, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 6.5rem);
+  overflow-y: auto;
+  padding: 0.9rem 1.1rem 1.1rem;
+  background: var(--panel-solid);
+  animation: card-in 0.3s var(--ease-out);
+}
+
+.filter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filter-head .label {
+  margin: 0;
+}
+
+.filter-head .card-close {
+  position: static;
+  float: none;
+  margin: 0;
+}
+
+.filter-label {
+  margin: 1rem 0 0.45rem;
+  color: var(--muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--fg);
+}
+
+.chip-count {
+  color: var(--muted);
+  font: 400 0.7rem/1 var(--ff-mono);
+}
+
+.filter-clear {
+  margin-top: 1.1rem;
+}
+
+.filter-clear:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.legend-summary {
+  margin: 0.4rem 0 0;
+  color: var(--accent);
+  font: 400 0.7rem/1.4 var(--ff-mono);
+  letter-spacing: 0.04em;
+}
+
+.legend-summary button {
+  margin-left: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* ---------- Groups: count badges and the list card ---------- */
 
 .cluster-badge {
@@ -903,7 +1008,8 @@ body.page {
   }
 
   /* Just above the legend, never over it, and solid enough to read over the globe. */
-  .event-card {
+  .event-card,
+  .filter-panel {
     top: auto;
     left: var(--gutter);
     right: var(--gutter);

@@ -15,13 +15,24 @@ import "@fontsource/jetbrains-mono/500.css";
 import "./style.css";
 import { compareBySeverity, parseEvents } from "./events";
 import type { Cluster } from "./clusters";
+import {
+  defaultFilters,
+  fromQuery,
+  isDefault,
+  matchesExceptTime,
+  toQuery,
+  windowOf,
+  type FilterState,
+} from "./filters";
+import { CATEGORIES, SEVERITIES } from "./types";
+import { createFilterPanel, type Counts } from "./ui/filter-panel";
 import type { GlobeApp } from "./globe/globe";
 import { attachKeyboard } from "./globe/keyboard";
 import { SEVERITY_STYLES } from "./severity";
 import type { GlobeEvent } from "./types";
 import { createEventCard } from "./ui/event-card";
 import { renderEventList } from "./ui/event-list";
-import { renderLegend } from "./ui/legend";
+import { renderLegend, renderSummary } from "./ui/legend";
 import { initialReducedMotion, setupMotionToggle } from "./ui/motion";
 
 function byId<T extends HTMLElement>(id: string): T {
@@ -70,7 +81,10 @@ async function loadEvents(): Promise<Loaded> {
   }
 }
 
+/** Every event loaded, and those that pass the filters. */
+let allEvents: GlobeEvent[] = [];
 let events: GlobeEvent[] = [];
+let filters: FilterState = fromQuery(window.location.search);
 let dataTime: string | null = null;
 const container = byId<HTMLDivElement>("globe");
 const status = byId<HTMLParagraphElement>("status");
@@ -92,11 +106,11 @@ function updateHud(): void {
   hud.textContent = `UTC ${utc}${data} · ${degrees(view.lat, "N", "S")} ${degrees(lng, "E", "W")} · ALT ${view.altitude.toFixed(1)}`;
 }
 
-/** A message that stays visible over the globe (loading problems, empty data). */
-function notice(message: string): void {
-  status.textContent = message;
+/** A message that stays visible over the globe (loading problems, empty data), or none. */
+function notice(message: string | null): void {
+  status.textContent = message ?? "";
   status.classList.add("notice");
-  status.hidden = false;
+  status.hidden = message === null;
 }
 
 /**
@@ -122,7 +136,78 @@ const card = createEventCard(byId("event-card"), () => {
   setAccent(null);
 });
 
+const panel = createFilterPanel(
+  byId("filter-panel"),
+  byId<HTMLButtonElement>("filter-toggle"),
+  (change) => {
+    filters = { ...filters, ...change };
+    applyFilters();
+  },
+  () => {
+    filters = defaultFilters();
+    applyFilters();
+  },
+  () => card.close(),
+);
+
+/** How many kinds of filter are on (categories, severities, time, place). */
+function activeFilters(state: FilterState): number {
+  const fresh = defaultFilters();
+  return [
+    state.categories.size !== fresh.categories.size,
+    state.severities.size !== fresh.severities.size,
+    state.range !== fresh.range || state.end !== null,
+    state.place.length > 0,
+  ].filter(Boolean).length;
+}
+
+/** Event counts for the chips: each chip counts the events it would show, given the other
+ * filters. */
+function chipCounts(inWindow: GlobeEvent[]): Counts {
+  const categories = Object.fromEntries(CATEGORIES.map((c) => [c, 0])) as Counts["categories"];
+  const severities = Object.fromEntries(SEVERITIES.map((s) => [s, 0])) as Counts["severities"];
+  for (const event of inWindow) {
+    if (matchesExceptTime(event, { ...filters, categories: new Set(CATEGORIES) })) {
+      for (const category of event.categories) categories[category] += 1;
+    }
+    if (matchesExceptTime(event, { ...filters, severities: new Set(SEVERITIES) })) {
+      severities[event.severity] += 1;
+    }
+  }
+  return { categories, severities };
+}
+
+const listHandlers = {
+  onFocus: (event: GlobeEvent) => {
+    app?.select(event.id);
+    app?.flyTo(event);
+  },
+  onOpen: (event: GlobeEvent) => openEvent(event, true),
+};
+
+/** Applies the filters to every part of the page and to the web address. */
+function applyFilters(): void {
+  const { from, to } = windowOf(filters, Date.now());
+  const inWindow = allEvents.filter((e) => {
+    const time = Date.parse(e.published);
+    return time >= from && time <= to;
+  });
+  events = inWindow.filter((e) => matchesExceptTime(e, filters)).sort(compareBySeverity);
+  panel.render(filters, chipCounts(inWindow), activeFilters(filters));
+  renderSummary(events.length, allEvents.length, !isDefault(filters), () => {
+    filters = defaultFilters();
+    applyFilters();
+  });
+  window.history.replaceState(null, "", window.location.pathname + toQuery(filters));
+  if (app) {
+    app.setEvents(events);
+    renderEventList(list, events, listHandlers);
+    if (allEvents.length > 0) notice(events.length === 0 ? "No events match these filters." : null);
+  }
+}
+
 function openEvent(event: GlobeEvent, focus: boolean, back?: () => void): void {
+  panel.close();
   app?.select(event.id);
   if (!back) app?.flyTo(event);
   setAccent(SEVERITY_STYLES[event.severity].color);
@@ -135,6 +220,7 @@ function openCluster(cluster: Cluster, focus: boolean): void {
     openEvent(cluster.lead, focus);
     return;
   }
+  panel.close();
   app?.select(cluster.id);
   app?.flyTo(cluster);
   setAccent(SEVERITY_STYLES[cluster.severity].color);
@@ -170,13 +256,14 @@ async function start(): Promise<void> {
   let loadFailed = false;
   try {
     const loaded = await loadEvents();
-    events = loaded.events;
+    allEvents = loaded.events;
     dataTime = loaded.generated;
     if (loaded.sample) byId("preview-note").hidden = false;
   } catch (error) {
     console.error(error);
     loadFailed = true;
   }
+  applyFilters();
 
   if (!hasWebGL()) {
     showList("This browser cannot show the 3D globe, so the events are listed instead.");
@@ -195,17 +282,11 @@ async function start(): Promise<void> {
     });
     window.setInterval(updateHud, 30_000);
     attachKeyboard(container, app);
-    renderEventList(list, events, {
-      onFocus: (event) => {
-        app?.select(event.id);
-        app?.flyTo(event);
-      },
-      onOpen: (event) => openEvent(event, true),
-    });
     status.hidden = true;
     container.classList.add("ready");
+    applyFilters();
     if (loadFailed) notice("Couldn't load the latest events. Please try again in a few minutes.");
-    else if (events.length === 0) notice("No events in the last 72 hours.");
+    else if (allEvents.length === 0) notice("No events in the last 7 days.");
   } catch (error) {
     console.error(error);
     showList("The 3D globe could not start, so the events are listed instead.");

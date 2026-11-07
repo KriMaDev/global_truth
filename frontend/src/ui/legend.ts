@@ -47,5 +47,24 @@ export function renderLegend(root: HTMLElement): void {
   link.target = "_blank";
   link.rel = "noopener";
 
-  root.replaceChildren(heading, list, link);
+  const summary = document.createElement("p");
+  summary.className = "legend-summary";
+  summary.id = "legend-summary";
+  summary.setAttribute("aria-live", "polite");
+  summary.hidden = true;
+
+  root.replaceChildren(heading, list, link, summary);
+}
+
+/** "Showing 37 of 412 events · Clear filters" while filters are on; hidden otherwise. */
+export function renderSummary(shown: number, total: number, filtered: boolean, onClear: () => void): void {
+  const summary = document.getElementById("legend-summary");
+  if (!summary) return;
+  summary.hidden = !filtered;
+  if (!filtered) return;
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.textContent = "Clear";
+  clear.addEventListener("click", onClear);
+  summary.replaceChildren(`Showing ${shown} of ${total} events`, clear);
 }
