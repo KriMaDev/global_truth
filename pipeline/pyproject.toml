@@ -1,0 +1,23 @@
+[project]
+name = "globe-pipeline"
+version = "0.1.0"
+description = "Fetches, normalizes, geocodes, categorizes and rates world news for World News Globe."
+license = "MIT"
+authors = [{ name = "KriMa" }]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.urls]
+Homepage = "https://globe.krimadev.com"
+Source = "https://github.com/KriMaDev/global_truth"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF"]

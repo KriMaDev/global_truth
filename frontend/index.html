@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>World News Globe</title>
+    <meta
+      name="description"
+      content="Honest, sourced world news on an interactive 3D globe. Coming soon."
+    />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="stars" aria-hidden="true"></canvas>
+    <main class="card">
+      <p class="eyebrow">globe.krimadev.com</p>
+      <h1>World News Globe</h1>
+      <p class="lead">
+        Current world events on an interactive 3D globe, as lights coloured by severity.
+        Every story links to its original source. No opinions, no rewritten headlines.
+      </p>
+      <p class="status">Coming soon. Built in the open.</p>
+      <ul class="legend" aria-label="Severity scale preview">
+        <li><span class="dot low" aria-hidden="true"></span>Low</li>
+        <li><span class="dot moderate" aria-hidden="true"></span>Moderate</li>
+        <li><span class="dot high" aria-hidden="true"></span>High</li>
+        <li><span class="dot critical" aria-hidden="true"></span>Critical</li>
+      </ul>
+      <p class="links">
+        <a href="https://github.com/KriMaDev/global_truth">Source code</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://krimadev.com">krimadev.com</a>
+      </p>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

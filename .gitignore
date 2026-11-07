@@ -1,0 +1,37 @@
+# Dependencies and build output
+node_modules/
+frontend/dist/
+.wrangler/
+
+# Data written by the pipeline (published by the deploy, never committed)
+frontend/public/data/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Downloads kept between pipeline runs (GeoNames etc.)
+.cache/
+
+# Secrets: never commit these. Document variable names in .env.example only.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs
+*.log
+
+# Editor, tool and operating system files
+.claude/
+.vscode/
+.idea/
+*.code-workspace
+desktop.ini
+Thumbs.db
+.DS_Store

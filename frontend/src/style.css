@@ -1,0 +1,148 @@
+/* Severity palette (Okabe-Ito, colourblind-safe). Keep in sync with docs/severity.md. */
+:root {
+  --sev-low: #56b4e9;
+  --sev-moderate: #f0e442;
+  --sev-high: #e69f00;
+  --sev-critical: #d55e00;
+
+  --bg: #03050b;
+  --text: #e8ecf4;
+  --muted: #9aa4b8;
+  --card: rgb(12 16 28 / 72%);
+  --border: rgb(255 255 255 / 10%);
+  --accent: #8fd3ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 16px;
+}
+
+#stars {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  max-width: 34rem;
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+  backdrop-filter: blur(8px);
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+}
+
+h1 {
+  margin: 0.25rem 0 1rem;
+  font-size: clamp(1.8rem, 6vw, 2.6rem);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.lead {
+  margin: 0 0 1rem;
+  color: var(--text);
+}
+
+.status {
+  margin: 0 0 1.5rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.25rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Size grows with severity, so colour is never the only signal. */
+.dot {
+  display: inline-block;
+  border-radius: 50%;
+}
+.dot.low {
+  width: 8px;
+  height: 8px;
+  background: var(--sev-low);
+  box-shadow: 0 0 6px var(--sev-low);
+}
+.dot.moderate {
+  width: 10px;
+  height: 10px;
+  background: var(--sev-moderate);
+  box-shadow: 0 0 8px var(--sev-moderate);
+}
+.dot.high {
+  width: 12px;
+  height: 12px;
+  background: var(--sev-high);
+  box-shadow: 0 0 10px var(--sev-high);
+}
+.dot.critical {
+  width: 14px;
+  height: 14px;
+  background: var(--sev-critical);
+  box-shadow: 0 0 12px var(--sev-critical);
+}
+
+.links {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+a {
+  color: var(--accent);
+}
+
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}

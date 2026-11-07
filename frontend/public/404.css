@@ -1,0 +1,15 @@
+body {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  margin: 0;
+  padding: 16px;
+  background: #03050b;
+  color: #e8ecf4;
+  font-family: system-ui, sans-serif;
+  text-align: center;
+}
+
+a {
+  color: #8fd3ff;
+}

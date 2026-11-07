@@ -1,0 +1,17 @@
+// Cloudflare Workers static assets: the site is plain files, no server code.
+// Deployed the same way as krimadev.com (see docs/deploy.md).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "world-news-globe",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    // Output of `npm run build`.
+    "directory": "./frontend/dist",
+    "not_found_handling": "404-page"
+  },
+  // A custom domain route: Cloudflare creates the DNS record and certificate itself.
+  "routes": [{ "pattern": "globe.krimadev.com", "custom_domain": true }],
+  // No second copy of the site on *.workers.dev.
+  "workers_dev": false,
+  "preview_urls": false
+}

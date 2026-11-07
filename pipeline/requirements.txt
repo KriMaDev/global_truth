@@ -1,0 +1,1 @@
+# Runtime dependencies, pinned. Added in milestone 3 (httpx, feedparser).

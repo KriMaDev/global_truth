@@ -1,0 +1,22 @@
+{
+  "name": "world-news-globe",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "author": "KriMa (https://krimadev.com)",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "vite frontend",
+    "typecheck": "tsc -p frontend",
+    "build": "npm run typecheck && vite build frontend",
+    "preview": "vite preview frontend",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "wrangler": "4.152.0"
+  }
+}
