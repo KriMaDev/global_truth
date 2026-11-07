@@ -21,7 +21,7 @@ from .cluster import cluster
 from .geocode import Gazetteer
 from .models import Event, iso
 from .outlets import MAX_EVENTS_PER_OUTLET
-from .output import FeedStatus, Previous, load_previous, within_window, write
+from .output import FeedStatus, Previous, day_of, load_previous, within_window, write
 from .sources import gdacs, gdelt, usgs
 
 LOG = logging.getLogger("globe_pipeline")
@@ -58,13 +58,13 @@ def _run_feed(
 
 
 def balance_outlets(events: list[Event], limit: int = MAX_EVENTS_PER_OUTLET) -> list[Event]:
-    """Keeps at most `limit` news events led by each outlet: the most severe, then the most
-    widely reported, then the newest. Data-feed events are never dropped."""
+    """Keeps at most `limit` news events led by each outlet per UTC day: the most severe,
+    then the most widely reported, then the newest. Data-feed events are never dropped."""
     kept: list[Event] = [e for e in events if e.kind != "news"]
-    by_outlet: dict[str, list[Event]] = {}
+    by_outlet: dict[tuple[str, str], list[Event]] = {}
     for event in events:
         if event.kind == "news":
-            by_outlet.setdefault(event.sources[0].name, []).append(event)
+            by_outlet.setdefault((event.sources[0].name, day_of(event)), []).append(event)
     for group in by_outlet.values():
         group.sort(key=lambda e: (-int(e.severity), -e.coverage, -e.published.timestamp()))
         kept.extend(group[:limit])

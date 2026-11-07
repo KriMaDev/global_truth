@@ -736,6 +736,34 @@ body:not(.no-globe) .event-list-button:focus {
   margin-top: 1.1rem;
 }
 
+.timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.timeline-row .card-back {
+  margin: 0;
+}
+
+.timeline-row .card-back:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.timeline-slider {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.timeline-readout {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font: 400 0.7rem/1.5 var(--ff-mono);
+  letter-spacing: 0.02em;
+}
+
 .filter-clear:disabled {
   opacity: 0.4;
   cursor: default;

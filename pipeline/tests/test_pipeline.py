@@ -12,7 +12,7 @@ from globe_pipeline import run as run_module
 from globe_pipeline.cluster import cluster, headline_words, similarity
 from globe_pipeline.models import Event, Geo, Source
 from globe_pipeline.outlets import OUTLETS
-from globe_pipeline.output import load_previous, within_window
+from globe_pipeline.output import load_previous, within_window, write
 from globe_pipeline.severity import Severity
 
 REPO = Path(__file__).resolve().parents[2]
@@ -86,10 +86,11 @@ def test_merge_keeps_highest_severity(now) -> None:
     assert cluster([a, b])[0].severity == Severity.HIGH
 
 
-def test_window_drops_old_events(now) -> None:
+def test_window_keeps_seven_days(now) -> None:
     fresh = news("f", "Fresh story here today", "dw", now, 60)
-    old = news("o", "Old story from last week", "dw", now, 73 * 60)
-    assert [e.id for e in within_window([fresh, old], now)] == ["f"]
+    last_week = news("w", "Story from six days ago", "dw", now, 6 * 24 * 60)
+    old = news("o", "Story from eight days ago", "dw", now, 8 * 24 * 60)
+    assert [e.id for e in within_window([fresh, last_week, old], now)] == ["f", "w"]
 
 
 def test_outlet_balance_keeps_most_severe(now) -> None:
@@ -98,6 +99,42 @@ def test_outlet_balance_keeps_most_severe(now) -> None:
     kept = run_module.balance_outlets(events, limit=2)
     assert len(kept) == 2
     assert kept[0].id == "n3"
+
+
+def test_outlet_balance_is_per_day(now) -> None:
+    today = [news(f"t{i}", f"Today story {i} words", "hindu", now, i) for i in range(3)]
+    yesterday = [
+        news(f"y{i}", f"Earlier story {i} words", "hindu", now, 24 * 60 + i) for i in range(3)
+    ]
+    kept = run_module.balance_outlets(today + yesterday, limit=2)
+    assert sorted(e.id[0] for e in kept) == ["t", "t", "y", "y"]
+
+
+def test_day_files_and_index(tmp_path, now) -> None:
+    events = [
+        news("a", "Story published today", "dw", now, 60),
+        news("b", "Story from two days ago", "dw", now, 2 * 24 * 60),
+        news("c", "Story from five days ago", "dw", now, 5 * 24 * 60),
+    ]
+    write(tmp_path, events, [], now, None)
+    recent = json.loads((tmp_path / "events.json").read_text(encoding="utf-8"))
+    assert sorted(e["id"] for e in recent["events"]) == ["a", "b"]  # last 72 hours only
+    index = json.loads((tmp_path / "days" / "index.json").read_text(encoding="utf-8"))
+    assert [d["day"] for d in index["days"]] == ["2026-11-07", "2026-11-05", "2026-11-02"]
+    day = json.loads((tmp_path / "days" / "2026-11-02.json").read_text(encoding="utf-8"))
+    assert [e["id"] for e in day["events"]] == ["c"]
+    # A later run drops the day files that fell out of the window.
+    write(tmp_path, events[:1], [], now, None)
+    assert not (tmp_path / "days" / "2026-11-02.json").exists()
+
+
+def test_previous_days_are_read_back(tmp_path, now) -> None:
+    events = [
+        news("a", "Story published today", "dw", now, 60),
+        news("c", "Old story", "dw", now, 5 * 24 * 60),
+    ]
+    write(tmp_path, events, [], now, None)
+    assert sorted(e.id for e in load_previous(str(tmp_path)).events) == ["a", "c"]
 
 
 def test_event_json_round_trip(now) -> None:

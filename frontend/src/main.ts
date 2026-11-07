@@ -26,6 +26,7 @@ import {
 } from "./filters";
 import { CATEGORIES, SEVERITIES } from "./types";
 import { createFilterPanel, type Counts } from "./ui/filter-panel";
+import { createTimeline } from "./ui/timeline";
 import type { GlobeApp } from "./globe/globe";
 import { attachKeyboard } from "./globe/keyboard";
 import { SEVERITY_STYLES } from "./severity";
@@ -185,15 +186,78 @@ const listHandlers = {
   onOpen: (event: GlobeEvent) => openEvent(event, true),
 };
 
+const timeline = createTimeline(byId("filter-panel").querySelector<HTMLElement>("[data-filter=time]")!, (change) => {
+  filters = { ...filters, ...change };
+  applyFilters();
+});
+
+/** The 72 hours in events.json are loaded first; older days come from /data/days/ when
+ * the time window reaches them, each file once. */
+const RECENT_HOURS = 72;
+const loadedDays = new Set<string>();
+let dayIndex: { day: string; file: string }[] | null = null;
+let loadingHistory = false;
+
+async function loadHistory(from: number): Promise<boolean> {
+  if (dayIndex === null) {
+    const doc = (await fetchJson("/data/days/index.json")) as { days?: unknown };
+    dayIndex = Array.isArray(doc?.days)
+      ? doc.days.filter(
+          (d): d is { day: string; file: string } =>
+            typeof d?.day === "string" && typeof d?.file === "string" && /^[\d-]+\.json$/.test(d.file),
+        )
+      : [];
+  }
+  const firstDay = new Date(from).toISOString().slice(0, 10);
+  const needed = dayIndex.filter((d) => d.day >= firstDay && !loadedDays.has(d.day));
+  const files = await Promise.all(needed.map((d) => fetchJson(`/data/days/${d.file}`)));
+  const known = new Set(allEvents.map((e) => e.id));
+  for (const [i, doc] of files.entries()) {
+    loadedDays.add(needed[i].day);
+    for (const event of parseEvents((doc as { events?: unknown })?.events)) {
+      if (!known.has(event.id)) {
+        known.add(event.id);
+        allEvents.push(event);
+      }
+    }
+  }
+  return needed.length > 0;
+}
+
+/** Loads older days if the window needs them, then applies the filters again. */
+function ensureHistory(from: number): void {
+  // events.json covers the 72 hours before it was generated; only earlier windows need days.
+  const recentFrom = (dataTime ? Date.parse(dataTime) : Date.now()) - RECENT_HOURS * 3_600_000;
+  if (loadingHistory || from >= recentFrom) return;
+  const firstDay = new Date(from).toISOString().slice(0, 10);
+  if (dayIndex !== null && dayIndex.every((d) => d.day < firstDay || loadedDays.has(d.day))) return;
+  loadingHistory = true;
+  notice("Loading older events…");
+  loadHistory(from)
+    .then((added) => {
+      loadingHistory = false;
+      notice(null);
+      if (added) applyFilters();
+    })
+    .catch((error: unknown) => {
+      loadingHistory = false;
+      console.warn("Older events unavailable:", error);
+      notice("Older events couldn't be loaded. Please try again later.");
+    });
+}
+
 /** Applies the filters to every part of the page and to the web address. */
 function applyFilters(): void {
-  const { from, to } = windowOf(filters, Date.now());
+  const now = Date.now();
+  const { from, to } = windowOf(filters, now);
+  ensureHistory(from);
   const inWindow = allEvents.filter((e) => {
     const time = Date.parse(e.published);
     return time >= from && time <= to;
   });
   events = inWindow.filter((e) => matchesExceptTime(e, filters)).sort(compareBySeverity);
   panel.render(filters, chipCounts(inWindow), activeFilters(filters));
+  timeline.update(filters, now);
   renderSummary(events.length, allEvents.length, !isDefault(filters), () => {
     filters = defaultFilters();
     applyFilters();
@@ -202,7 +266,9 @@ function applyFilters(): void {
   if (app) {
     app.setEvents(events);
     renderEventList(list, events, listHandlers);
-    if (allEvents.length > 0) notice(events.length === 0 ? "No events match these filters." : null);
+    if (allEvents.length > 0 && !loadingHistory) {
+      notice(events.length === 0 ? "No events match these filters." : null);
+    }
   }
 }
 
