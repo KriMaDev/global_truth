@@ -18,7 +18,7 @@ An interactive, visually stunning 3D globe that shows current world events as gl
 - Deploying by hand needs `$env:CLOUDFLARE_ACCOUNT_ID` set to the account ID in krimadev_rebuild's NOTES.md (the OAuth login can't list accounts on its own).
 
 ## Decisions (7 Nov 2026)
-- **Hosting: Cloudflare, not here.now.** Star Teller is a static site on here.now with `stars → CNAME fallback.here.now`, but the here.now account is on the free plan and its single custom domain is used by stars.krimadev.com. So this site runs like krimadev.com: a Cloudflare Worker with static assets only (`wrangler.jsonc`, Worker `world-news-globe`), custom-domain route `globe.krimadev.com`, zone on Cloudflare, `wrangler login` done on this PC. Deploy steps: `docs/deploy.md`.
+- **Hosting: everything on Cloudflare, nowhere else** (owner's wish, 7 Nov 2026). krimadev.com, stars.krimadev.com (Star Teller, moved from here.now the same day, Worker `star-teller`) and globe.krimadev.com are each their own Cloudflare Worker. Public contact address: hello@krimadev.com (Email Routing to Gmail). This site runs like krimadev.com: a Cloudflare Worker with static assets only (`wrangler.jsonc`, Worker `world-news-globe`), custom-domain route `globe.krimadev.com`, zone on Cloudflare, `wrangler login` done on this PC. Deploy steps: `docs/deploy.md`.
 - **No running server.** The Python pipeline runs on GitHub Actions cron (every 30 min) and writes static JSON, which is deployed with the site. FastAPI is not used.
 - **Stack:** Vite + TypeScript (no UI framework) + globe.gl in `frontend/`; Python 3.13 pipeline in `pipeline/` (httpx, feedparser from M3; pytest, ruff). Node 24, npm.
 - **Public repo** `KriMaDev/global_truth`, **MIT licence**.
