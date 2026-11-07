@@ -52,7 +52,7 @@ Deploying is described in [docs/deploy.md](docs/deploy.md).
 1. ✅ Plan, stack and skeleton, placeholder live (7 Nov 2026)
 2. ✅ Globe with sample events and severity lights (on `main`, not deployed: the live site keeps the placeholder until real data)
 3. Live data pipeline (USGS, GDACS, first RSS feeds)
-4. Location drill-down and category filters
+4. Location drill-down and category filters; a geography view (countries coloured by severity, names of countries, oceans, seas and mountains)
 5. News panel, source attribution, About / Sources page
 6. Polish: animations, performance, mobile, accessibility
 7. More sources, monitoring, public API, alerts, languages

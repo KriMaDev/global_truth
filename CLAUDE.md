@@ -101,6 +101,8 @@ Respect each source's rate limits and terms. Cache aggressively. Never hammer a 
 ## Geography education (owner's goal, 7 Nov 2026)
 The globe should also teach general geography. Plan it into milestone 4 (location drill-down) and beyond, e.g. country borders and names, capitals and major cities that appear as you zoom, the continent/region/country of the selected place, and a short "about this place" panel with facts from open, credited sources (e.g. Wikidata CC0, GeoNames CC BY). Facts must be sourced like the news: no unsourced text.
 
+**Geography view switch (owner's idea, 7 Nov 2026), milestone 4:** a switch between the news view (pillars) and a geography view: each country coloured by its events' severity (documented rule in `docs/severity.md`, proposal: the highest severity among its current events; none = neutral), events reduced to small dots, and labels for country names, oceans, seas and important mountains (ranges and peaks). Source: Natural Earth (public domain: admin-0 countries, marine polygons, geography regions, elevation points). Needs each event's country from the milestone 3 geocoder.
+
 ## Out of scope for now
 User accounts, comments, social features, paid data sources, opinion or editorial content.
 
