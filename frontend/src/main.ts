@@ -29,7 +29,16 @@ import { createFilterPanel, type Counts } from "./ui/filter-panel";
 import { createTimeline } from "./ui/timeline";
 import { createPlacePicker } from "./ui/place-picker";
 import { placeAltitude, placeCenter } from "./places";
-import { countryCounts, countrySeverity, type GeographyData } from "./geography";
+import {
+  countryCounts,
+  countryLabel,
+  countrySeverity,
+  formatPopulation,
+  type GeographyData,
+  type MapLabel,
+  type PlacesData,
+} from "./geography";
+import { placeCardParts } from "./ui/place-card";
 import type { GlobeApp } from "./globe/globe";
 import { attachKeyboard } from "./globe/keyboard";
 import { SEVERITY_STYLES } from "./severity";
@@ -306,10 +315,13 @@ function applyFilters(): void {
 
 /**
  * The geography view: countries coloured by their events' severity, map labels, events as
- * small dots. Its data (Natural Earth, about 150 KB) loads the first time it is opened.
+ * small dots, and "About this place" for everything labelled. Its data (Natural Earth; facts
+ * and text from Wikidata and Wikipedia) loads the first time it is opened.
  */
 let geoView = new URLSearchParams(window.location.search).get("view") === "geo";
 let geoData: GeographyData | null = null;
+/** Facts and text for places; the view works without them. */
+let placesData: PlacesData | null = null;
 const geoToggle = byId<HTMLButtonElement>("geo-toggle");
 
 /** Adds the view to a filter query ("?cat=war" → "?cat=war&view=geo"). */
@@ -338,7 +350,16 @@ async function setGeoView(on: boolean): Promise<void> {
   if (on && !geoData) {
     try {
       notice("Loading the map…");
-      geoData = await loadGeography();
+      const [geography, places] = await Promise.all([
+        loadGeography(),
+        fetchJson("/geo/places.json").catch((error: unknown) => {
+          console.warn("Place descriptions unavailable:", error);
+          return null;
+        }),
+      ]);
+      geoData = geography;
+      const doc = places as Partial<PlacesData> | null;
+      placesData = doc?.places ? { generated: String(doc.generated ?? ""), places: doc.places } : null;
       notice(null);
     } catch (error) {
       console.warn("Geography unavailable:", error);
@@ -353,39 +374,76 @@ async function setGeoView(on: boolean): Promise<void> {
   applyFilters();
 }
 
+/** "12 events: 3 high, 9 low", for the current filters and time window. */
+function countryEventSummary(iso2: string): string | null {
+  const counts = countryCounts(events, iso2);
+  const total = SEVERITIES.reduce((sum, s) => sum + counts[s], 0);
+  if (total === 0) return null;
+  const parts = [...SEVERITIES]
+    .reverse()
+    .filter((s) => counts[s] > 0)
+    .map((s) => `${counts[s]} ${SEVERITY_STYLES[s].label.toLowerCase()}`);
+  return `${total} event${total === 1 ? "" : "s"}: ${parts.join(", ")}`;
+}
+
 /** The lines under a country's name when hovering it in the geography view. */
 function describeCountry(iso2: string): string[] {
   const country = geoData?.countries.find((c) => c.iso2 === iso2);
+  const facts = country?.wikidata ? placesData?.places[country.wikidata] : undefined;
   const lines: string[] = [];
-  const where = [country?.continent, country?.region].filter(Boolean).join(" · ");
+  const where = [country?.region, country?.continent].filter(Boolean).join(" · ");
   if (where) lines.push(where);
-  const counts = countryCounts(events, iso2);
-  const total = SEVERITIES.reduce((sum, s) => sum + counts[s], 0);
-  if (total === 0) {
-    lines.push("No events in the current filters");
-  } else {
-    const parts = [...SEVERITIES]
-      .reverse()
-      .filter((s) => counts[s] > 0)
-      .map((s) => `${counts[s]} ${SEVERITY_STYLES[s].label.toLowerCase()}`);
-    lines.push(`${total} event${total === 1 ? "" : "s"}: ${parts.join(", ")} · click to filter`);
-  }
+  const basics = [
+    facts?.capital ? `Capital ${facts.capital}` : null,
+    facts?.population ? `${formatPopulation(facts.population)} people` : null,
+  ].filter(Boolean);
+  if (basics.length) lines.push(basics.join(" · "));
+  lines.push(countryEventSummary(iso2) ?? "No events in the current filters");
+  lines.push(`Click for more about ${country?.name ?? "this country"}`);
   return lines;
 }
 
-/** A country was clicked: filter to it (when it has events) and fly to its name. */
+/** Opens "About this place" for a label (or a country) and turns the globe to it. */
+function openPlace(label: MapLabel, extra: { where?: string | null; events?: { summary: string; onShow?: () => void } | null } = {}): void {
+  panel.close();
+  app?.select(null);
+  const facts = label.wikidata ? placesData?.places[label.wikidata] : undefined;
+  card.openPanel(
+    label.id,
+    placeCardParts({ label, facts, asOf: placesData?.generated ?? null, ...extra }),
+    false,
+  );
+  app?.setCardOpen(true);
+  // Closer for small places, never further out than now.
+  const reach: Record<MapLabel["kind"], number> = { ocean: 2.4, country: 1.6, sea: 1.6, range: 1.4, desert: 1.6, peak: 1 };
+  app?.flyOver(label.lat, label.lng, Math.min(view.altitude, reach[label.kind]));
+}
+
+/** A country (shape or name) was clicked: its card, with its events and a filter button. */
 function chooseCountry(iso2: string): void {
   const country = geoData?.countries.find((c) => c.iso2 === iso2);
+  if (!country) return;
   const { from, to } = windowOf(filters, Date.now());
   const match = allEvents.find((e) => {
     const time = Date.parse(e.published);
     return e.geo?.country_code === iso2 && e.geo.continent && e.geo.region && time >= from && time <= to;
   });
-  if (match?.geo?.continent && match.geo.region) {
-    filters = { ...filters, place: [match.geo.continent, match.geo.region, iso2] };
-    applyFilters();
-  }
-  if (country) app?.flyOver(country.label[1], country.label[0], placeAltitude(3));
+  const summary = countryEventSummary(iso2);
+  const severity = countrySeverity(events).get(iso2);
+  setAccent(severity ? SEVERITY_STYLES[severity].color : null);
+  openPlace(countryLabel(country), {
+    where: [country.region, country.continent].filter(Boolean).join(" · "),
+    events: {
+      summary: summary ?? "No events in the current filters and time window.",
+      onShow:
+        summary && match?.geo?.continent && match.geo.region
+          ? () => {
+              filters = { ...filters, place: [match.geo!.continent!, match.geo!.region!, iso2] };
+              applyFilters();
+            }
+          : undefined,
+    },
+  });
 }
 
 function openEvent(event: GlobeEvent, focus: boolean, back?: () => void): void {
@@ -469,6 +527,10 @@ async function start(): Promise<void> {
         updateHud();
       },
       onCountry: chooseCountry,
+      onPlace: (label) => {
+        setAccent(null);
+        openPlace(label);
+      },
       describeCountry,
       onRotationChange: showRotation,
     });

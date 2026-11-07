@@ -351,6 +351,11 @@ button {
 /* ---------- Geography view: map labels ---------- */
 
 .map-label {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
   color: rgb(214 218 224 / 82%);
   font: 500 0.62rem/1.2 var(--ff-mono);
   letter-spacing: 0.14em;
@@ -359,7 +364,47 @@ button {
     0 0 3px rgb(0 0 0 / 95%),
     0 0 8px rgb(0 0 0 / 80%);
   white-space: nowrap;
-  pointer-events: none;
+}
+
+.map-label:hover,
+.map-label:focus-visible {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Place card: facts as a two-column list. */
+.place-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.9rem;
+  margin: 0.9rem 0 0;
+  font-size: 0.85rem;
+}
+
+.place-facts dt {
+  color: var(--muted);
+  font: 500 0.66rem/1.6 var(--ff-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.place-facts dd {
+  margin: 0;
+}
+
+.place-events {
+  margin-top: 1rem;
+}
+
+.place-text {
+  margin-top: 1rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.place-events p {
+  margin: 0.3rem 0 0.6rem;
 }
 
 .map-label.kind-country {

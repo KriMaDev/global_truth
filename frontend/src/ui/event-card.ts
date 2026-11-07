@@ -13,6 +13,9 @@ export interface EventCard {
   open(event: GlobeEvent, focus: boolean, back?: () => void): void;
   /** A group's list of events. */
   openList(cluster: Cluster, focus: boolean, onPick: (event: GlobeEvent) => void): void;
+  /** Other content in the same card (e.g. a place, ui/place-card.ts), under the close
+   * button. The heading inside should have the id "event-card-title". */
+  openPanel(id: string, parts: HTMLElement[], focus: boolean): void;
   close(): void;
   readonly openId: string | null;
 }
@@ -234,9 +237,19 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
     if (focus) title.focus();
   };
 
+  const openPanel = (id: string, parts: HTMLElement[], focus: boolean): void => {
+    openId = id;
+    rememberFocus(focus);
+    root.replaceChildren(closeButton(), ...parts);
+    root.hidden = false;
+    root.scrollTop = 0;
+    if (focus) root.querySelector<HTMLElement>("#event-card-title")?.focus();
+  };
+
   return {
     open,
     openList,
+    openPanel,
     close,
     get openId() {
       return openId;

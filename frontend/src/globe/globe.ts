@@ -42,8 +42,10 @@ export interface GlobeAppOptions {
   onSelect: (cluster: Cluster) => void;
   /** Called with the camera's position whenever it moves (for the readout). */
   onView?: (view: { lat: number; lng: number; altitude: number }) => void;
-  /** Geography view: a country was clicked. */
+  /** Geography view: a country (its shape or its name) was clicked. */
   onCountry?: (iso2: string) => void;
+  /** Geography view: an ocean, sea, range, desert or peak label was clicked. */
+  onPlace?: (label: MapLabel) => void;
   /** Geography view: the lines shown under a country's name when hovering it. */
   describeCountry?: (iso2: string) => string[];
   /** Called when auto-rotation is switched on or off (for the Rotate button). */
@@ -158,17 +160,34 @@ function labelFor(cluster: Cluster): HTMLElement {
   return label;
 }
 
+/** Keeps a button's pointer events from the globe, which would otherwise also treat the
+ * press as a click on whatever lies beneath it (a country, a pillar). */
+function shield(element: HTMLElement): void {
+  for (const type of ["pointerdown", "pointerup"] as const) {
+    element.addEventListener(type, (event) => event.stopPropagation());
+  }
+}
+
 /** What the one HTML layer holds: group count badges and, in the geography view, map labels. */
 type HtmlItem =
   | { type: "badge"; cluster: Cluster; lat: number; lng: number }
   | { type: "label"; label: MapLabel; lat: number; lng: number };
 
-/** A map label (country, ocean, sea, range, desert, peak): text only, not clickable. */
-function mapLabelFor(label: MapLabel): HTMLElement {
-  const element = document.createElement("div");
+/** A map label (country, ocean, sea, range, desert, peak): a button that opens "About this
+ * place". Not in the Tab order (like the count badges); hidden or crowded labels cannot be
+ * clicked. */
+function mapLabelFor(label: MapLabel, onClick: (label: MapLabel) => void): HTMLElement {
+  const element = document.createElement("button");
+  element.type = "button";
+  element.tabIndex = -1;
   element.className = `map-label kind-${label.kind}`;
   element.textContent = label.kind === "peak" ? `▲ ${label.text}` : label.text;
-  element.setAttribute("aria-hidden", "true");
+  element.title = `${label.type}: ${label.name} · click for more`;
+  element.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onClick(label);
+  });
+  shield(element);
   return element;
 }
 
@@ -213,6 +232,7 @@ function badgeFor(cluster: Cluster, onSelect: (cluster: Cluster) => void): HTMLE
     event.stopPropagation();
     onSelect(cluster);
   });
+  shield(badge);
   return badge;
 }
 
@@ -285,7 +305,9 @@ export async function createGlobeApp(
     .htmlElement((d) => {
       const item = d as HtmlItem;
       if (item.type === "badge") return badgeFor(item.cluster, options.onSelect);
-      const element = mapLabelFor(item.label);
+      const element = mapLabelFor(item.label, (label) =>
+        label.iso2 ? options.onCountry?.(label.iso2) : options.onPlace?.(label),
+      );
       labelElements.set(item, element);
       return element;
     })

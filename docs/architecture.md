@@ -79,6 +79,8 @@ Cloudflare Workers static assets @ globe.krimadev.com
 | Timeline: 6 h, 24 h, 3 days, 7 days, and an "ending at" slider; loads day files on demand | `frontend/src/ui/timeline.ts`, `frontend/src/main.ts` |
 | Coastlines and borders (Natural Earth 50m), brighter on the night side | `frontend/src/globe/lines.ts`, `frontend/public/geo/lines.bin` |
 | Geography view: countries coloured by severity (rule in `docs/severity.md`), labels for countries, oceans, seas, ranges, deserts and peaks by zoom, decluttered on screen | `frontend/src/geography.ts`, `frontend/src/globe/globe.ts`, `frontend/public/geo/countries.json`, `labels.json` |
+| "About this place": every country, ocean, sea, range, desert and peak label (and country shape) opens a card with Wikidata facts and the Wikipedia introduction, credited per card; countries add their current events and "Show only these events" | `frontend/src/ui/place-card.ts`, `frontend/src/geography.ts` (`factRows`), `frontend/public/geo/places.json` made by `tools/build_places.py` |
+| Rotation: a Rotate play/pause button; touching the globe pauses it, it resumes 10 s later unless a card is open. Zoom limits: altitude 0.5 (0.9 with 2K images) to 4 | `frontend/src/globe/globe.ts` |
 | Footer version (build date and commit, set by Vite from git or `GITHUB_SHA`) | `frontend/vite.config.ts` |
 | Severity look (colour, size, pulse, rings) | `frontend/src/severity.ts` |
 | Event shape and checks (untrusted input is validated, malformed events dropped) | `frontend/src/types.ts`, `frontend/src/events.ts` |
