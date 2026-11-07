@@ -27,6 +27,8 @@ import {
 import { CATEGORIES, SEVERITIES } from "./types";
 import { createFilterPanel, type Counts } from "./ui/filter-panel";
 import { createTimeline } from "./ui/timeline";
+import { createPlacePicker } from "./ui/place-picker";
+import { placeAltitude, placeCenter } from "./places";
 import type { GlobeApp } from "./globe/globe";
 import { attachKeyboard } from "./globe/keyboard";
 import { SEVERITY_STYLES } from "./severity";
@@ -186,6 +188,22 @@ const listHandlers = {
   onOpen: (event: GlobeEvent) => openEvent(event, true),
 };
 
+/** Choosing a place filters to it and flies the globe there. */
+const placePicker = createPlacePicker(
+  byId("filter-panel").querySelector<HTMLElement>("[data-filter=place]")!,
+  (path) => {
+    filters = { ...filters, place: path };
+    applyFilters();
+    const { from, to } = windowOf(filters, Date.now());
+    const inWindow = allEvents.filter((e) => {
+      const time = Date.parse(e.published);
+      return time >= from && time <= to;
+    });
+    const center = placeCenter(inWindow, path);
+    if (center) app?.flyOver(center.lat, center.lng, placeAltitude(path.length));
+  },
+);
+
 const timeline = createTimeline(byId("filter-panel").querySelector<HTMLElement>("[data-filter=time]")!, (change) => {
   filters = { ...filters, ...change };
   applyFilters();
@@ -258,6 +276,10 @@ function applyFilters(): void {
   events = inWindow.filter((e) => matchesExceptTime(e, filters)).sort(compareBySeverity);
   panel.render(filters, chipCounts(inWindow), activeFilters(filters));
   timeline.update(filters, now);
+  placePicker.update(
+    filters.place,
+    inWindow.filter((e) => matchesExceptTime(e, { ...filters, place: [] })),
+  );
   renderSummary(events.length, allEvents.length, !isDefault(filters), () => {
     filters = defaultFilters();
     applyFilters();

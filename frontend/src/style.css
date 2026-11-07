@@ -736,6 +736,39 @@ body:not(.no-globe) .event-list-button:focus {
   margin-top: 1.1rem;
 }
 
+.place-crumbs {
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+  font: 400 0.75rem/1.6 var(--ff-mono);
+}
+
+.place-crumb {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.place-crumb.is-current {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.place-select {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--panel-solid);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
 .timeline-row {
   display: flex;
   align-items: center;
