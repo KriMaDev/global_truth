@@ -154,6 +154,22 @@ def test_load_previous_skips_damaged_entries(tmp_path) -> None:
 
 
 @pytest.mark.parametrize("outlet", OUTLETS, ids=lambda o: o.name)
+def test_every_outlet_is_on_the_legal_page(outlet) -> None:
+    page = (REPO / "frontend" / "legal" / "index.html").read_text(encoding="utf-8")
+    label = {
+        "state": "State-affiliated",
+        "public": "Public",
+        "private": "Private",
+        "intergovernmental": "Intergovernmental",
+    }[outlet.ownership]
+    row = (
+        f"<tr><td>{outlet.name}</td><td>{outlet.domains[0]}</td>"
+        f"<td>{outlet.country}</td><td>{label}</td></tr>"
+    )
+    assert row in page, f"{outlet.name} missing or mislabelled on the legal page"
+
+
+@pytest.mark.parametrize("outlet", OUTLETS, ids=lambda o: o.name)
 def test_every_outlet_is_listed_publicly(outlet) -> None:
     sources = (REPO / "docs" / "sources.md").read_text(encoding="utf-8")
     assert f"| {outlet.name} |" in sources, f"{outlet.name} missing from docs/sources.md"

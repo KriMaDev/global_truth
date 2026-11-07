@@ -18,6 +18,7 @@ import {
 import { SEVERITY_STYLES } from "../severity";
 import type { GlobeEvent } from "../types";
 import { createAtmosphere } from "./atmosphere";
+import { createLines, parseLines } from "./lines";
 import { createDayNightMaterial, setSunDirection } from "./daynight";
 import { PillarField } from "./markers";
 import { createStars } from "./stars";
@@ -45,6 +46,8 @@ const BACKGROUND = "rgba(0, 0, 0, 0)";
 const GLOBE_RADIUS = 100;
 /** Pillars stand on the surface (just above it, so the ground spot is not hidden). */
 const LIGHT_ALTITUDE = 0.002;
+/** Coastlines and borders sit just above the surface, under the pillars. */
+const LINE_ALTITUDE = 0.0012;
 const RING_ALTITUDE = 0.004;
 const FLY_MS = 1400;
 const STEP_MS = 350;
@@ -163,6 +166,15 @@ export async function createGlobeApp(
   const camera = globe.camera() as PerspectiveCamera;
   globe.scene().add(createStars(2000, Math.min(camera.far * 0.8, 20_000)));
   globe.scene().add(createAtmosphere(GLOBE_RADIUS, sunVector));
+
+  // Coastlines and borders: loaded after the globe shows; the globe works without them.
+  void fetch("/geo/lines.bin")
+    .then((response) => (response.ok ? response.arrayBuffer() : Promise.reject(new Error(`HTTP ${response.status}`))))
+    .then((buffer) => {
+      const coords = (lat: number, lng: number) => globe.getCoords(lat, lng, LINE_ALTITUDE);
+      for (const lines of createLines(parseLines(buffer), coords, sunVector)) globe.scene().add(lines);
+    })
+    .catch((error: unknown) => console.warn("Coastlines and borders unavailable:", error));
   if (options.onView) {
     const onView = options.onView;
     globe.onZoom((pov) => onView(pov));

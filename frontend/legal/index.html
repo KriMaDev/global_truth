@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Legal, privacy and sources · World News Globe</title>
+    <meta
+      name="description"
+      content="Who publishes World News Globe, how it works, what it collects (nothing personal), and every source and licence it uses."
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#05070a" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body class="page">
+    <main class="doc">
+      <p class="doc-back"><a href="/">← Back to the globe</a></p>
+      <h1>Legal, privacy and sources</h1>
+      <p class="doc-updated">Last updated: 8 November 2026</p>
+
+      <nav class="doc-toc glass" aria-label="On this page">
+        <a href="#publisher">Publisher</a>
+        <a href="#what">What this site is</a>
+        <a href="#corrections">Corrections</a>
+        <a href="#disclaimer">Disclaimer</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#rules">How events are rated</a>
+        <a href="#sources">Data sources</a>
+        <a href="#outlets">News outlets</a>
+        <a href="#credits">Other credits</a>
+        <a href="#licence">Licence</a>
+      </nav>
+
+      <section id="publisher">
+        <h2>Publisher</h2>
+        <p>
+          World News Globe is published by <strong>Kristian Manev (KriMa Development)</strong>,
+          Brussels area, Belgium. Contact:
+          <a href="https://krimadev.com/contact/">krimadev.com/contact</a>.
+        </p>
+      </section>
+
+      <section id="what">
+        <h2>What this site is</h2>
+        <p>
+          A map of current world events, built automatically from public data feeds and news
+          headlines. It is not a news outlet and publishes no editorial content or opinions.
+        </p>
+        <ul>
+          <li>
+            News items show the <strong>headline as the outlet published it</strong>, the outlet's
+            name, the time and a link to the original article. No article text is copied. Only the
+            outlet's own name is removed from the end of a page title (e.g. " | The Guardian").
+          </li>
+          <li>
+            Data-feed items (earthquakes, disaster alerts) show the provider's own title and a
+            short factual line built from its data (e.g. "Magnitude 5.0, depth 77 km.").
+          </li>
+          <li>
+            Places, categories, severity and the grouping of duplicate stories are worked out by
+            published rules, not chosen by hand.
+          </li>
+        </ul>
+      </section>
+
+      <section id="corrections">
+        <h2>Corrections and removal</h2>
+        <p>
+          If something here is wrong, or you are a publisher and want your headlines removed,
+          write through <a href="https://krimadev.com/contact/">krimadev.com/contact</a>. Requests
+          are handled promptly.
+        </p>
+      </section>
+
+      <section id="disclaimer">
+        <h2>Disclaimer</h2>
+        <ul>
+          <li>
+            Everything is provided as is, for general information. It can be incomplete, late or
+            wrong.
+          </li>
+          <li>
+            <strong>Do not use this site for safety decisions.</strong> Disaster alerts from GDACS
+            are automated estimates and do not replace official warnings: follow your national
+            and local authorities.
+          </li>
+          <li>
+            News locations are <strong>machine-coded</strong> by the GDELT Project from the article
+            text and can be wrong; such events say so on their card.
+          </li>
+          <li>
+            Headlines and articles belong to their publishers and reflect their views, not ours.
+          </li>
+        </ul>
+      </section>
+
+      <section id="privacy">
+        <h2>Privacy</h2>
+        <p>This site collects as little as possible: no account, no cookies, no ads, no tracking.</p>
+        <ul>
+          <li>
+            <strong>Hosting.</strong> The site is served by Cloudflare. To deliver pages and protect
+            the site, Cloudflare processes technical data such as your IP address, browser and the
+            page requested. See
+            <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>. The
+            legal basis is our legitimate interest in running the site securely (GDPR art.
+            6(1)(f)).
+          </li>
+          <li>
+            <strong>No analytics, no cookies.</strong> We do not count or follow visitors.
+          </li>
+          <li>
+            <strong>Everything comes from this site.</strong> Fonts, map data and events are served
+            from globe.krimadev.com itself, so no other company learns about your visit. Links to
+            articles open the outlet's own site, under its own privacy policy.
+          </li>
+          <li>
+            <strong>Stored in your browser.</strong> Only your "Reduce motion" choice, under the
+            name <code>wng-reduce-motion</code>, if you change it. It never leaves your device;
+            clear it in your browser settings at any time.
+          </li>
+          <li>
+            <strong>Your rights.</strong> You can ask what data about you is processed, and contact
+            the Belgian Data Protection Authority
+            (<a href="https://www.dataprotectionauthority.be/">dataprotectionauthority.be</a>).
+          </li>
+        </ul>
+      </section>
+
+      <section id="rules">
+        <h2>How events are rated</h2>
+        <p>
+          Every event's severity (low, moderate, high, critical) and categories come from
+          published rules, and each card says why. Earthquakes use the USGS impact alert or the
+          magnitude; GDACS alerts use their alert level; news uses the number of deaths stated in
+          the headline or listed hazard terms. How many outlets report a story never raises its
+          severity. The full rules:
+          <a href="https://github.com/KriMaDev/global_truth/blob/main/docs/severity.md">severity</a>,
+          <a href="https://github.com/KriMaDev/global_truth/blob/main/docs/categories.md">categories</a>,
+          <a href="https://github.com/KriMaDev/global_truth/blob/main/docs/architecture.md">places and grouping</a>.
+        </p>
+      </section>
+
+      <section id="sources">
+        <h2>Data sources</h2>
+        <table class="doc-table">
+          <thead>
+            <tr><th>Source</th><th>Used for</th><th>Terms and credit</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="https://earthquake.usgs.gov/earthquakes/feed/">USGS Earthquake Hazards Program</a></td>
+              <td>Earthquakes (magnitude 4.5 and above, and significant ones)</td>
+              <td>Public domain. Credit: U.S. Geological Survey.</td>
+            </tr>
+            <tr>
+              <td><a href="https://www.gdacs.org/">GDACS</a> (European Commission JRC, UN OCHA)</td>
+              <td>Disaster alerts: earthquakes, cyclones, floods, volcanoes, droughts, wildfires</td>
+              <td>
+                CC BY 4.0 under the
+                <a href="https://commission.europa.eu/legal-notice_en">European Commission's reuse policy</a>.
+                Our change: severity is derived from the GDACS alert level (Green low, Orange high,
+                Red critical). GDACS alerts are indicative and do not replace official alerts
+                (<a href="https://www.gdacs.org/About/termofuse.aspx">GDACS terms</a>).
+              </td>
+            </tr>
+            <tr>
+              <td><a href="https://www.gdeltproject.org/">The GDELT Project</a></td>
+              <td>Which articles the outlets below published, their headlines, places mentioned and themes</td>
+              <td>Free for any use with credit and a link to the GDELT Project.</td>
+            </tr>
+            <tr>
+              <td><a href="https://www.geonames.org/">GeoNames</a></td>
+              <td>Places, provinces and countries</td>
+              <td><a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Credit: GeoNames.</td>
+            </tr>
+            <tr>
+              <td><a href="https://unstats.un.org/unsd/methodology/m49/overview/">UN M49</a></td>
+              <td>World regions</td>
+              <td>United Nations Statistics Division.</td>
+            </tr>
+            <tr>
+              <td><a href="https://www.naturalearthdata.com/">Natural Earth</a></td>
+              <td>Coastlines, borders, countries, seas, mountains</td>
+              <td>Public domain.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="outlets">
+        <h2>News outlets</h2>
+        <p>
+          Only articles from these outlets appear, chosen to cover every region and a range of
+          viewpoints. Ownership: <strong>State-affiliated</strong> means funded and editorially
+          controlled by a government, without legal editorial independence (shown on every item
+          from that outlet); <strong>Public</strong> means publicly funded with editorial
+          independence guaranteed by law or charter; <strong>Private</strong> covers companies,
+          trusts and non-profits; <strong>Intergovernmental</strong> is an international
+          organisation's news service. To keep any one outlet from dominating, at most 30 events
+          from each are shown at a time.
+        </p>
+        <table class="doc-table">
+          <thead>
+            <tr><th>Outlet</th><th>Website</th><th>Country</th><th>Ownership</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>BBC News</td><td>bbc.co.uk</td><td>United Kingdom</td><td>Public</td></tr>
+            <tr><td>The Guardian</td><td>theguardian.com</td><td>United Kingdom</td><td>Private</td></tr>
+            <tr><td>DW</td><td>dw.com</td><td>Germany</td><td>Public</td></tr>
+            <tr><td>France 24</td><td>france24.com</td><td>France</td><td>Public</td></tr>
+            <tr><td>RFI</td><td>rfi.fr</td><td>France</td><td>Public</td></tr>
+            <tr><td>Euronews</td><td>euronews.com</td><td>France</td><td>Private</td></tr>
+            <tr><td>Kyiv Independent</td><td>kyivindependent.com</td><td>Ukraine</td><td>Private</td></tr>
+            <tr><td>Meduza</td><td>meduza.io</td><td>Latvia (Russian exile media)</td><td>Private</td></tr>
+            <tr><td>TASS</td><td>tass.com</td><td>Russia</td><td>State-affiliated</td></tr>
+            <tr><td>AP News</td><td>apnews.com</td><td>United States</td><td>Private</td></tr>
+            <tr><td>NPR</td><td>npr.org</td><td>United States</td><td>Private</td></tr>
+            <tr><td>VOA</td><td>voanews.com</td><td>United States</td><td>Public</td></tr>
+            <tr><td>RFE/RL</td><td>rferl.org</td><td>United States (Prague newsroom)</td><td>Public</td></tr>
+            <tr><td>CBC News</td><td>cbc.ca</td><td>Canada</td><td>Public</td></tr>
+            <tr><td>MercoPress</td><td>mercopress.com</td><td>Uruguay</td><td>Private</td></tr>
+            <tr><td>Buenos Aires Times</td><td>batimes.com.ar</td><td>Argentina</td><td>Private</td></tr>
+            <tr><td>Al Jazeera</td><td>aljazeera.com</td><td>Qatar</td><td>State-affiliated</td></tr>
+            <tr><td>Anadolu Agency</td><td>aa.com.tr</td><td>Türkiye</td><td>State-affiliated</td></tr>
+            <tr><td>Daily Maverick</td><td>dailymaverick.co.za</td><td>South Africa</td><td>Private</td></tr>
+            <tr><td>Premium Times</td><td>premiumtimesng.com</td><td>Nigeria</td><td>Private</td></tr>
+            <tr><td>Africanews</td><td>africanews.com</td><td>France (pan-African)</td><td>Private</td></tr>
+            <tr><td>The EastAfrican</td><td>theeastafrican.co.ke</td><td>Kenya</td><td>Private</td></tr>
+            <tr><td>NHK World</td><td>nhk.or.jp</td><td>Japan</td><td>Public</td></tr>
+            <tr><td>The Japan Times</td><td>japantimes.co.jp</td><td>Japan</td><td>Private</td></tr>
+            <tr><td>The Hindu</td><td>thehindu.com</td><td>India</td><td>Private</td></tr>
+            <tr><td>Dawn</td><td>dawn.com</td><td>Pakistan</td><td>Private</td></tr>
+            <tr><td>South China Morning Post</td><td>scmp.com</td><td>Hong Kong</td><td>Private</td></tr>
+            <tr><td>Xinhua</td><td>xinhuanet.com</td><td>China</td><td>State-affiliated</td></tr>
+            <tr><td>CGTN</td><td>cgtn.com</td><td>China</td><td>State-affiliated</td></tr>
+            <tr><td>The Straits Times</td><td>straitstimes.com</td><td>Singapore</td><td>Private</td></tr>
+            <tr><td>ABC News (Australia)</td><td>abc.net.au</td><td>Australia</td><td>Public</td></tr>
+            <tr><td>UN News</td><td>news.un.org</td><td>International</td><td>Intergovernmental</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="credits">
+        <h2>Other credits</h2>
+        <ul>
+          <li>
+            Earth by day: NASA Earth Observatory,
+            <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/">Blue Marble Next Generation</a>
+            (public domain).
+          </li>
+          <li>
+            Earth at night: NASA Earth Observatory,
+            <a href="https://science.nasa.gov/earth/earth-observatory/earth-at-night/">Black Marble 2016</a>
+            (public domain).
+          </li>
+          <li>
+            Relief: imagery by Jesse Allen, NASA Earth Observatory, using data from the General
+            Bathymetric Chart of the Oceans (GEBCO), produced by the British Oceanographic Data
+            Centre.
+          </li>
+          <li>
+            Fonts: Michroma, Hanken Grotesk and JetBrains Mono, under the
+            <a href="https://openfontlicense.org/">SIL Open Font License</a>.
+          </li>
+          <li>
+            Software: <a href="https://threejs.org/">three.js</a> and
+            <a href="https://globe.gl/">globe.gl</a> (MIT licence), and their dependencies.
+          </li>
+        </ul>
+      </section>
+
+      <section id="licence">
+        <h2>Licence</h2>
+        <p>
+          The site's code is open source under the MIT licence:
+          <a href="https://github.com/KriMaDev/global_truth">github.com/KriMaDev/global_truth</a>.
+          News headlines belong to their publishers; data belongs to the sources above, under
+          their own terms.
+        </p>
+        <p>
+          Created by <a href="https://krimadev.com">KriMa Development</a> ·
+          <a id="version" href="https://github.com/KriMaDev/global_truth">Version</a>
+        </p>
+      </section>
+    </main>
+    <script type="module" src="/src/legal.ts"></script>
+  </body>
+</html>

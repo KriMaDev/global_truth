@@ -135,7 +135,16 @@ function showList(message: string): void {
   renderEventList(list, events, { onOpen: (event) => card.open(event, true) });
 }
 
+/** The footer's version: build date and commit, linked to that commit on GitHub. */
+function showVersion(): void {
+  const link = byId<HTMLAnchorElement>("version");
+  link.textContent = `Version ${__BUILD_DATE__} · ${__BUILD_COMMIT__}`;
+  const sha = __BUILD_COMMIT__.replace("+", "");
+  if (/^[0-9a-f]{7}$/.test(sha)) link.href = `https://github.com/KriMaDev/global_truth/commit/${sha}`;
+}
+
 async function start(): Promise<void> {
+  showVersion();
   renderLegend(byId("legend"));
   setupMotionToggle(byId<HTMLButtonElement>("motion-toggle"), (on) => app?.setReducedMotion(on));
 
