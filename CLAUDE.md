@@ -34,7 +34,8 @@ Node needs `$env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;" + $env:Path`
 - Frontend tests: `npm test` (vitest). Preview the build: `npm run preview` (port 4173).
 - Textures: `pipeline\.venv\Scripts\python tools\build_textures.py` (NASA sources cached in `.cache/textures/`; output committed).
 - Browser checks: Playwright from Star Teller's install (`Desktop\Star Teller\apps\web\node_modules\@playwright\test`, `channel: "msedge"`), from a scratchpad script; route the document response to add the CSP from `frontend/public/_headers`, since `vite preview` doesn't apply `_headers`. Headless Edge `--window-size` can't go below about 500 px, so use a 390×844 viewport for phones.
-- CSP: globe.gl 2.46.2 injects four `<style>` blocks, allowed by hash in `_headers`. After updating globe.gl, run the browser check; it prints any new hash to add.
+- CSP: globe.gl 2.46.2 injects four `<style>` blocks, allowed by hash in `_headers`. After updating globe.gl, run the browser check; it prints any new hash to add. `assetsInlineLimit: 0` in vite.config.ts keeps fonts out of `data:` URLs, which the CSP blocks.
+- Look and feel: the krimadev.com design language (owner's wish, 7 Nov 2026): `.glass` panels (3px corners, fine line, blur, teal `#6fe3dc` corner brackets), Michroma title, Hanken Grotesk text, JetBrains Mono uppercase labels, a faint 64px grid behind a transparent globe canvas. Globe surface: day/night along the real terminator, GEBCO relief lit by the sun, sun-facing atmosphere. No sun glint and no clouds: on a news globe they could be read as real weather.
 
 ## How to work
 - Start every new feature in plan mode and get approval before large changes.

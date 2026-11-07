@@ -22,7 +22,7 @@ export function renderEventList(
   for (const event of events) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "event-list-button";
+    button.className = "event-list-button glass";
     button.dataset.eventId = event.id;
     const dot = document.createElement("span");
     dot.className = "card-dot";

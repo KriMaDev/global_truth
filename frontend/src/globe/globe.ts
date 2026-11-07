@@ -1,20 +1,23 @@
 /**
- * The 3D globe: globe.gl with NASA day and night textures, atmosphere, stars, the severity
+ * The 3D globe: globe.gl with NASA day, night and relief textures, atmosphere, stars, the severity
  * lights and rings, auto-rotation and smooth camera moves. Loaded lazily by main.ts, so the
  * page shell appears before three.js is downloaded.
  */
 
 import Globe from "globe.gl";
 import {
+  NoColorSpace,
   SRGBColorSpace,
   TextureLoader,
   type Group,
   type PerspectiveCamera,
   type Texture,
+  type Vector3,
   type WebGLRenderer,
 } from "three";
 import { SEVERITY_STYLES } from "../severity";
 import type { GlobeEvent } from "../types";
+import { createAtmosphere } from "./atmosphere";
 import { createDayNightMaterial, setSunDirection } from "./daynight";
 import { createMarker, updateMarkers } from "./markers";
 import { createStars } from "./stars";
@@ -25,6 +28,8 @@ export interface GlobeAppOptions {
   reducedMotion: boolean;
   /** Called when a light is clicked or tapped. */
   onSelect: (event: GlobeEvent) => void;
+  /** Called with the camera's position whenever it moves (for the readout). */
+  onView?: (view: { lat: number; lng: number; altitude: number }) => void;
 }
 
 export interface GlobeApp {
@@ -35,8 +40,9 @@ export interface GlobeApp {
   zoomBy(factor: number): void;
 }
 
-const BACKGROUND = "#03050b";
-const ATMOSPHERE = "#7cc4ff";
+/** Transparent, so the page's background and grid show behind the stars. */
+const BACKGROUND = "rgba(0, 0, 0, 0)";
+const GLOBE_RADIUS = 100;
 const LIGHT_ALTITUDE = 0.012;
 const RING_ALTITUDE = 0.004;
 const FLY_MS = 1400;
@@ -63,9 +69,10 @@ function startAltitude(): number {
   return window.innerWidth < window.innerHeight ? 3.6 : 2.4;
 }
 
-async function loadTexture(url: string, renderer: WebGLRenderer): Promise<Texture> {
+/** `color` textures are sRGB images; data textures (elevation) are read as plain numbers. */
+async function loadTexture(url: string, renderer: WebGLRenderer, color = true): Promise<Texture> {
   const texture = await new TextureLoader().loadAsync(url);
-  texture.colorSpace = SRGBColorSpace;
+  texture.colorSpace = color ? SRGBColorSpace : NoColorSpace;
   texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   return texture;
 }
@@ -97,19 +104,23 @@ export async function createGlobeApp(
   const markers = new Map<string, Group>();
   const ringEvents = options.events.filter((e) => SEVERITY_STYLES[e.severity].rings);
 
+  // No grow-in animation: the atmosphere is a separate object and would not grow with it.
   const globe = new Globe(container, {
-    animateIn: !reducedMotion,
-    rendererConfig: { antialias: true, powerPreference: "high-performance" },
+    animateIn: false,
+    rendererConfig: { antialias: true, alpha: true, powerPreference: "high-performance" },
   });
   const renderer = globe.renderer();
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
   const size = textureSize(renderer);
-  const [day, night] = await Promise.all([
+  const [day, night, topo] = await Promise.all([
     loadTexture(`/textures/day-${size}.webp`, renderer),
     loadTexture(`/textures/night-${size}.webp`, renderer),
+    loadTexture(`/textures/topo-${size}.webp`, renderer, false),
   ]);
-  const material = createDayNightMaterial(day, night);
+  const width = size === "4k" ? 4096 : 2048;
+  const material = createDayNightMaterial({ day, night, topo, width, height: width / 2 });
+  const sunVector = material.uniforms.sunDirection.value as Vector3;
   container.dataset.textures = size;
 
   const resize = (): void => {
@@ -121,9 +132,7 @@ export async function createGlobeApp(
   globe
     .backgroundColor(BACKGROUND)
     .globeMaterial(material)
-    .showAtmosphere(true)
-    .atmosphereColor(ATMOSPHERE)
-    .atmosphereAltitude(0.17)
+    .showAtmosphere(false)
     .customLayerData(options.events)
     .customThreeObject((d) => {
       const event = d as GlobeEvent;
@@ -148,6 +157,11 @@ export async function createGlobeApp(
 
   const camera = globe.camera() as PerspectiveCamera;
   globe.scene().add(createStars(2000, Math.min(camera.far * 0.8, 20_000)));
+  globe.scene().add(createAtmosphere(GLOBE_RADIUS, sunVector));
+  if (options.onView) {
+    const onView = options.onView;
+    globe.onZoom((pov) => onView(pov));
+  }
 
   // The sun, now and every minute.
   const updateSun = (): void => {
@@ -160,6 +174,7 @@ export async function createGlobeApp(
   // Open on the side where the day meets the night.
   const sun = sunPosition(new Date());
   globe.pointOfView({ lat: 22, lng: sun.lng + 40, altitude: startAltitude() });
+  options.onView?.(globe.pointOfView());
 
   // Auto-rotation: slow, off with reduced motion, paused by any interaction.
   const controls = globe.controls();

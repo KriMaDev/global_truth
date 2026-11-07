@@ -7,6 +7,8 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     target: "es2022",
+    // Never inline files as data: URLs: the Content-Security-Policy only allows our own files.
+    assetsInlineLimit: 0,
     // three.js is one large library; it is loaded after the page shell, so its size
     // does not delay the first paint.
     chunkSizeWarningLimit: 1200,

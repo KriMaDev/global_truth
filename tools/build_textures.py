@@ -11,6 +11,8 @@ Sources (public domain, credited in docs/sources.md and on the page):
 - Day: NASA Earth Observatory, Blue Marble Next Generation with topography and bathymetry,
   July 2004.
 - Night: NASA Earth Observatory, Black Marble 2016 (VIIRS night lights), 3 km.
+- Relief: imagery by Jesse Allen, NASA Earth Observatory, using data from the General
+  Bathymetric Chart of the Oceans (GEBCO_08), land elevation.
 """
 
 from __future__ import annotations
@@ -28,9 +30,13 @@ NASA = "https://assets.science.nasa.gov/content/dam/science/esd/eo/images"
 SOURCES = {
     "day": f"{NASA}/bmng/bmng-topography-bathymetry/july/world.topo.bathy.200407.3x5400x2700.jpg",
     "night": f"{NASA}/imagerecords/144000/144898/BlackMarble_2016_3km.jpg",
+    # Land elevation in grey (sea is black): relief shading and the land/sea mask.
+    "topo": f"{NASA}/bmng/topography/gebco_08_rev_elev_5400x2700.jpg",
 }
 SIZES = {"2k": (2048, 1024), "4k": (4096, 2048)}
-QUALITY = {"day": 82, "night": 80}
+QUALITY = {"day": 82, "night": 80, "topo": 85}
+# Stored as grey; the others in colour.
+MODES = {"day": "RGB", "night": "RGB", "topo": "L"}
 USER_AGENT = "WorldNewsGlobe/0.1 (+https://globe.krimadev.com)"
 
 # The 3 km night image is 13500 x 6750 (91 million pixels), just over Pillow's default
@@ -54,10 +60,10 @@ def build(name: str, source: Path) -> None:
     """Write every size of one texture as WebP."""
     OUT.mkdir(parents=True, exist_ok=True)
     with Image.open(source) as image:
-        rgb = image.convert("RGB")
+        converted = image.convert(MODES[name])
         for label, size in SIZES.items():
             out = OUT / f"{name}-{label}.webp"
-            rgb.resize(size, Image.Resampling.LANCZOS).save(
+            converted.resize(size, Image.Resampling.LANCZOS).save(
                 out, "WEBP", quality=QUALITY[name], method=6
             )
             print(f"wrote {out.relative_to(ROOT)} ({out.stat().st_size // 1024} KB)")

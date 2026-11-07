@@ -4,6 +4,14 @@
  * fails, the events are shown as a plain list instead, so the page always works.
  */
 
+// The same fonts as krimadev.com (SIL Open Font License): Michroma for the title,
+// Hanken Grotesk for text, JetBrains Mono for labels. Bundled, so no outside requests.
+import "@fontsource/michroma/400.css";
+import "@fontsource/hanken-grotesk/400.css";
+import "@fontsource/hanken-grotesk/600.css";
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/500.css";
+import "./style.css";
 import sampleEvents from "./data/sample-events.json";
 import { compareBySeverity, parseEvents } from "./events";
 import type { GlobeApp } from "./globe/globe";
@@ -33,6 +41,20 @@ const events = parseEvents(sampleEvents).sort(compareBySeverity);
 const container = byId<HTMLDivElement>("globe");
 const status = byId<HTMLParagraphElement>("status");
 const list = byId<HTMLElement>("event-list");
+
+const hud = byId<HTMLParagraphElement>("hud");
+let view = { lat: 0, lng: 0, altitude: 0 };
+
+function degrees(value: number, positive: string, negative: string): string {
+  return `${Math.abs(value).toFixed(1)}°${value >= 0 ? positive : negative}`;
+}
+
+/** The readout: the UTC time the day/night line is drawn for, and where the camera looks. */
+function updateHud(): void {
+  const utc = new Date().toISOString().slice(11, 16);
+  const lng = ((((view.lng + 180) % 360) + 360) % 360) - 180;
+  hud.textContent = `UTC ${utc} · ${degrees(view.lat, "N", "S")} ${degrees(lng, "E", "W")} · ALT ${view.altitude.toFixed(1)}`;
+}
 
 let app: GlobeApp | null = null;
 const card = createEventCard(byId("event-card"), () => app?.select(null));
@@ -68,7 +90,12 @@ async function start(): Promise<void> {
       events,
       reducedMotion: initialReducedMotion(),
       onSelect: (event) => openEvent(event, false),
+      onView: (pov) => {
+        view = pov;
+        updateHud();
+      },
     });
+    window.setInterval(updateHud, 30_000);
     attachKeyboard(container, app);
     renderEventList(list, events, {
       onFocus: (event) => {

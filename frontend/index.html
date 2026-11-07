@@ -9,18 +9,17 @@
       content="Current world events on an interactive 3D globe, coloured by severity, each linked to its original source."
     />
     <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#03050b" />
+    <meta name="theme-color" content="#05070a" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <header class="topbar">
       <div class="brand">
         <h1>World News Globe</h1>
-        <p class="preview-note">Preview: sample events, not real news</p>
+        <p class="preview-note">Preview · sample events, not real news</p>
       </div>
-      <button id="motion-toggle" class="motion-toggle" type="button" aria-pressed="false">
-        Reduce motion
+      <button id="motion-toggle" class="motion-toggle glass" type="button" aria-pressed="false">
+        <span class="toggle-led" aria-hidden="true"></span>Reduce motion
       </button>
     </header>
 
@@ -40,19 +39,33 @@
       </p>
       <p id="status" class="status" role="status">Loading the globe…</p>
       <nav id="event-list" class="event-list" aria-label="Events, most severe first"></nav>
-      <aside id="event-card" class="event-card" aria-labelledby="event-card-title" hidden></aside>
+      <aside
+        id="event-card"
+        class="event-card glass"
+        aria-labelledby="event-card-title"
+        hidden
+      ></aside>
     </main>
 
     <footer class="bottom">
-      <section id="legend" class="legend" aria-label="Severity legend"></section>
-      <p class="credits">
-        Earth:
-        <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/"
-          >NASA Blue Marble</a
-        >,
-        <a href="https://science.nasa.gov/earth/earth-observatory/earth-at-night/">Black Marble</a>
-        · <a href="https://github.com/KriMaDev/global_truth">Source code</a>
-      </p>
+      <section id="legend" class="legend glass" aria-label="Severity legend"></section>
+      <div class="bottom-right">
+        <p id="hud" class="hud" aria-hidden="true"></p>
+        <p class="credits">
+          Earth:
+          <a href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/"
+            >NASA Blue Marble</a
+          >,
+          <a href="https://science.nasa.gov/earth/earth-observatory/earth-at-night/"
+            >Black Marble</a
+          >,
+          <a
+            href="https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/topography-bathymetry-maps/"
+            >GEBCO relief</a
+          >
+          · <a href="https://github.com/KriMaDev/global_truth">Source code</a>
+        </p>
+      </div>
     </footer>
 
     <script type="module" src="/src/main.ts"></script>

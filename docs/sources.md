@@ -35,6 +35,8 @@ Candidate outlets, to be checked one by one: BBC, DW, France 24, NHK World, ABC 
 | [UN M49](https://unstats.un.org/unsd/methodology/m49/) | Continents and sub-regions | UN Statistics Division, free to use |
 | [NASA Blue Marble Next Generation](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/) (topography and bathymetry, July 2004) | Earth day texture | Public domain; credit "NASA Earth Observatory" (shown on the page) |
 | [NASA Black Marble 2016](https://science.nasa.gov/earth/earth-observatory/earth-at-night/) (3 km) | Earth night lights texture | Public domain; credit "NASA Earth Observatory" (shown on the page) |
+| [NASA Earth Observatory topography](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/topography-bathymetry-maps/) (GEBCO_08 land elevation, 5400×2700) | Relief shading on the globe | Imagery by Jesse Allen, NASA Earth Observatory, using data from GEBCO (British Oceanographic Data Centre); credited on the page |
+| [Michroma](https://github.com/googlefonts/Michroma-font), [Hanken Grotesk](https://github.com/marcologous/hanken-grotesk), [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) (via @fontsource) | Fonts, as on krimadev.com | SIL Open Font License 1.1 |
 
 ## Not used
 
