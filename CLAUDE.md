@@ -13,10 +13,21 @@ An interactive, visually stunning 3D globe that shows current world events as gl
 - [x] Studied star-teller deployment setup (7 Nov 2026)
 - [x] Architecture and stack approved by the owner (7 Nov 2026; plan summarised in `docs/architecture.md`)
 - [x] Milestone 1: skeleton live at https://globe.krimadev.com (7 Nov 2026), repo https://github.com/KriMaDev/global_truth (public), CI green
-- [x] Milestone 2 built (7 Nov 2026): globe with sample events, day/night, severity lights, legend, card, keyboard, reduce motion, no-WebGL list. **On `main` but NOT deployed** (owner's decision: no sample/fake news in public). **Do not run `npm run deploy` until milestone 3 replaces the sample data with real data.** Awaiting the owner's review on localhost.
+- [x] Milestone 2 (7 Nov 2026): globe with sample events, day/night, severity lights, legend, card, keyboard, reduce motion, no-WebGL list. Went public only with milestone 3's real data (owner's rule: no sample/fake news in public; sample events are used only in tests and `npm run dev` without data).
 - [x] Milestone 3 built (7 Nov 2026): pipeline (USGS, GDACS, GDELT GKG with a 32-outlet allowlist; GeoNames/M49 places; documented category and severity rules with reasons; grouping; 72 h window), frontend on real data, `update.yml`. **Live since 7 Nov 2026 16:40 UTC** (owner's "go live"): secrets `CLOUDFLARE_API_TOKEN` (owner-made, template "Edit Cloudflare Workers", zone krimadev.com, **no expiration**) and `CLOUDFLARE_ACCOUNT_ID`, variable `LIVE=true`. Updates run at :07 and :37; set `LIVE=false` to pause. First run: 138 events, all feeds ok.
 - Decisions for M3 (7 Nov 2026): news via GDELT GKG files (not its throttled search API) from allowlisted outlets only; headline + outlet + time + link, **no snippets** (outlet RSS terms unclear, EU press publishers' right). News is placed only where its headline names a place. Outlet RSS with snippets later, outlet by outlet with permission.
-- [x] Milestone 4 built (7 Nov 2026) on branch `milestone-4` (plan approved by the owner): coastlines/borders, close button, footer with version + `/legal/` page (publisher: Kristian Manev (KriMa Development), Brussels area, Belgium; contact via krimadev.com/contact, no email printed), Health category, grouped pillars with list cards, filters in the URL, 7-day timeline (day files), place drill-down, geography view. **Not merged or deployed: merge only when the owner says "deploy".**
+- [x] **Milestone 4 live since 7 Nov 2026 ~22:00 UTC** (owner's "deploy"; PR #1 from branch `milestone-4`, merge commit `78f086e`, deployed by a manual `update.yml` run and checked in a browser). Contents:
+  - coastlines/borders (brighter at night); clear close button; footer with version (build date + commit) and a `/legal/` page (publisher: Kristian Manev (KriMa Development), Brussels area, Belgium; contact via krimadev.com/contact, no email printed; privacy, sources, outlets, credits);
+  - Health & outbreaks category; natural-disaster type on cards/hover/lists (`hazard`, rules in `docs/categories.md`);
+  - grouped pillars with count badges and list cards (Back); filters (type, severity, place drill-down, time) kept in the URL, each chip group with "All off/All on"; 7-day timeline (day files `data/days/`);
+  - geography view (`view=geo`): countries coloured by most severe event (rule in `docs/severity.md`), events as dots, decluttered labels for countries, oceans, seas, ranges, deserts, peaks in 5 zoom levels; every label and country opens "About this place" (Wikidata facts + Wikipedia intro, `geo/places.json`, 873 places);
+  - Rotate play/pause button (resumes 10 s after touching, not while a card is open; Reduce motion only stops it); zoom limits 0.15–4 (0.5/0.6 until NASA tiles load);
+  - close-up NASA GIBS tiles (`globe/detail.ts`, up to 500 m/px) loaded straight from gibs.earthdata.nasa.gov.
+- [ ] **Next: milestone 5** (news panel, source attribution, About/Sources page). The legal page already covers sources, outlets and credits, so start in plan mode and agree with the owner what milestone 5 still needs.
+- Open follow-ups:
+  - GitHub warns that the pinned actions (`actions/checkout@v4`, `setup-node@v4`, `setup-python@v5`, `cache@v4`) target Node 20 (deprecated; forced to Node 24 for now): update to versions at least two weeks old;
+  - the `milestone-4` branch can be deleted (ask first);
+  - WHO Disease Outbreak News as a health data feed is an idea for milestone 7 (terms check first).
 - Commits in this repo use the GitHub noreply address (repo-local git config), never the Gmail address.
 - Deploying by hand needs `$env:CLOUDFLARE_ACCOUNT_ID` set to the account ID in krimadev_rebuild's NOTES.md (the OAuth login can't list accounts on its own).
 
@@ -28,6 +39,13 @@ An interactive, visually stunning 3D globe that shows current world events as gl
 - **State-affiliated outlets are included, with a visible "State-affiliated" label** on items and on the Sources page.
 - **Not used:** ACLED (terms), Nominatim (bulk use forbidden). GeoNames + Natural Earth + UN M49 for places.
 - **Pins:** only versions at least two weeks old (supply-chain caution).
+- **Deploying = merging to `main`** (the scheduled `update.yml` builds and deploys `main`). Work happens on a branch with a pull request (CI runs on it); merge only on the owner's "deploy". Merge **locally** (`git merge --no-ff`, then push) so the merge commit carries the repo's noreply address; then `gh workflow run update.yml --ref main` to publish at once instead of waiting for :07/:37.
+
+## Decisions for milestone 4 (7 Nov 2026, owner)
+- **Timeline:** 7 days, as daily files on the same hosting. **Clusters:** clicking a group opens a list. **Refresh:** stays every 30 min (cost: none).
+- **Place descriptions:** Wikidata (CC0) facts + the English Wikipedia introduction (CC BY-SA 4.0) shown **word for word** with a link to the exact revision, the licence and the fetch date. Facts filtered to the whole country and current (no "applies to part", no dissolved states). Fetched by hand with `tools/build_places.py` (1 request/s, cached), never by visitors.
+- **Close-up imagery:** NASA GIBS tiles loaded by visitors' browsers straight from gibs.earthdata.nasa.gov (not mirrored on Cloudflare). The privacy section on /legal/ says so; CSP `img-src` allows it; GIBS's acknowledgement is on /legal/. Day layer `BlueMarble_ShadedRelief_Bathymetry`, night `VIIRS_Black_Marble` (2016) only at levels 5–6 (PNG tiles up to 450 KB); a close view costs about 1–6 MB.
+- **Rotation:** separate Rotate button; Reduce motion is an accessibility setting (turning it on also stops rotation).
 
 ## Commands (Windows)
 Node needs `$env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;" + $env:Path` in PowerShell.
@@ -39,6 +57,12 @@ Node needs `$env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;" + $env:Path`
 - Place descriptions: `pipeline\.venv\Scripts\python tools\build_places.py` (after `build_geo.py`; Wikidata facts CC0 + Wikipedia introductions CC BY-SA 4.0, cached in `.cache/places/`, `--fresh` to refetch; writes `frontend/public/geo/places.json`, committed). Wikipedia text is shown word for word, never shortened, with revision link and licence on each card.
 - Browser checks: Playwright from Star Teller's install (`Desktop\Star Teller\apps\web\node_modules\@playwright\test`, `channel: "msedge"`), from a scratchpad script; route the document response to add the CSP from `frontend/public/_headers`, since `vite preview` doesn't apply `_headers`. Headless Edge `--window-size` can't go below about 500 px, so use a 390×844 viewport for phones.
 - CSP: `img-src` allows `https://gibs.earthdata.nasa.gov` for the close-up NASA tiles (`src/globe/detail.ts`; owner's decision 7 Nov 2026, stated on /legal/). globe.gl 2.46.2 injects four `<style>` blocks, allowed by hash in `_headers`. After updating globe.gl, run the browser check; it prints any new hash to add. `assetsInlineLimit: 0` in vite.config.ts keeps fonts out of `data:` URLs, which the CSP blocks.
+- Browser check scripts used for milestone 4 (desktop 1440×900 and phone 390×844, live CSP): check the footer version and `/legal/`; cluster list + Back; filters and URL; timeline day files; place drill-down; geography labels, hover, place cards; Rotate (after a drag the globe glides about 1.5 s before it stops); zoom limits; NASA tiles (count requests and bytes; also run with gibs blocked: zoom must stop at 0.5); frame rate with ~1,000 synthetic events in **headed** Edge (news ~140 fps, geography ~75–80 far, ~140 close). Scripts live in the session scratchpad, so rewrite them as needed.
+- Gotchas:
+  - In Git Bash, inline heredoc scripts that contain `\b` or other backslashes can end up as control characters in files (a backspace replaced `\b` twice): write edit scripts with the Write tool and run them, then grep for `\x08`.
+  - globe.gl hover box: it needs `.float-tooltip-kap { z-index: 100000 }`, since three's CSS2D renderer numbers labels by depth.
+  - Clickable HTML labels/badges must stop `pointerdown`/`pointerup` from bubbling (`shield()` in globe.ts), or globe.gl also "clicks" what lies beneath.
+  - `elementFromPoint` ignores `pointer-events: none` elements, so check stacking with screenshots.
 - Look and feel: the krimadev.com design language (owner's wish, 7 Nov 2026): `.glass` panels (3px corners, fine line, blur, corner brackets), Michroma title, Hanken Grotesk text, JetBrains Mono uppercase labels, a faint 64px grid behind a transparent globe canvas. **Not** krimadev's teal: the accent is greyish white `#d6dae0`, and turns to the open event's severity colour (`--accent`, set in main.ts). Events are pillars of light (`globe/markers.ts`), taller/wider/faster-pulsing with severity; on phones the event card sits above the legend, never over it. Globe surface: day/night along the real terminator, GEBCO relief lit by the sun, sun-facing atmosphere. No sun glint and no clouds: on a news globe they could be read as real weather.
 
 ## How to work
@@ -94,15 +118,17 @@ Respect each source's rate limits and terms. Cache aggressively. Never hammer a 
 - Show clear loading, empty and error states. A failing feed must never break the whole app.
 
 ## Milestones
-1. Plan, stack decision and project skeleton, deployed to the subdomain as a placeholder
-2. Globe with static sample events and severity lights
-3. Live data pipeline: 2–3 sources, normalization, geocoding, categories, severity
-4. Location drill-down and category filters
+1. ✅ Plan, stack decision and project skeleton, deployed to the subdomain as a placeholder
+2. ✅ Globe with static sample events and severity lights
+3. ✅ Live data pipeline: 2–3 sources, normalization, geocoding, categories, severity
+4. ✅ Location drill-down and category filters (plus timeline, clusters, geography view, place cards, legal page, NASA close-ups)
 5. News panel, source attribution, About/Sources page
 6. Polish: animations, performance, mobile, accessibility
 7. More sources, monitoring, future ideas (language selection, alerts, public RSS/JSON API, saved regions)
 
 ## Geography education (owner's goal, 7 Nov 2026)
+Done in milestone 4: the geography view, labels and "About this place" cards. Still open: capitals and major cities appearing as you zoom. The original goal follows.
+
 The globe should also teach general geography. Plan it into milestone 4 (location drill-down) and beyond, e.g. country borders and names, capitals and major cities that appear as you zoom, the continent/region/country of the selected place, and a short "about this place" panel with facts from open, credited sources (e.g. Wikidata CC0, GeoNames CC BY). Facts must be sourced like the news: no unsourced text.
 
 **Geography view switch (owner's idea, 7 Nov 2026), milestone 4:** a switch between the news view (pillars) and a geography view: each country coloured by its events' severity (documented rule in `docs/severity.md`, proposal: the highest severity among its current events; none = neutral), events reduced to small dots, and labels for country names, oceans, seas and important mountains (ranges and peaks). Source: Natural Earth (public domain: admin-0 countries, marine polygons, geography regions, elevation points). Needs each event's country from the milestone 3 geocoder.
