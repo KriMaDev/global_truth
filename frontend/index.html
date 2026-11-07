@@ -79,9 +79,15 @@
         <div data-filter="time"></div>
         <h3 class="label filter-label">Place</h3>
         <div data-filter="place"></div>
-        <h3 class="label filter-label">Type of event</h3>
+        <div class="filter-label-row">
+          <h3 class="label filter-label">Type of event</h3>
+          <button type="button" class="filter-all" data-filter="categories-all"></button>
+        </div>
         <div class="chips" role="group" aria-label="Type of event" data-filter="categories"></div>
-        <h3 class="label filter-label">Severity</h3>
+        <div class="filter-label-row">
+          <h3 class="label filter-label">Severity</h3>
+          <button type="button" class="filter-all" data-filter="severities-all"></button>
+        </div>
         <div class="chips" role="group" aria-label="Severity" data-filter="severities"></div>
         <button type="button" class="card-back filter-clear" data-filter="clear">Clear filters</button>
       </section>
@@ -90,7 +96,12 @@
     <footer class="bottom">
       <section id="legend" class="legend glass" aria-label="Severity legend"></section>
       <div class="bottom-right">
-        <p id="hud" class="hud" aria-hidden="true"></p>
+        <div class="hud-row">
+          <button id="rotate-toggle" class="rotate-toggle" type="button" aria-pressed="true" hidden>
+            <span class="rotate-icon" aria-hidden="true"></span>Rotate
+          </button>
+          <p id="hud" class="hud" aria-hidden="true"></p>
+        </div>
         <p class="credits">
           Created by <a class="maker" href="https://krimadev.com">KriMa Development</a> ·
           <a href="/legal/">Legal &amp; sources</a> ·

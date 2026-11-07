@@ -22,9 +22,11 @@ export interface Cluster {
 
 /** Grouping distance in degrees for a camera altitude (globe radii above the surface). */
 export function clusterDegrees(altitude: number): number {
+  // Steps fit the zoom limits (closest 0.5, or 0.9 on phones: see globe/globe.ts), so
+  // grouping always ends before the closest zoom.
   if (altitude >= 2) return 4;
-  if (altitude >= 1) return 2;
-  if (altitude >= 0.5) return 1;
+  if (altitude >= 1.4) return 2;
+  if (altitude >= 1) return 1;
   return 0;
 }
 

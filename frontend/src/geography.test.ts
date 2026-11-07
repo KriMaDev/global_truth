@@ -84,7 +84,7 @@ describe("labelsFor", () => {
   });
 
   it("has four zoom levels", () => {
-    expect([3, 1.5, 0.7, 0.3].map(labelLevel)).toEqual([0, 1, 2, 3]);
+    expect([3, 1.5, 1.2, 0.9].map(labelLevel)).toEqual([0, 1, 2, 3]);
   });
 
   it("puts oceans first, then countries by rank, and peaks last", () => {

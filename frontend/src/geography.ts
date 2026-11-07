@@ -76,9 +76,10 @@ export function countryCounts(events: GlobeEvent[], iso2: string): Record<Severi
 
 /** 0 when far away, up to 3 when zoomed right in. */
 export function labelLevel(altitude: number): 0 | 1 | 2 | 3 {
+  // Within the zoom limits (closest 0.5, or 0.9 on phones), every level is reachable.
   if (altitude >= 2) return 0;
-  if (altitude >= 1) return 1;
-  if (altitude >= 0.5) return 2;
+  if (altitude >= 1.4) return 1;
+  if (altitude >= 1) return 2;
   return 3;
 }
 

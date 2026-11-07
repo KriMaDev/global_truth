@@ -137,8 +137,16 @@ if (footer) {
 let app: GlobeApp | null = null;
 const card = createEventCard(byId("event-card"), () => {
   app?.select(null);
+  app?.setCardOpen(false);
   setAccent(null);
 });
+
+/** The Rotate button: pressed while the globe turns by itself. */
+const rotateToggle = byId<HTMLButtonElement>("rotate-toggle");
+function showRotation(on: boolean): void {
+  rotateToggle.setAttribute("aria-pressed", String(on));
+  rotateToggle.title = on ? "Stop the globe turning" : "Let the globe turn by itself";
+}
 
 const panel = createFilterPanel(
   byId("filter-panel"),
@@ -385,6 +393,7 @@ function openEvent(event: GlobeEvent, focus: boolean, back?: () => void): void {
   app?.select(event.id);
   if (!back) app?.flyTo(event);
   setAccent(SEVERITY_STYLES[event.severity].color);
+  app?.setCardOpen(true);
   card.open(event, focus, back);
 }
 
@@ -398,6 +407,7 @@ function openCluster(cluster: Cluster, focus: boolean): void {
   app?.select(cluster.id);
   app?.flyTo(cluster);
   setAccent(SEVERITY_STYLES[cluster.severity].color);
+  app?.setCardOpen(true);
   card.openList(cluster, focus, (event) =>
     openEvent(event, true, () => {
       app?.select(cluster.id);
@@ -425,7 +435,12 @@ function showVersion(): void {
 async function start(): Promise<void> {
   showVersion();
   renderLegend(byId("legend"));
-  setupMotionToggle(byId<HTMLButtonElement>("motion-toggle"), (on) => app?.setReducedMotion(on));
+  setupMotionToggle(byId<HTMLButtonElement>("motion-toggle"), (on) => {
+    app?.setReducedMotion(on);
+    // Turning reduced motion on also stops the rotation; turning it off leaves it to the
+    // Rotate button.
+    if (on) app?.setRotating(false);
+  });
 
   let loadFailed = false;
   try {
@@ -455,7 +470,13 @@ async function start(): Promise<void> {
       },
       onCountry: chooseCountry,
       describeCountry,
+      onRotationChange: showRotation,
     });
+    showRotation(!initialReducedMotion());
+    rotateToggle.hidden = false;
+    rotateToggle.addEventListener("click", () =>
+      app?.setRotating(rotateToggle.getAttribute("aria-pressed") !== "true"),
+    );
     geoToggle.hidden = false;
     geoToggle.addEventListener("click", () => void setGeoView(!geoView));
     if (geoView) void setGeoView(true);

@@ -46,6 +46,8 @@ export interface GlobeAppOptions {
   onCountry?: (iso2: string) => void;
   /** Geography view: the lines shown under a country's name when hovering it. */
   describeCountry?: (iso2: string) => string[];
+  /** Called when auto-rotation is switched on or off (for the Rotate button). */
+  onRotationChange?: (on: boolean) => void;
 }
 
 export interface GlobeApp {
@@ -58,6 +60,10 @@ export interface GlobeApp {
   /** Highlights the pillar holding this event (or group), or none. */
   select(id: string | null): void;
   setReducedMotion(on: boolean): void;
+  /** The Rotate button: rotation on (now) or off (until switched on again). */
+  setRotating(on: boolean): void;
+  /** While a card or list is open, rotation does not come back by itself. */
+  setCardOpen(open: boolean): void;
   /** The geography view (countries coloured by severity, map labels) with this data, or the
    * news view with null. Call again whenever the filtered events change. */
   setGeography(data: GeographyData | null, severities: Map<string, Severity>): void;
@@ -88,10 +94,12 @@ const FLY_MS = 1400;
 const STEP_MS = 350;
 const AUTO_ROTATE_SPEED = 0.35;
 /** Auto-rotation comes back after this long without any interaction. */
-const AUTO_ROTATE_RESUME_MS = 30_000;
+const AUTO_ROTATE_RESUME_MS = 10_000;
 const SUN_UPDATE_MS = 60_000;
-const MIN_ALTITUDE = 0.25;
-const MAX_ALTITUDE = 5;
+/** Closest zoom: where the Earth images still look sharp (2K images blur sooner). */
+const MIN_ALTITUDE: Record<"2k" | "4k", number> = { "2k": 0.9, "4k": 0.5 };
+/** Furthest zoom: the whole globe still fits across a phone screen (which starts at 3.6). */
+const MAX_ALTITUDE = 4;
 
 /** Windows at least this wide (CSS pixels) get 4K textures; phones and small tablets 2K. */
 const WIDE_SCREEN = 1024;
@@ -440,19 +448,38 @@ export async function createGlobeApp(
   regroupForAltitude(globe.pointOfView().altitude);
   options.onView?.(globe.pointOfView());
 
-  // Auto-rotation: slow, off with reduced motion, paused by any interaction.
+  // Zoom limits (globe.gl allows from the surface to 100 radii out).
   const controls = globe.controls();
+  const minAltitude = MIN_ALTITUDE[size];
+  controls.minDistance = GLOBE_RADIUS * (1 + minAltitude);
+  controls.maxDistance = GLOBE_RADIUS * (1 + MAX_ALTITUDE);
+  const clampAltitude = (altitude: number): number =>
+    Math.max(minAltitude, Math.min(MAX_ALTITUDE, altitude));
+
+  // Auto-rotation: the Rotate button switches it on or off (off at first with reduced
+  // motion). Any interaction pauses it; it comes back after 10 s, but not while a card is
+  // open, unless the Rotate button is pressed.
   controls.autoRotateSpeed = AUTO_ROTATE_SPEED;
-  controls.autoRotate = !reducedMotion;
+  let rotationOn = !reducedMotion;
+  let idle = true;
+  let cardOpen = false;
+  let forced = false;
   let resumeTimer = 0;
+  const applyRotation = (): void => {
+    controls.autoRotate = rotationOn && idle && (!cardOpen || forced);
+  };
   const pauseAutoRotate = (): void => {
-    controls.autoRotate = false;
+    idle = false;
+    forced = false;
+    applyRotation();
     window.clearTimeout(resumeTimer);
     resumeTimer = window.setTimeout(() => {
-      controls.autoRotate = !reducedMotion && selectedId === null;
+      idle = true;
+      applyRotation();
     }, AUTO_ROTATE_RESUME_MS);
   };
   controls.addEventListener("start", pauseAutoRotate);
+  applyRotation();
 
   // Pulses and pillar sizes: one loop for every light.
   const start = performance.now();
@@ -493,16 +520,29 @@ export async function createGlobeApp(
       move({ lat, lng: target.lng, altitude: Math.min(current.altitude, 1.6) }, FLY_MS);
     },
     flyOver(lat, lng, altitude) {
-      move({ lat, lng, altitude: Math.max(MIN_ALTITUDE, Math.min(MAX_ALTITUDE, altitude)) }, FLY_MS);
+      move({ lat, lng, altitude: clampAltitude(altitude) }, FLY_MS);
     },
     select(id) {
       selectedId = id;
-      if (id !== null) pauseAutoRotate();
     },
     setReducedMotion(on) {
       reducedMotion = on;
-      controls.autoRotate = !on && selectedId === null;
       globe.ringsData(ringClusters());
+    },
+    setRotating(on) {
+      rotationOn = on;
+      window.clearTimeout(resumeTimer);
+      idle = true;
+      forced = on;
+      applyRotation();
+      options.onRotationChange?.(on);
+    },
+    setCardOpen(open) {
+      cardOpen = open;
+      if (open) forced = false;
+      // Closing a card starts the 10 s before rotation comes back.
+      if (!open) pauseAutoRotate();
+      else applyRotation();
     },
     setGeography(data, severities) {
       const switched = (data === null) !== (geography === null);
@@ -532,7 +572,7 @@ export async function createGlobeApp(
     },
     zoomBy(factor) {
       const p = globe.pointOfView();
-      const altitude = Math.max(MIN_ALTITUDE, Math.min(MAX_ALTITUDE, p.altitude * factor));
+      const altitude = clampAltitude(p.altitude * factor);
       move({ lat: p.lat, lng: p.lng, altitude }, STEP_MS);
     },
   };

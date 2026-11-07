@@ -42,6 +42,17 @@ function chip(label: string, count: number, pressed: boolean, onClick: () => voi
   return button;
 }
 
+/** The "All on / All off" button: everything off while anything is on, else everything on. */
+export function allToggled<T>(set: Set<T>, all: readonly T[]): Set<T> {
+  return set.size > 0 ? new Set<T>() : new Set<T>(all);
+}
+
+function setAllButton(button: HTMLButtonElement | null, anyOn: boolean, what: string): void {
+  if (!button) return;
+  button.textContent = anyOn ? "All off" : "All on";
+  button.setAttribute("aria-label", `${anyOn ? "Turn off" : "Turn on"} every ${what}`);
+}
+
 function toggled<T>(set: Set<T>, value: T): Set<T> {
   const next = new Set(set);
   if (next.has(value)) next.delete(value);
@@ -59,6 +70,16 @@ export function createFilterPanel(
   const categories = root.querySelector<HTMLElement>("[data-filter=categories]");
   const severities = root.querySelector<HTMLElement>("[data-filter=severities]");
   const clear = root.querySelector<HTMLButtonElement>("[data-filter=clear]");
+  const categoriesAll = root.querySelector<HTMLButtonElement>("[data-filter=categories-all]");
+  const severitiesAll = root.querySelector<HTMLButtonElement>("[data-filter=severities-all]");
+  // The current state, for the All on / All off buttons (set by render).
+  let current: FilterState | null = null;
+  categoriesAll?.addEventListener("click", () => {
+    if (current) onChange({ categories: allToggled(current.categories, CATEGORIES) });
+  });
+  severitiesAll?.addEventListener("click", () => {
+    if (current) onChange({ severities: allToggled(current.severities, SEVERITIES) });
+  });
   const closeButton = root.querySelector<HTMLButtonElement>("[data-filter=close]");
   let isOpen = false;
 
@@ -83,6 +104,9 @@ export function createFilterPanel(
 
   return {
     render(state, counts, activeFilters) {
+      current = state;
+      setAllButton(categoriesAll, state.categories.size > 0, "type of event");
+      setAllButton(severitiesAll, state.severities.size > 0, "severity level");
       categories?.replaceChildren(
         ...CATEGORIES.map((category) =>
           chip(CATEGORY_LABELS[category], counts.categories[category], state.categories.has(category), () =>

@@ -20,7 +20,7 @@ function event(id: string, lat: number, lng: number, severity: Severity = "low",
 
 describe("clusterDegrees", () => {
   it("groups less as the camera comes closer", () => {
-    expect([3, 2, 1.5, 1, 0.7, 0.5, 0.3].map(clusterDegrees)).toEqual([4, 4, 2, 2, 1, 1, 0]);
+    expect([3, 2, 1.6, 1.4, 1.2, 1, 0.9, 0.5].map(clusterDegrees)).toEqual([4, 4, 2, 2, 1, 1, 0, 0]);
   });
 });
 

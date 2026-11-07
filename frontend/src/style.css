@@ -720,6 +720,55 @@ body:not(.no-globe) .event-list-button:focus {
   gap: 0.35rem;
 }
 
+.hud-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.rotate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: rgb(5 7 10 / 60%);
+  color: var(--fg);
+  font: 500 0.62rem/1.2 var(--ff-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.rotate-toggle[hidden] {
+  display: none;
+}
+
+.rotate-toggle:hover {
+  border-color: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Pause bars while turning, a play triangle while still. */
+.rotate-icon {
+  width: 8px;
+  height: 9px;
+  border-left: 3px solid currentColor;
+  border-right: 3px solid currentColor;
+}
+
+.rotate-toggle[aria-pressed="false"] .rotate-icon {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid currentColor;
+  border-right: 0;
+}
+
 .hud {
   margin: 0;
   color: var(--accent);
@@ -800,6 +849,30 @@ body:not(.no-globe) .event-list-button:focus {
 .filter-label {
   margin: 1rem 0 0.45rem;
   color: var(--muted);
+}
+
+.filter-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.filter-all {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: none;
+  color: var(--fg);
+  font: 500 0.62rem/1.2 var(--ff-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.filter-all:hover {
+  border-color: var(--accent-soft);
+  color: var(--accent);
 }
 
 .chips {
@@ -1180,6 +1253,10 @@ body.page {
 
   .bottom-right {
     justify-items: center;
+  }
+
+  .hud-row {
+    justify-content: center;
   }
 
   .credits {
