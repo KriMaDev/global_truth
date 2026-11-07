@@ -10,6 +10,7 @@ import Globe from "globe.gl";
 import {
   MeshBasicMaterial,
   NoColorSpace,
+  RepeatWrapping,
   SRGBColorSpace,
   TextureLoader,
   type Mesh,
@@ -30,6 +31,7 @@ import { SEVERITY_STYLES } from "../severity";
 import { hazardLabel, type GlobeEvent, type Severity } from "../types";
 import { createAtmosphere } from "./atmosphere";
 import { createDayNightMaterial, setSunDirection } from "./daynight";
+import { DetailLayer } from "./detail";
 import { createLines, parseLines } from "./lines";
 import { PillarField } from "./markers";
 import { createStars } from "./stars";
@@ -98,13 +100,12 @@ const AUTO_ROTATE_SPEED = 0.35;
 /** Auto-rotation comes back after this long without any interaction. */
 const AUTO_ROTATE_RESUME_MS = 10_000;
 const SUN_UPDATE_MS = 60_000;
-/** Closest zoom: where the Earth images still look sharp (2K images blur sooner). */
-const MIN_ALTITUDE: Record<"2k" | "4k", number> = { "2k": 0.9, "4k": 0.5 };
+/** Closest zoom with the globe's own images (2K images blur sooner)… */
+const MIN_ALTITUDE: Record<"2k" | "4k", number> = { "2k": 0.6, "4k": 0.5 };
+/** …and once NASA's sharp tiles show (./detail.ts). */
+const DETAIL_MIN_ALTITUDE = 0.15;
 /** Furthest zoom: the whole globe still fits across a phone screen (which starts at 3.6). */
 const MAX_ALTITUDE = 4;
-
-/** Below this altitude, desktops swap in the sharper 8K night lights (loaded once). */
-const SHARP_NIGHT_ALTITUDE = 1.2;
 
 /** Windows at least this wide (CSS pixels) get 4K textures; phones and small tablets 2K. */
 const WIDE_SCREEN = 1024;
@@ -268,6 +269,8 @@ export async function createGlobeApp(
     loadTexture(`/textures/topo-${size}.webp`, renderer, false),
   ]);
   const width = size === "4k" ? 4096 : 2048;
+  // The detail patch reads elevation across the date line (./detail.ts).
+  topo.wrapS = RepeatWrapping;
   const material = createDayNightMaterial({ day, night, topo, width, height: width / 2 });
   const sunVector = material.uniforms.sunDirection.value as Vector3;
   container.dataset.textures = size;
@@ -450,22 +453,29 @@ export async function createGlobeApp(
     })
     .catch((error: unknown) => console.warn("Coastlines and borders unavailable:", error));
 
-  // Sharper night lights when zooming in, on desktops whose graphics can hold 8192 px.
-  let sharpNight = size !== "4k" || renderer.capabilities.maxTextureSize < 8192;
-  const loadSharpNight = (): void => {
-    sharpNight = true;
-    loadTexture("/textures/night-8k.webp", renderer)
-      .then((texture) => {
-        const uniform = material.uniforms.nightTexture;
-        (uniform.value as Texture).dispose();
-        uniform.value = texture;
-        container.dataset.night = "8k";
-      })
-      .catch((error: unknown) => console.warn("Sharper night lights unavailable:", error));
+  // Sharp NASA tiles over the area in view when zooming in. Once they show, the zoom may go
+  // closer; without them (offline, blocked) the old limit stays.
+  let minAltitude = MIN_ALTITUDE[size];
+  const detail = new DetailLayer({
+    base: material,
+    renderer,
+    coords: (lat, lng, altitude) => globe.getCoords(lat, lng, altitude),
+    sun: sunVector,
+    maxTiles: size === "4k" ? 6 : 4,
+    onFirstTile: () => {
+      minAltitude = DETAIL_MIN_ALTITUDE;
+      globe.controls().minDistance = GLOBE_RADIUS * (1 + minAltitude);
+      container.dataset.detail = "on";
+    },
+  });
+  globe.scene().add(detail.mesh);
+  const updateDetail = (pov: { lat: number; lng: number; altitude: number }): void => {
+    const screenPx = container.clientHeight * Math.min(window.devicePixelRatio, 2);
+    detail.update(pov, camera.fov, container.clientWidth / container.clientHeight, screenPx);
   };
 
   globe.onZoom((pov) => {
-    if (!sharpNight && pov.altitude < SHARP_NIGHT_ALTITUDE) loadSharpNight();
+    updateDetail(pov);
     regroupForAltitude(pov.altitude);
     if (geography && labelLevel(pov.altitude) !== labelsAt) {
       labelsAt = labelLevel(pov.altitude);
@@ -490,7 +500,6 @@ export async function createGlobeApp(
 
   // Zoom limits (globe.gl allows from the surface to 100 radii out).
   const controls = globe.controls();
-  const minAltitude = MIN_ALTITUDE[size];
   controls.minDistance = GLOBE_RADIUS * (1 + minAltitude);
   controls.maxDistance = GLOBE_RADIUS * (1 + MAX_ALTITUDE);
   const clampAltitude = (altitude: number): number =>
@@ -529,6 +538,7 @@ export async function createGlobeApp(
       lastDeclutter = now;
       declutter();
     }
+    detail.tick(now);
     pillars.pulse((now - start) / 1000, reducedMotion);
     const highlighted = selectedId ? (clusterOf(clusters, selectedId)?.id ?? selectedId) : null;
     pillars.update(camera.position.length(), highlighted);

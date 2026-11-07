@@ -1,8 +1,8 @@
 """Build the Earth textures for the globe from NASA's public-domain images.
 
 Downloads each source image once into .cache/textures/ (git-ignored), then writes WebP
-versions at 2K (phones) and 4K (wide screens), plus an 8K night-lights image that desktops
-load when zooming in, to frontend/public/textures/. Run it again only
+versions at 2K (phones) and 4K (wide screens) to frontend/public/textures/. Close up, the
+site shows NASA GIBS tiles instead (frontend/src/globe/detail.ts). Run it again only
 to change sizes or quality; the output files are committed.
 
 Usage (from the repository root, with the pipeline's virtual environment):
@@ -35,9 +35,6 @@ SOURCES = {
     "topo": f"{NASA}/bmng/topography/gebco_08_rev_elev_5400x2700.jpg",
 }
 SIZES = {"2k": (2048, 1024), "4k": (4096, 2048)}
-# Sharper night lights for desktops, loaded only when zooming in (the 3 km source is
-# 13500 px wide; the day and relief sources are 5400 px, so 8K would add nothing there).
-EXTRA_SIZES = {"night": {"8k": (8192, 4096)}}
 QUALITY = {"day": 82, "night": 80, "topo": 85}
 # Stored as grey; the others in colour.
 MODES = {"day": "RGB", "night": "RGB", "topo": "L"}
@@ -65,7 +62,7 @@ def build(name: str, source: Path) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     with Image.open(source) as image:
         converted = image.convert(MODES[name])
-        for label, size in {**SIZES, **EXTRA_SIZES.get(name, {})}.items():
+        for label, size in SIZES.items():
             out = OUT / f"{name}-{label}.webp"
             converted.resize(size, Image.Resampling.LANCZOS).save(
                 out, "WEBP", quality=QUALITY[name], method=6

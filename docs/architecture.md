@@ -84,7 +84,8 @@ Cloudflare Workers static assets @ globe.krimadev.com
 | Footer version (build date and commit, set by Vite from git or `GITHUB_SHA`) | `frontend/vite.config.ts` |
 | Severity look (colour, size, pulse, rings) | `frontend/src/severity.ts` |
 | Event shape and checks (untrusted input is validated, malformed events dropped) | `frontend/src/types.ts`, `frontend/src/events.ts` |
-| Earth textures (NASA, public domain), 2K for phones, 4K for wide screens, and 8K night lights that desktops load when zooming in below altitude 1.2 | `frontend/public/textures/`, made by `tools/build_textures.py` |
+| Earth textures (NASA, public domain), 2K for phones, 4K for wide screens | `frontend/public/textures/`, made by `tools/build_textures.py` |
+| Close up: a "detail patch" over the area in view with NASA GIBS tiles (Blue Marble with shaded relief and bathymetry by day, Black Marble 2016 at night; up to 500 m per pixel), drawn with the globe's own day/night shader so it blends in. Shown below altitude 1.0 when the view fits in 6×6 tiles (4×4 on phones); night tiles only at levels 5–6 (they weigh up to 450 KB each); tiles load once the camera pauses and only for the side of the terminator that needs them; after 4 failures in a row it stops for 5 minutes. The zoom may go to altitude 0.15 once a tile has loaded (else 0.5, or 0.6 with 2K images). Tiles load from gibs.earthdata.nasa.gov (allowed by the CSP, stated on the Legal page) | `frontend/src/globe/detail.ts`, `frontend/src/globe/daynight.ts` (DETAIL) |
 
 Everything from a feed is rendered as text (`textContent`), never as HTML. The sample events (`frontend/src/data/sample-events.json`) are used only in unit tests and in `npm run dev` when there is no pipeline data.
 
