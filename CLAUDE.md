@@ -44,7 +44,7 @@ An interactive, visually stunning 3D globe that shows current world events as gl
 - **State-affiliated outlets are included, with a visible "State-affiliated" label** on items and on the Sources page.
 - **Not used:** ACLED (terms), Nominatim (bulk use forbidden). GeoNames + Natural Earth + UN M49 for places.
 - **Pins:** only versions at least two weeks old (supply-chain caution).
-- **Deploying = merging to `main`** (the scheduled `update.yml` builds and deploys `main`). Work happens on a branch with a pull request (CI runs on it); merge only on the owner's "deploy". Merge **locally** (`git merge --no-ff`, then push) so the merge commit carries the repo's noreply address; then `gh workflow run update.yml --ref main` to publish at once instead of waiting for :07/:37.
+- **Deploying = merging to `main`** (the scheduled `update.yml` builds and deploys `main`). Work happens on a branch with a pull request; CI must pass on it. GitHub enforces this: the ruleset "main needs green CI" refuses anything on `main` whose exact commit hasn't passed the checks `verify` and `pipeline`, as well as force-pushes and deleting `main`. Merge only on the owner's "deploy", and **fast-forward** so that the tested commit itself lands on `main` and the repo's noreply address stays on it: rebase the branch on `main` if needed, wait for green CI, `git switch main`, `git merge --ff-only <branch>`, `git push`, then `gh workflow run update.yml --ref main` to publish at once instead of waiting for :07/:37. A merge commit made on this PC would be refused, since it was never tested.
 
 ## Decisions for milestone 4 (7 Nov 2026, owner)
 - **Timeline:** 7 days, as daily files on the same hosting. **Clusters:** clicking a group opens a list. **Refresh:** stays every 30 min (cost: none).
@@ -78,6 +78,7 @@ krimadev.com, Star Teller and this project keep one baseline: the same tool vers
 - Start every new feature in plan mode and get approval before large changes.
 - Work in small steps and show the result after each milestone.
 - Explain trade-offs briefly, in plain language.
+- Every new feature ships with browser tests (`tests/browser`, synthetic data only).
 - Commit often with clear, descriptive messages.
 - Ask before guessing on important decisions (stack, data sources, licensing, hosting).
 - Tell the owner clearly about anything that needs manual work (DNS, hosting settings, API keys).
@@ -132,7 +133,7 @@ Respect each source's rate limits and terms. Cache aggressively. Never hammer a 
 3. ✅ Live data pipeline: 2–3 sources, normalization, geocoding, categories, severity
 4. ✅ Location drill-down and category filters (plus timeline, clusters, geography view, place cards, legal page, NASA close-ups)
 5. ✅ Headlines panel, source attribution, About/Sources pages, plain pages for search engines and AI assistants
-6. Polish: animations, performance, mobile, accessibility
+6. Polish: animations, performance, mobile, accessibility, and the globe's own browser tests, after the permission emails (owner, 8 Nov 2026): bring the important checks from `private/scripts/` into `tests/browser` on synthetic data (filters, event cards, Headlines panel, failed and out-of-date feeds)
 7. More sources, monitoring, future ideas (language selection, alerts, public RSS/JSON API, saved regions)
 
 ## Geography education (owner's goal, 7 Nov 2026)
