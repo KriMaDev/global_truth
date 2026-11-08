@@ -9,6 +9,9 @@
     "directory": "./frontend/dist",
     "not_found_handling": "404-page"
   },
+  // No timer here: it lives in its own Worker with no web address (worker/wrangler.jsonc).
+  // The empty list removes the timer this Worker had briefly on 8 Nov 2026.
+  "triggers": { "crons": [] },
   // A custom domain route: Cloudflare creates the DNS record and certificate itself.
   "routes": [{ "pattern": "globe.krimadev.com", "custom_domain": true }],
   // No second copy of the site on *.workers.dev.
