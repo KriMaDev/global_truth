@@ -2,101 +2,10 @@
  * The globe page on phones, with made-up events only. Page zoom is tested with a real pinch
  * gesture through the browser's own tools (Chromium and Edge).
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { altitude, box, openGlobe, view, visibleLabel } from './fixtures';
 
 test.skip(({ isMobile }) => !isMobile, 'Phone layout only');
-
-const now = new Date().toISOString();
-
-function syntheticEvent(id: string, lat: number, lng: number) {
-  return {
-    id,
-    title: `Test event ${id} near a made-up place`,
-    snippet: '',
-    lat,
-    lng,
-    severity: 'moderate',
-    severity_reason: 'Test data',
-    categories: ['politics'],
-    category_basis: { politics: 'headline' },
-    kind: 'news',
-    feed: 'gdelt',
-    hazard: null,
-    published: now,
-    first_seen: now,
-    coverage: 1,
-    place: 'Testland',
-    geo: {
-      continent: 'Europe',
-      region: 'Western Europe',
-      country: 'Testland',
-      country_code: 'TL',
-      admin1: null,
-      city: null,
-      precision: 'country',
-    },
-    location_method: 'machine-coded',
-    sources: [{ name: 'Test Outlet', url: 'https://example.org/1', state_affiliated: false }],
-  };
-}
-
-const eventsDocument = {
-  generated: now,
-  window_hours: 72,
-  counts: {},
-  events: Array.from({ length: 30 }, (_, i) => syntheticEvent(`e${i}`, -60 + i * 4, -170 + i * 11)),
-};
-
-async function openGlobe(page: Page, path = '/'): Promise<void> {
-  await page.route('**/data/events.json', (route) => route.fulfill({ json: eventsDocument }));
-  await page.route('**/data/days/**', (route) => route.fulfill({ json: eventsDocument }));
-  await page.route('**/data/feeds.json', (route) =>
-    route.fulfill({ json: { generated: now, feeds: [] } }),
-  );
-  await page.route('**/data/outlets.json', (route) => route.fulfill({ json: [] }));
-  await page.goto(path);
-  await expect(page.locator('#rotate-toggle')).toBeVisible({ timeout: 60_000 });
-}
-
-/** The camera's latitude and longitude, from the readout. */
-async function view(page: Page): Promise<[number, number]> {
-  const text = (await page.locator('#hud').textContent()) ?? '';
-  const found = /([\d.]+)°([NS]) ([\d.]+)°([EW])/.exec(text);
-  if (!found) throw new Error(`No position in "${text}"`);
-  return [
-    Number(found[1]) * (found[2] === 'N' ? 1 : -1),
-    Number(found[3]) * (found[4] === 'E' ? 1 : -1),
-  ];
-}
-
-/** Centre of a showing map label with only the map under it (labels let fingers through on
- * touch screens), away from the screen's edges. */
-function visibleLabel(page: Page) {
-  return page.evaluate(() => {
-    for (const label of document.querySelectorAll<HTMLElement>('.map-label')) {
-      if (label.matches('.is-hidden, .is-crowded')) continue;
-      const area = label.getBoundingClientRect();
-      const x = area.x + area.width / 2;
-      const y = area.y + area.height / 2;
-      if (area.width && x > 60 && x < 260 && y > 200 && y < 520) {
-        if (document.elementFromPoint(x, y)?.tagName === 'CANVAS') return { x, y };
-      }
-    }
-    return null;
-  });
-}
-
-async function box(page: Page, selector: string) {
-  const found = await page.locator(selector).boundingBox();
-  if (!found) throw new Error(`${selector} is not visible`);
-  return found;
-}
-
-/** Where the camera is, from the readout (kept up to date even when hidden on phones). */
-async function altitude(page: Page): Promise<number> {
-  const text = await page.locator('#hud').textContent();
-  return Number(/ALT ([\d.]+)/.exec(text ?? '')?.[1]);
-}
 
 for (const [width, height] of [
   [320, 568],

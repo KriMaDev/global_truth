@@ -2,7 +2,10 @@ import { defineConfig, devices } from '@playwright/test';
 
 const onCi = Boolean(process.env.CI);
 // Computers here use the installed Microsoft Edge, as in krimadev.com and Star Teller.
-const browser = onCi ? {} : { channel: 'msedge' };
+// CI has no graphics card, so the 3D globe runs on the processor there.
+const browser = onCi
+  ? { launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } }
+  : { channel: 'msedge' };
 const port = 4173;
 
 export default defineConfig({

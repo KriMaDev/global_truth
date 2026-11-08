@@ -1551,6 +1551,11 @@ body.page {
   font-size: 0.9rem;
 }
 
+/* Stays hidden on phones too, where wide tables are made to scroll (display: block). */
+.doc-table[hidden] {
+  display: none;
+}
+
 .doc-table th,
 .doc-table td {
   padding: 0.45rem 0.6rem;
