@@ -80,7 +80,7 @@ export interface GlobeApp {
    * news view with null. Call again whenever the filtered events change. */
   setGeography(data: GeographyData | null, severities: Map<string, Severity>): void;
   rotateBy(degreesLng: number, degreesLat: number): void;
-  /** Back out to the starting distance, looking at the same place. */
+  /** Back to the view the globe opens on, at its starting distance. */
   showWholeGlobe(): void;
   zoomBy(factor: number): void;
 }
@@ -690,9 +690,13 @@ export async function createGlobeApp(
   updateSun();
   window.setInterval(updateSun, SUN_UPDATE_MS);
 
-  // Open on the side where the day meets the night.
-  const sun = sunPosition(new Date());
-  globe.pointOfView({ lat: 22, lng: sun.lng + 40, altitude: startAltitude() });
+  /** The view the globe opens on: on the side where the day meets the night. */
+  const startView = (): { lat: number; lng: number; altitude: number } => ({
+    lat: 22,
+    lng: sunPosition(new Date()).lng + 40,
+    altitude: startAltitude(),
+  });
+  globe.pointOfView(startView());
   regroupForAltitude(globe.pointOfView().altitude);
   options.onView?.(globe.pointOfView());
 
@@ -872,8 +876,7 @@ export async function createGlobeApp(
       move({ lat, lng: p.lng + degreesLng, altitude: p.altitude }, STEP_MS);
     },
     showWholeGlobe() {
-      const p = globe.pointOfView();
-      move({ lat: p.lat, lng: p.lng, altitude: startAltitude() }, FLY_MS);
+      move(startView(), FLY_MS);
     },
     zoomBy(factor) {
       const p = globe.pointOfView();

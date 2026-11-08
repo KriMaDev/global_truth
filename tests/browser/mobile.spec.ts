@@ -92,6 +92,24 @@ test('zoom buttons work, stop at the limit, and Whole globe comes back', async (
   await expect.poll(() => altitude(page), { timeout: 5000 }).toBe(7);
 });
 
+test('Whole globe also goes back to the starting view', async ({ page }) => {
+  test.setTimeout(120_000); // Software graphics here run at a few frames a second.
+  await openGlobe(page, '/', { events: knownWorld() });
+  await page.locator('#rotate-toggle').click();
+  await page.waitForTimeout(800);
+  const [, startLng] = await view(page);
+
+  await showEurope(page);
+  await expect.poll(async () => (await view(page))[0]).toBeGreaterThan(24);
+
+  await page.locator('#zoom-whole').click();
+  await expect.poll(() => altitude(page), { timeout: 10_000 }).toBeGreaterThan(3.5);
+  await expect.poll(async () => Math.abs((await view(page))[0] - 22)).toBeLessThan(1);
+  await expect
+    .poll(async () => Math.abs((await view(page))[1] - startLng), { timeout: 10_000 })
+    .toBeLessThan(15);
+});
+
 test('a pinch on the controls does not zoom the page', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', 'The pinch tool exists in Chromium and Edge only');
   await openGlobe(page);
