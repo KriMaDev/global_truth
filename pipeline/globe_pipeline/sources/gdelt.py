@@ -24,7 +24,7 @@ from ..geocode import Gazetteer, place_name
 from ..http import FetchError, get
 from ..models import Event, Geo, Source
 from ..normalize import clean_text
-from ..outlets import clean_headline, outlet_for_url
+from ..outlets import clean_headline, is_sport_page, outlet_for_url
 from ..severity import news_severity
 
 ID = "gdelt"
@@ -174,7 +174,7 @@ def parse_rows(text: str, gazetteer: Gazetteer, now: datetime) -> tuple[list[Eve
         if len(title) < MIN_TITLE_LENGTH:
             continue
         themes = [t for t in f[COL_THEMES].split(";") if t]
-        categories = categorize_news(title, themes)
+        categories = categorize_news(title, themes, sport_page=is_sport_page(url))
         if not categories:
             continue
         chosen = main_place(parse_mentions(f[COL_LOCATIONS]), title)

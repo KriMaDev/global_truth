@@ -110,6 +110,16 @@ def test_outlet_balance_is_per_day(now) -> None:
     assert sorted(e.id[0] for e in kept) == ["t", "t", "y", "y"]
 
 
+def test_sport_has_its_own_allowance(now) -> None:
+    stories = [news(f"n{i}", f"News story {i} unique words", "bbc", now, i) for i in range(3)]
+    sport = [
+        replace(news(f"s{i}", f"Sport story {i} other words", "bbc", now, i), categories=["sport"])
+        for i in range(4)
+    ]
+    kept = run_module.balance_outlets(stories + sport, limit=2, sport_limit=1)
+    assert sorted(e.id[0] for e in kept) == ["n", "n", "s"]
+
+
 def test_day_files_and_index(tmp_path, now) -> None:
     events = [
         news("a", "Story published today", "dw", now, 60),

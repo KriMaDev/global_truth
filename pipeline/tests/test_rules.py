@@ -6,7 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from globe_pipeline.categorize import HAZARD_WORDS, categorize_news, hazard_of
+from globe_pipeline.categorize import (
+    CATEGORIES,
+    HAZARD_WORDS,
+    OFF_BY_DEFAULT,
+    categorize_news,
+    hazard_of,
+)
 from globe_pipeline.severity import (
     Severity,
     casualties_in,
@@ -138,6 +144,64 @@ def test_health_and_outbreaks() -> None:
     # "Who is ..." is not the World Health Organization.
     assert "health" not in categorize_news("Who is the new prime minister?", [])
     assert news_severity("WHO declares a pandemic")[0] == Severity.MODERATE
+
+
+@pytest.mark.parametrize(
+    ("headline", "expected"),
+    [
+        ("Sample: COP31 talks run late over emissions targets", ["climate"]),
+        ("Sample: glaciers shrink faster than forecast", ["climate"]),
+        ("Sample: gunman arrested after shooting at market", ["crime"]),
+        ("Sample: former mayor sentenced for fraud", ["crime"]),
+        ("Sample: refugees cross the border as famine spreads", ["humanitarian"]),
+        ("Sample: aid convoy reaches the city", ["humanitarian"]),
+        ("Sample: astronauts return from the space station", ["science"]),
+        ("Sample: telescope spots a distant galaxy", ["science"]),
+        ("Sample: Olympics host city named", ["sport"]),
+        ("Sample: parliament votes on World Cup stadium funding", ["politics", "sport"]),
+    ],
+)
+def test_new_categories_from_headline_words(headline: str, expected: list[str]) -> None:
+    assert categorize_news(headline, []) == expected
+
+
+def test_science_moved_out_of_technology() -> None:
+    assert categorize_news("Sample: rocket carries a new satellite", []) == ["science"]
+    assert categorize_news("Sample: new AI chips unveiled", []) == ["technology"]
+
+
+def test_new_categories_avoid_ambiguous_words() -> None:
+    # A clinical trial is not a court case, military aid is not humanitarian aid.
+    assert "crime" not in categorize_news("Sample: vaccine trial shows strong results", [])
+    assert "humanitarian" not in categorize_news("Sample: military aid package approved", [])
+
+
+def test_new_categories_from_themes() -> None:
+    assert categorize_news(
+        "Sample: what next?", ["ENV_CLIMATECHANGE", "WB_567_CLIMATE_CHANGE"]
+    ) == ["climate"]
+    assert categorize_news("Sample: what next?", ["SOC_GENERALCRIME", "ARREST", "KILL"]) == [
+        "crime"
+    ]
+    assert categorize_news("Sample: what next?", ["REFUGEES", "DISPLACED"]) == ["humanitarian"]
+    # Oil and mining are ENV_ themes too, but not climate.
+    assert categorize_news("Sample: what next?", ["ENV_OIL", "ENV_MINING"]) == []
+
+
+def test_sport_section_is_sport_only() -> None:
+    # Sport headlines use words that mean something else elsewhere.
+    headline = "Sample: striker's offensive display storms past the defence"
+    assert categorize_news(headline, ["MILITARY", "ARMEDCONFLICT"], sport_page=True) == ["sport"]
+    assert "war" in categorize_news(headline, [])
+
+
+def test_categories_match_the_site() -> None:
+    types = (ROOT / "frontend" / "src" / "types.ts").read_text(encoding="utf-8")
+    block = types.split("export const CATEGORIES", 1)[1].split("] as const", 1)[0]
+    assert tuple(re.findall(r'"([a-z-]+)"', block)) == CATEGORIES
+    filters = (ROOT / "frontend" / "src" / "filters.ts").read_text(encoding="utf-8")
+    line = filters.split("export const OFF_BY_DEFAULT", 1)[1].split(";", 1)[0]
+    assert tuple(re.findall(r'"([a-z-]+)"', line)) == OFF_BY_DEFAULT
 
 
 def test_whole_words_only() -> None:

@@ -5,7 +5,7 @@ Project guide for Claude Code. Read this at the start of every session.
 ## Project summary
 An interactive, visually stunning 3D globe that shows current world events as glowing lights, colored by severity. Users can filter by location (All → Continent → Region → Country → Province/State → City) and by category, and read current news for the selection. The goal is an honest, transparent, RSS-style way for anyone to follow global news.
 
-- **Categories:** War, Politics, Natural Disasters, Economic, Technology Advancements, Health & outbreaks (added 8 Nov 2026 for emerging epidemics)
+- **Categories:** War, Politics, Natural Disasters, Economic, Technology Advancements, Health & outbreaks (added 8 Nov 2026 for emerging epidemics); Climate & environment, Crime & justice, Humanitarian & migration, Science & space, Sport (added 8 Nov 2026 from the search review; **Sport off by default**, sport sections are Sport only). Reviewed once a year (`docs/categories.md`).
 - **Hosting:** **globe.krimadev.com** on Cloudflare Workers static assets (see Decisions)
 - **Owner:** KriMaDev (GitHub: github.com/KriMaDev). Python is the owner's strongest language.
 

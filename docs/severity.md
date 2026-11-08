@@ -43,6 +43,8 @@ Only the headline is read: it is what the reader sees, and the rule can be check
 
 When several outlets report the same story, the event takes the highest level any of their headlines gives.
 
+The same news rules apply to every category, Sport included: a headline reporting deaths at a stadium is rated like any other.
+
 ### What does not change severity
 How many outlets cover a story is shown as **coverage**, separately. It never raises severity, because prominence is not severity.
 

@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from globe_pipeline.outlets import OUTLETS, clean_headline, outlet_for_url
+from globe_pipeline.outlets import OUTLETS, clean_headline, is_sport_page, outlet_for_url
 from globe_pipeline.sources import gdacs, gdelt, usgs
 
 
@@ -161,6 +161,17 @@ def test_gdelt_coordinates_decide_the_country(gazetteer, now) -> None:
     assert event.geo.country == "Palestinian Territory"
 
 
+def test_gdelt_sport_page_is_sport_only(gazetteer, now) -> None:
+    row = gkg_row(
+        "https://www.bbc.co.uk/sport/football/2",
+        "Sample: Sanaa side's offensive line storms to victory",
+        YEMEN,
+        "MILITARY;ARMEDCONFLICT",
+    )
+    event = gdelt.parse_rows(row, gazetteer, now)[0][0]
+    assert event.categories == ["sport"]
+
+
 def test_gdelt_stamps_to_fetch(now) -> None:
     latest = gdelt.parse_stamp("20261107120000")
     stamps = gdelt.stamps_to_fetch(gdelt.parse_stamp("20261107113000"), latest)
@@ -170,7 +181,12 @@ def test_gdelt_stamps_to_fetch(now) -> None:
 
 def test_outlet_matching_and_paths() -> None:
     assert outlet_for_url("https://www.bbc.co.uk/news/world-1").name == "BBC News"
-    assert outlet_for_url("https://www.bbc.co.uk/sport/football/1") is None
+    # Sport sections are kept, as Sport; culture and the like stay out.
+    assert outlet_for_url("https://www.bbc.co.uk/sport/football/1").name == "BBC News"
+    assert is_sport_page("https://www.bbc.co.uk/sport/football/1")
+    assert is_sport_page("https://www.theguardian.com/football/2026/nov/08/x")
+    assert not is_sport_page("https://www.bbc.co.uk/news/world-1")
+    assert outlet_for_url("https://www.bbc.co.uk/culture/article/1") is None
     assert outlet_for_url("https://www.dw.com/de/thema/a-1") is None  # German edition
     assert outlet_for_url("https://www.thehindu.com/news/cities/x/1.ece") is None
     assert outlet_for_url("https://notbbc.co.uk.example.com/news") is None

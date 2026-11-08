@@ -26,7 +26,7 @@ describe("isGlobeEvent", () => {
     ["latitude out of range", { lat: 91 }],
     ["longitude out of range", { lng: -181 }],
     ["unknown severity", { severity: "extreme" }],
-    ["unknown category", { categories: ["sport"] }],
+    ["unknown category", { categories: ["gossip"] }],
     ["unknown kind", { kind: "opinion" }],
     ["unreadable time", { published: "yesterday" }],
     ["empty title", { title: "  " }],

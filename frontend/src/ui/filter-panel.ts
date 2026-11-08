@@ -3,7 +3,7 @@
  * window and the place drill-down (rendered by ui/timeline.ts and ui/place-picker.ts).
  */
 
-import type { FilterState } from "../filters";
+import { OFF_BY_DEFAULT, type FilterState } from "../filters";
 import { SEVERITY_STYLES } from "../severity";
 import { CATEGORIES, CATEGORY_LABELS, SEVERITIES, type Category, type Severity } from "../types";
 
@@ -40,6 +40,12 @@ function chip(label: string, count: number, pressed: boolean, onClick: () => voi
   button.append(name, number);
   button.addEventListener("click", onClick);
   return button;
+}
+
+/** A category's chip text; categories hidden by default say so (filters.ts, OFF_BY_DEFAULT). */
+export function categoryChipLabel(category: Category): string {
+  const label = CATEGORY_LABELS[category];
+  return OFF_BY_DEFAULT.includes(category) ? `${label} (off by default)` : label;
 }
 
 /** The "All on / All off" button: everything off while anything is on, else everything on. */
@@ -109,7 +115,7 @@ export function createFilterPanel(
       setAllButton(severitiesAll, state.severities.size > 0, "severity level");
       categories?.replaceChildren(
         ...CATEGORIES.map((category) =>
-          chip(CATEGORY_LABELS[category], counts.categories[category], state.categories.has(category), () =>
+          chip(categoryChipLabel(category), counts.categories[category], state.categories.has(category), () =>
             onChange({ categories: toggled(state.categories, category) }),
           ),
         ),

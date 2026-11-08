@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaultFilters, fromQuery, isDefault, matches, toQuery, windowOf } from "./filters";
-import type { GlobeEvent } from "./types";
+import { CATEGORIES, type GlobeEvent } from "./types";
 
 const NOW = Date.parse("2026-11-08T12:00:00Z");
 
@@ -99,6 +99,20 @@ describe("the web address", () => {
     expect(again.range).toBe("24h");
     expect(again.end).toBe(state.end);
     expect(again.place).toEqual(["Asia", "Southern Asia", "IN"]);
+  });
+
+  it("starts with Sport off, and keeps it on when chosen", () => {
+    const state = defaultFilters();
+    expect(state.categories.has("sport")).toBe(false);
+    expect(state.categories.size).toBe(CATEGORIES.length - 1);
+    state.categories.add("sport");
+    expect(isDefault(state)).toBe(false);
+    const query = toQuery(state);
+    expect(query).toContain("sport");
+    expect(fromQuery(query).categories.has("sport")).toBe(true);
+    // Old links without "cat", and broken ones, get the default: no Sport.
+    expect(fromQuery("?range=24h").categories.has("sport")).toBe(false);
+    expect(fromQuery("?cat=gossip").categories.has("sport")).toBe(false);
   });
 
   it("ignores unknown values", () => {

@@ -1,13 +1,14 @@
 """Categories: War, Politics, Natural disasters, Economic, Technology advancements, Health &
-outbreaks.
+outbreaks, Climate & environment, Crime & justice, Humanitarian & migration, Science & space,
+Sport (the last five added 8 Nov 2026 after a review of what people search for).
 
 Rules (docs/categories.md): data feeds are natural disasters. For news:
-1. If the headline contains words from the lists below, the categories of those words apply
-   (possibly several).
-2. Otherwise the one category with the most GDELT themes for the article applies, if it has
-   at least two (ties: the first in the order War, Politics, Natural disasters, Economic,
-   Technology, Health).
-3. With no category, the item is not shown.
+1. An article in an outlet's sport section is Sport, and only Sport.
+2. Otherwise, if the headline contains words from the lists below, the categories of those
+   words apply (possibly several).
+3. Otherwise the one category with the most GDELT themes for the article applies, if it has
+   at least two (ties: the first in the order of CATEGORIES).
+4. With no category, the item is not shown.
 The headline leads because it is what the reader sees; GDELT's themes describe the whole
 article, which often touches many subjects.
 """
@@ -16,7 +17,21 @@ from __future__ import annotations
 
 import re
 
-CATEGORIES = ("war", "politics", "natural-disasters", "economic", "technology", "health")
+CATEGORIES = (
+    "war",
+    "politics",
+    "natural-disasters",
+    "economic",
+    "technology",
+    "health",
+    "climate",
+    "crime",
+    "humanitarian",
+    "science",
+    "sport",
+)
+#: Hidden until the visitor turns them on (the site's filters), so they don't crowd the globe.
+OFF_BY_DEFAULT = ("sport",)
 #: Distinct matching themes needed when the headline has no listed word.
 MIN_THEMES = 2
 
@@ -48,7 +63,6 @@ THEMES: dict[str, tuple[str, ...]] = {
     "natural-disasters": ("NATURAL_DISASTER", "NATURAL_DISASTER_", "ENV_DROUGHT", "ENV_WILDFIRE"),
     "economic": ("ECON_", "EPU_ECONOMY", "EPU_POLICY", "UNEMPLOYMENT", "WB_1104_MACROECONOMIC"),
     "technology": (
-        "SCIENCE",
         "WB_133_INFORMATION_AND_COMMUNICATION_TECHNOLOGIES",
         "CYBER_ATTACK",
         "TECH_",
@@ -60,6 +74,48 @@ THEMES: dict[str, tuple[str, ...]] = {
         "MEDICAL_",
         "WB_621_HEALTH_NUTRITION_AND_POPULATION",
     ),
+    # Not ENV_* as a whole: it also covers oil, mining, coal and gas.
+    "climate": (
+        "ENV_CLIMATECHANGE",
+        "WB_567_CLIMATE_CHANGE",
+        "UNGP_CLIMATE_CHANGE_ACTION",
+        "ENV_GREEN",
+        "ENV_DEFORESTATION",
+        "ENV_SPECIESENDANGERED",
+        "ENV_POACHING",
+        "MOVEMENT_ENVIRONMENTAL",
+        "WB_601_POLLUTION_MANAGEMENT",
+        "WB_1791_AIR_POLLUTION",
+        "WB_1798_WATER_POLLUTION",
+        "WB_1984_OCEAN_POLLUTION",
+    ),
+    # Not KILL: it is in most war reports too.
+    "crime": (
+        "SOC_GENERALCRIME",
+        "CRIME_",
+        "ARREST",
+        "TRIAL",
+        "WB_1014_CRIMINAL_JUSTICE",
+        "UNGP_CRIME_VIOLENCE",
+        "CORRUPTION",
+        "DRUG_TRADE",
+        "KIDNAP",
+        "ASSASSINATION",
+        "HUMAN_TRAFFICKING",
+    ),
+    "humanitarian": (
+        "REFUGEES",
+        "DISPLACED",
+        "IMMIGRATION",
+        "WB_2837_IMMIGRATION",
+        "EPU_CATS_MIGRATION_FEAR_MIGRATION",
+        "FOOD_SECURITY",
+        "SELF_IDENTIFIED_HUMANITARIAN_CRISIS",
+        "AID_HUMANITARIAN",
+    ),
+    "science": ("SCIENCE", "TAX_FNCACT_ASTRONOMER"),
+    # GDELT has no sport theme: sport comes from the sport sections and headline words.
+    "sport": (),
 }
 
 #: Headline words (whole words, case-insensitive).
@@ -177,25 +233,17 @@ KEYWORDS: dict[str, tuple[str, ...]] = {
         "chips",
         "semiconductor",
         "semiconductors",
-        "satellite",
-        "rocket",
-        "spacecraft",
-        "space station",
         "quantum",
         "robot",
         "robots",
         "robotics",
         "battery",
         "batteries",
-        "fusion",
         "vaccine",
-        "gene",
-        "genome",
         "cyberattack",
         "software",
         "supercomputer",
         "launch",
-        "telescope",
         "breakthrough",
     ),
     # Not "WHO": matching ignores case, so "Who is ..." would count. The full name works.
@@ -231,6 +279,191 @@ KEYWORDS: dict[str, tuple[str, ...]] = {
         "vaccination",
         "vaccination campaign",
         "quarantine",
+    ),
+    # Not "COP" alone (also slang for police): the numbered summits and "climate summit".
+    "climate": (
+        "climate",
+        "climate change",
+        "global warming",
+        "emissions",
+        "carbon",
+        "net zero",
+        "net-zero",
+        "greenhouse gas",
+        "greenhouse gases",
+        "cop29",
+        "cop30",
+        "cop31",
+        "cop32",
+        "climate summit",
+        "pollution",
+        "polluted",
+        "deforestation",
+        "biodiversity",
+        "glacier",
+        "glaciers",
+        "sea level",
+        "sea levels",
+        "renewable",
+        "renewables",
+        "coral",
+        "coral reef",
+        "endangered species",
+        "extinction",
+        "fossil fuel",
+        "fossil fuels",
+        "hottest year",
+        "heat record",
+        "environmental",
+    ),
+    # Not "trial" alone (clinical trials) or "investigation" (crashes, inquiries).
+    "crime": (
+        "murder",
+        "murdered",
+        "murders",
+        "homicide",
+        "assassination",
+        "assassinated",
+        "shooting",
+        "shootings",
+        "gunman",
+        "gunmen",
+        "stabbing",
+        "stabbed",
+        "arrest",
+        "arrested",
+        "arrests",
+        "charged",
+        "indicted",
+        "indictment",
+        "on trial",
+        "stands trial",
+        "goes on trial",
+        "verdict",
+        "sentenced",
+        "convicted",
+        "acquitted",
+        "court",
+        "supreme court",
+        "prosecutor",
+        "prosecutors",
+        "police",
+        "fraud",
+        "corruption",
+        "bribery",
+        "kidnapping",
+        "kidnapped",
+        "abducted",
+        "trafficking",
+        "smuggling",
+        "cartel",
+        "cartels",
+        "gang",
+        "gangs",
+        "extradition",
+        "extradited",
+        "jailed",
+        "prison",
+        "robbery",
+        "heist",
+    ),
+    # Not "aid" alone ("military aid"): the humanitarian forms.
+    "humanitarian": (
+        "refugee",
+        "refugees",
+        "migrant",
+        "migrants",
+        "migration",
+        "asylum",
+        "asylum seekers",
+        "displaced",
+        "displacement",
+        "famine",
+        "hunger",
+        "starvation",
+        "malnutrition",
+        "humanitarian",
+        "humanitarian aid",
+        "aid convoy",
+        "aid workers",
+        "aid trucks",
+        "food aid",
+        "food crisis",
+        "food insecurity",
+        "unhcr",
+        "unrwa",
+        "world food programme",
+        "deportation",
+        "deportations",
+        "deported",
+    ),
+    # Moved from Technology on 8 Nov 2026: satellite, rocket, spacecraft, space station,
+    # telescope, gene, genome, fusion.
+    "science": (
+        "satellite",
+        "satellites",
+        "rocket",
+        "spacecraft",
+        "space station",
+        "telescope",
+        "gene",
+        "genes",
+        "genome",
+        "fusion",
+        "space",
+        "nasa",
+        "esa",
+        "isro",
+        "mars",
+        "moon",
+        "lunar",
+        "asteroid",
+        "comet",
+        "astronaut",
+        "astronauts",
+        "astronomers",
+        "galaxy",
+        "black hole",
+        "exoplanet",
+        "scientists",
+        "researchers",
+        "study finds",
+        "new study",
+        "fossils",
+        "dinosaur",
+        "species",
+        "physics",
+    ),
+    "sport": (
+        "world cup",
+        "olympics",
+        "olympic",
+        "paralympics",
+        "premier league",
+        "champions league",
+        "la liga",
+        "bundesliga",
+        "serie a",
+        "fifa",
+        "uefa",
+        "nba",
+        "nfl",
+        "mlb",
+        "nhl",
+        "cricket",
+        "rugby",
+        "tennis",
+        "wimbledon",
+        "grand slam",
+        "formula 1",
+        "formula one",
+        "grand prix",
+        "tour de france",
+        "super bowl",
+        "footballer",
+        "golf",
+        "boxing",
+        "ufc",
     ),
 }
 
@@ -294,8 +527,12 @@ def hazard_of(headline: str) -> str | None:
     return None
 
 
-def categorize_news(headline: str, themes: list[str]) -> list[str]:
-    """The categories of a news item (possibly several, possibly none)."""
+def categorize_news(headline: str, themes: list[str], sport_page: bool = False) -> list[str]:
+    """The categories of a news item (possibly several, possibly none). An article from an
+    outlet's sport section (`sport_page`) is Sport only: sport headlines are full of words
+    like "offensive", "attack" or "storm" that mean something else elsewhere."""
+    if sport_page:
+        return ["sport"]
     words = keyword_hits(headline)
     from_headline = [c for c in CATEGORIES if words[c]]
     if from_headline:

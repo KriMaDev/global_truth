@@ -35,7 +35,7 @@ Only articles from these outlets appear. GDELT reads far more sites; the allowli
 - **Private:** privately owned (companies, trusts, non-profits).
 - **Intergovernmental:** the news service of an intergovernmental organisation.
 
-**Balance:** at most 15 news events led by any one outlet per UTC day (the most severe, most widely reported and newest are kept). Without it, one prolific outlet can cover a country in lights.
+**Balance:** at most 15 news events led by any one outlet per UTC day (the most severe, most widely reported and newest are kept). Without it, one prolific outlet can cover a country in lights. Sport-only events have their own allowance of 5 per outlet per day, so they never push news out.
 
 | Outlet | Domain | Country | Ownership |
 |---|---|---|---|
@@ -72,7 +72,9 @@ Only articles from these outlets appear. GDELT reads far more sites; the allowli
 | ABC News (Australia) | abc.net.au | Australia | Public |
 | UN News | news.un.org | International | Intergovernmental |
 
-**What is left out:** sport, culture, lifestyle, shopping, opinion, podcasts, video and live pages (by URL path), and articles in none of the five categories. For the English edition only: DW, France 24, RFI, Meduza, Anadolu Agency and NHK World. The Hindu's city pages are left out.
+**Sport:** articles from outlets' sport sections (`/sport`, `/football`) are kept as **Sport** (off by default on the site; see `docs/categories.md`), at most 5 Sport-only events per outlet per UTC day, counted apart from the 15 news events.
+
+**What is left out:** culture, lifestyle, shopping, opinion, podcasts, video and live pages (by URL path), and articles in none of the eleven categories. For the English edition only: DW, France 24, RFI, Meduza, Anadolu Agency and NHK World. The Hindu's city pages are left out.
 
 ## Reference data
 

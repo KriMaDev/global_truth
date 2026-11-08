@@ -20,7 +20,7 @@ from pathlib import Path
 from .cluster import cluster
 from .geocode import Gazetteer
 from .models import Event, iso
-from .outlets import MAX_EVENTS_PER_OUTLET
+from .outlets import MAX_EVENTS_PER_OUTLET, MAX_SPORT_EVENTS_PER_OUTLET
 from .output import FeedStatus, Previous, day_of, load_previous, within_window, write
 from .sources import gdacs, gdelt, usgs
 
@@ -57,17 +57,25 @@ def _run_feed(
     return events
 
 
-def balance_outlets(events: list[Event], limit: int = MAX_EVENTS_PER_OUTLET) -> list[Event]:
+def balance_outlets(
+    events: list[Event],
+    limit: int = MAX_EVENTS_PER_OUTLET,
+    sport_limit: int = MAX_SPORT_EVENTS_PER_OUTLET,
+) -> list[Event]:
     """Keeps at most `limit` news events led by each outlet per UTC day: the most severe,
-    then the most widely reported, then the newest. Data-feed events are never dropped."""
+    then the most widely reported, then the newest. Sport-only events are counted apart,
+    with their own `sport_limit`, so they never push news out. Data-feed events are never
+    dropped."""
     kept: list[Event] = [e for e in events if e.kind != "news"]
-    by_outlet: dict[tuple[str, str], list[Event]] = {}
+    by_outlet: dict[tuple[str, str, bool], list[Event]] = {}
     for event in events:
         if event.kind == "news":
-            by_outlet.setdefault((event.sources[0].name, day_of(event)), []).append(event)
-    for group in by_outlet.values():
+            sport_only = event.categories == ["sport"]
+            key = (event.sources[0].name, day_of(event), sport_only)
+            by_outlet.setdefault(key, []).append(event)
+    for (_, _, sport_only), group in by_outlet.items():
         group.sort(key=lambda e: (-int(e.severity), -e.coverage, -e.published.timestamp()))
-        kept.extend(group[:limit])
+        kept.extend(group[: sport_limit if sport_only else limit])
     return kept
 
 
