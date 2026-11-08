@@ -118,18 +118,23 @@ describe("the web address", () => {
     expect(again.place).toEqual(["Asia", "Southern Asia", "IN"]);
   });
 
-  it("starts with Sport off, and keeps it on when chosen", () => {
+  it("starts with every category on, Sport included", () => {
     const state = defaultFilters();
-    expect(state.categories.has("sport")).toBe(false);
-    expect(state.categories.size).toBe(CATEGORIES.length - 1);
-    state.categories.add("sport");
+    expect(state.categories.size).toBe(CATEGORIES.length);
+    expect(state.categories.has("sport")).toBe(true);
+    expect(isDefault(state)).toBe(true);
+    // Links without "cat", and broken ones, get the default.
+    expect(fromQuery("?range=24h").categories.has("sport")).toBe(true);
+    expect(fromQuery("?cat=gossip").categories.has("sport")).toBe(true);
+  });
+
+  it("keeps Sport off when a visitor turned it off", () => {
+    const state = defaultFilters();
+    state.categories.delete("sport");
     expect(isDefault(state)).toBe(false);
     const query = toQuery(state);
-    expect(query).toContain("sport");
-    expect(fromQuery(query).categories.has("sport")).toBe(true);
-    // Old links without "cat", and broken ones, get the default: no Sport.
-    expect(fromQuery("?range=24h").categories.has("sport")).toBe(false);
-    expect(fromQuery("?cat=gossip").categories.has("sport")).toBe(false);
+    expect(query).toContain("cat=");
+    expect(fromQuery(query).categories.has("sport")).toBe(false);
   });
 
   it("ignores unknown values", () => {

@@ -4,7 +4,7 @@ Eleven categories, which can be combined: **War**, **Politics**, **Natural disas
 
 - **Health & outbreaks** was added on 8 November 2026 so emerging epidemics are tracked.
 - **Climate & environment, Crime & justice, Humanitarian & migration, Science & space and Sport** were added on 8 November 2026 after the first review of what people search for (see "Review of what people search for" below). Science & space took the space and life-science words out of Technology advancements, which keeps computing, AI, chips, robots, batteries and cyberattacks.
-- **Sport is off by default** on the site: the visitor turns it on in Filters. Sport is the most searched subject of all, but dozens of matches a day would crowd the globe. In each outlet's daily balance it has its own allowance (see `docs/sources.md`), so it never pushes news out.
+- **Sport is on by default**, like every category. In each outlet's daily balance it has its own allowance (see `docs/sources.md`), so it never pushes news out. It started as off by default, for fear of crowding the globe, and was turned on the same day (8 November 2026, owner) when real data showed only a handful of sport items.
 
 ## Rules
 
@@ -43,7 +43,7 @@ Eleven categories, which can be combined: **War**, **Politics**, **Natural disas
 
 The categories follow what people around the world look for in the news. **Once a year** (after Google publishes its Year in Search in December), the owner and Claude check Google's Year in Search, global and by region, and the topic groups Google Trends uses, and write here what changed and why. Nothing is fetched live: Google Trends has no open interface whose terms clearly allow reuse.
 
-- **8 November 2026** (Year in Search 2025): the biggest news searches not covered by the first six categories were crimes and court cases (an assassination, the Epstein files), climate beyond disasters, science and space, refugees and migration, and sport, the most searched subject of all. All five were added; Sport is off by default. A first real run (6 hours, 59 news items) put 11 items in Crime & justice, 4 in Climate & environment, 4 in Sport and 2 in Humanitarian & migration; "marathon" was dropped from Sport after it caught a figurative use.
+- **8 November 2026** (Year in Search 2025): the biggest news searches not covered by the first six categories were crimes and court cases (an assassination, the Epstein files), climate beyond disasters, science and space, refugees and migration, and sport, the most searched subject of all. All five were added. A first real run (6 hours, 59 news items) put 11 items in Crime & justice, 4 in Climate & environment, 4 in Sport and 2 in Humanitarian & migration; "marathon" was dropped from Sport after it caught a figurative use.
 - **Next review:** December 2026 / January 2027 (Year in Search 2026).
 
 ## Where each category came from

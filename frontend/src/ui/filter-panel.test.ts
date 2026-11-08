@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SEVERITIES } from "../types";
-import { allToggled, categoryChipLabel } from "./filter-panel";
+import { allToggled } from "./filter-panel";
 
 describe("allToggled", () => {
   it("turns everything off while anything is on", () => {
@@ -10,12 +10,5 @@ describe("allToggled", () => {
 
   it("turns everything on when nothing is", () => {
     expect([...allToggled(new Set<string>(), SEVERITIES)]).toEqual([...SEVERITIES]);
-  });
-});
-
-describe("categoryChipLabel", () => {
-  it("says which categories are off by default", () => {
-    expect(categoryChipLabel("sport")).toBe("Sport (off by default)");
-    expect(categoryChipLabel("war")).toBe("War");
   });
 });

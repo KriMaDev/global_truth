@@ -9,7 +9,6 @@ import pytest
 from globe_pipeline.categorize import (
     CATEGORIES,
     HAZARD_WORDS,
-    OFF_BY_DEFAULT,
     categorize_news,
     category_basis,
     hazard_of,
@@ -228,9 +227,6 @@ def test_categories_match_the_site() -> None:
     types = (ROOT / "frontend" / "src" / "types.ts").read_text(encoding="utf-8")
     block = types.split("export const CATEGORIES", 1)[1].split("] as const", 1)[0]
     assert tuple(re.findall(r'"([a-z-]+)"', block)) == CATEGORIES
-    filters = (ROOT / "frontend" / "src" / "filters.ts").read_text(encoding="utf-8")
-    line = filters.split("export const OFF_BY_DEFAULT", 1)[1].split(";", 1)[0]
-    assert tuple(re.findall(r'"([a-z-]+)"', line)) == OFF_BY_DEFAULT
 
 
 def test_whole_words_only() -> None:

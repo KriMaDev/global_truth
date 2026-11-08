@@ -32,8 +32,6 @@ CATEGORIES = (
     "science",
     "sport",
 )
-#: Hidden until the visitor turns them on (the site's filters), so they don't crowd the globe.
-OFF_BY_DEFAULT = ("sport",)
 #: Distinct matching themes needed when the headline has no listed word.
 MIN_THEMES = 2
 

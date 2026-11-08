@@ -17,14 +17,6 @@ export const RANGE_LABELS: Record<RangeKey, string> = {
 export const DEFAULT_RANGE: RangeKey = "3d";
 export const HISTORY_HOURS = 168;
 
-/** Categories hidden until the visitor turns them on, so they don't crowd the globe (the
- * pipeline's OFF_BY_DEFAULT; a test keeps the two in step). */
-export const OFF_BY_DEFAULT: readonly Category[] = ["sport"];
-/** The categories shown when nothing else is chosen. */
-export const DEFAULT_CATEGORIES: readonly Category[] = CATEGORIES.filter(
-  (category) => !OFF_BY_DEFAULT.includes(category),
-);
-
 /** The place levels, from widest to narrowest; a path holds a value for the first few. */
 export const PLACE_LEVELS = ["continent", "region", "country_code", "admin1", "city"] as const;
 export type PlaceLevel = (typeof PLACE_LEVELS)[number];
@@ -41,7 +33,7 @@ export interface FilterState {
 
 export function defaultFilters(): FilterState {
   return {
-    categories: new Set(DEFAULT_CATEGORIES),
+    categories: new Set(CATEGORIES),
     severities: new Set(SEVERITIES),
     range: DEFAULT_RANGE,
     end: null,
@@ -80,13 +72,9 @@ export function matches(event: GlobeEvent, state: FilterState, now: number): boo
   return time >= from && time <= to && matchesExceptTime(event, state);
 }
 
-function sameAs<T>(set: Set<T>, list: readonly T[]): boolean {
-  return set.size === list.length && list.every((value) => set.has(value));
-}
-
 export function isDefault(state: FilterState): boolean {
   return (
-    sameAs(state.categories, DEFAULT_CATEGORIES) &&
+    state.categories.size === CATEGORIES.length &&
     state.severities.size === SEVERITIES.length &&
     state.range === DEFAULT_RANGE &&
     state.end === null &&
@@ -97,7 +85,7 @@ export function isDefault(state: FilterState): boolean {
 /** The state as web-address parameters (only what differs from the default). */
 export function toQuery(state: FilterState): string {
   const params = new URLSearchParams();
-  if (!sameAs(state.categories, DEFAULT_CATEGORIES)) {
+  if (state.categories.size !== CATEGORIES.length) {
     params.set("cat", CATEGORIES.filter((c) => state.categories.has(c)).join(",") || "none");
   }
   if (state.severities.size !== SEVERITIES.length) {
@@ -118,23 +106,19 @@ export function withPageState(query: string, page: { geo: boolean; list: boolean
 }
 
 /** A list from the address; "none" means none chosen, and a missing list or one with no valid
- * value at all (a broken link) gives the default rather than an empty globe. */
-function listFrom<T extends string>(
-  value: string | null,
-  allowed: readonly T[],
-  fallback: readonly T[] = allowed,
-): Set<T> {
-  if (value === null) return new Set(fallback);
+ * value at all (a broken link) gives everything rather than an empty globe. */
+function listFrom<T extends string>(value: string | null, allowed: readonly T[]): Set<T> {
+  if (value === null) return new Set(allowed);
   if (value === "none") return new Set();
   const valid = value.split(",").filter((v): v is T => (allowed as readonly string[]).includes(v));
-  return new Set(valid.length ? valid : fallback);
+  return new Set(valid.length ? valid : allowed);
 }
 
 /** Reads a state from web-address parameters; unknown or broken values are ignored. */
 export function fromQuery(search: string): FilterState {
   const params = new URLSearchParams(search);
   const state = defaultFilters();
-  state.categories = listFrom(params.get("cat"), CATEGORIES, DEFAULT_CATEGORIES);
+  state.categories = listFrom(params.get("cat"), CATEGORIES);
   state.severities = listFrom(params.get("sev"), SEVERITIES);
   const range = params.get("range");
   if (range && range in RANGES) state.range = range as RangeKey;
