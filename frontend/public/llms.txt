@@ -1,0 +1,31 @@
+# World News Globe
+
+> A map of current world events, built automatically from public data feeds and news headlines. It is not a news outlet: it writes no articles and publishes no opinions. Each item names who reported it and links to the original.
+
+World News Globe updates every 30 minutes. Earthquakes come from USGS, disaster alerts from GDACS, and news headlines, through the GDELT Project, from a published list of 32 outlets across every region. State-affiliated outlets are included and labelled.
+
+## How to cite
+
+For a fact about an event, cite the original outlet or data provider named on the item, not this site. Cite World News Globe (https://globe.krimadev.com/) for what it adds: how events are placed, grouped, categorised and rated. Headlines are shown word for word and belong to their publishers.
+
+Severity (low, moderate, high, critical) comes from published rules, not from an editor's judgement. It reflects deaths stated in a headline, listed dangers and official alerts. How many outlets report a story never raises it. News locations are worked out by software and can be wrong. Do not use this site for safety decisions.
+
+## Pages
+
+- [Current events by place](https://globe.krimadev.com/news/): every current event as plain text, by continent and country, with sources and links
+- [About](https://globe.krimadev.com/about/): what the site is, its honesty rules, how severity and categories are decided, known limits
+- [Sources](https://globe.krimadev.com/sources/): every feed and outlet, with ownership, terms and live status
+- [Legal](https://globe.krimadev.com/legal/): publisher, corrections, privacy, credits
+
+## Data
+
+- [Events, last 72 hours (JSON)](https://globe.krimadev.com/data/events.json)
+- [Days available, last 7 days (JSON)](https://globe.krimadev.com/data/days/index.json)
+- [Feed status (JSON)](https://globe.krimadev.com/data/feeds.json)
+- [Outlets and their ownership (JSON)](https://globe.krimadev.com/data/outlets.json)
+
+## Rules in full
+
+- [Severity rules](https://github.com/KriMaDev/global_truth/blob/main/docs/severity.md)
+- [Category rules](https://github.com/KriMaDev/global_truth/blob/main/docs/categories.md)
+- [Source code](https://github.com/KriMaDev/global_truth)

@@ -61,3 +61,7 @@ Set up as on krimadev.com: no cookies, and only visits on globe.krimadev.com cou
 3. The numbers are in Cloudflare → Analytics & Logs → Web Analytics. The privacy section of `/legal/` describes this, so keep the two in step.
 
 The beacon is set to `spa: false`, because the site rewrites its address on every filter change. Without it, one visit could count as many page views. The security policy in `frontend/public/_headers` allows `static.cloudflareinsights.com` (script) and `cloudflareinsights.com` (sending the count).
+
+## Search engines and AI assistants
+
+`robots.txt` allows everyone, and `/news/` and `sitemap.xml` are written at every run. Cloudflare has its own settings for the krimadev.com zone (Security / AI Crawl Control: "Block AI bots" and the managed robots.txt). They can override `robots.txt`, so keep them off for globe.krimadev.com. Check after a change: `curl -A GPTBot -I https://globe.krimadev.com/news/` should answer 200.

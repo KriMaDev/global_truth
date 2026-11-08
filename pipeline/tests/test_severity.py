@@ -37,6 +37,8 @@ def test_colors_match_docs_and_frontend() -> None:
         assert color.lower() in docs.lower(), f"{level.label} colour missing from docs"
         match = re.search(rf"--sev-{level.label}:\s*(#[0-9a-fA-F]{{6}})", css)
         assert match, f"--sev-{level.label} missing from style.css"
+        plain = (REPO_ROOT / "frontend" / "public" / "news.css").read_text(encoding="utf-8")
+        assert f"--sev-{level.label}: {SEVERITY_COLORS[level]}".lower() in plain.lower()
         assert match.group(1).lower() == color.lower()
         match = re.search(rf'\b{level.label}:\s*\{{[^}}]*color:\s*"(#[0-9a-fA-F]{{6}})"', styles)
         assert match, f"{level.label} missing from severity.ts"

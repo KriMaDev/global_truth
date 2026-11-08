@@ -5,6 +5,8 @@ frontend/dist/
 
 # Data written by the pipeline (published by the deploy, never committed)
 frontend/public/data/
+frontend/public/news/
+frontend/public/sitemap.xml
 
 # Python
 .venv/

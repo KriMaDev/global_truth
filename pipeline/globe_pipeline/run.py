@@ -22,6 +22,7 @@ from .geocode import Gazetteer
 from .models import Event, iso
 from .outlets import MAX_EVENTS_PER_OUTLET, MAX_SPORT_EVENTS_PER_OUTLET
 from .output import FeedStatus, Previous, day_of, load_previous, within_window, write
+from .pages import write_pages
 from .sources import gdacs, gdelt, usgs
 
 LOG = logging.getLogger("globe_pipeline")
@@ -79,7 +80,12 @@ def balance_outlets(
     return kept
 
 
-def run(out: Path, previous_location: str | None, now: datetime | None = None) -> list[Event]:
+def run(
+    out: Path,
+    previous_location: str | None,
+    now: datetime | None = None,
+    site: Path | None = None,
+) -> list[Event]:
     """One full run. Returns the events written."""
     now = now or datetime.now(UTC)
     gazetteer = Gazetteer.load()
@@ -120,6 +126,8 @@ def run(out: Path, previous_location: str | None, now: datetime | None = None) -
         {"name": m.SOURCE, "credit": m.CREDIT, "homepage": m.HOMEPAGE} for m in (usgs, gdacs)
     ]
     write(out, events, statuses, now, cursor, providers)
+    if site is not None:
+        write_pages(site, events, statuses, now)
     LOG.info(
         "wrote %d events (%s)",
         len(events),
@@ -138,9 +146,12 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_PREVIOUS,
         help="URL prefix or folder of the last published data ('' for a fresh start)",
     )
+    parser.add_argument(
+        "--site", type=Path, help="folder for news/ and sitemap.xml (default: the parent of --out)"
+    )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    run(args.out, args.previous or None)
+    run(args.out, args.previous or None, site=args.site or args.out.parent)
     return 0
 
 
