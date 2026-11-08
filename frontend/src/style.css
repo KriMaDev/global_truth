@@ -134,6 +134,27 @@ button {
   border-bottom-width: 2px;
 }
 
+/* Panels that scroll (event card, filters) draw their corner brackets as backgrounds instead,
+   which stay at the panel's corners while the text scrolls; the ::before/::after brackets would
+   scroll away with it. Defined on the panel itself so --accent is the open event's colour. */
+.event-card,
+.filter-panel {
+  --corner: linear-gradient(var(--accent), var(--accent));
+  --scroll-panel-bg:
+    var(--corner) left top / 10px 2px no-repeat border-box,
+    var(--corner) left top / 2px 10px no-repeat border-box,
+    var(--corner) right bottom / 10px 2px no-repeat border-box,
+    var(--corner) right bottom / 2px 10px no-repeat border-box,
+    var(--panel-solid);
+}
+
+.event-card::before,
+.event-card::after,
+.filter-panel::before,
+.filter-panel::after {
+  content: none;
+}
+
 /* A label: monospaced, uppercase, wide-spaced. */
 .label,
 .legend-title,
@@ -533,7 +554,7 @@ body:not(.no-globe) .event-list-button:focus {
   overflow-y: auto;
   padding: 1.1rem 1.3rem 1.3rem;
   animation: card-in 0.35s var(--ease-out);
-  background: var(--panel-solid);
+  background: var(--scroll-panel-bg);
 }
 
 @keyframes card-in {
@@ -643,6 +664,11 @@ body:not(.no-globe) .event-list-button:focus {
   padding: 0.55rem 0.7rem;
   border-left: 2px solid var(--accent);
   background: rgb(255 255 255 / 3%);
+}
+
+/* The place card's credits are one running sentence with links, not separate notes. */
+.card-notes.place-credits {
+  display: block;
 }
 
 .badge-state {
@@ -954,7 +980,7 @@ body:not(.no-globe) .event-list-button:focus {
   max-height: calc(100dvh - 6.5rem);
   overflow-y: auto;
   padding: 0.9rem 1.1rem 1.1rem;
-  background: var(--panel-solid);
+  background: var(--scroll-panel-bg);
   animation: card-in 0.3s var(--ease-out);
 }
 
@@ -1406,6 +1432,6 @@ body.page {
     bottom: calc(var(--bottom-h, 0px) - 0.75rem);
     width: auto;
     max-height: calc(100dvh - var(--bottom-h, 0px) - 6rem);
-    background: var(--panel-solid);
+    background: var(--scroll-panel-bg);
   }
 }

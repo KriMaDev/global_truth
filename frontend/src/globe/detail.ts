@@ -194,8 +194,11 @@ const UPLOAD_MS = 250;
 /** After this many failed tiles in a row, no tiles are asked for during a few minutes. */
 const GIVE_UP_AFTER = 4;
 const PAUSE_AFTER_FAILURES_MS = 5 * 60_000;
-/** Tiles load once the camera pauses, so zooming through levels does not fetch them all. */
+/** Tiles load once the camera pauses, so zooming through levels does not fetch them all... */
 const DEBOUNCE_MS = 450;
+/** ...but never later than this while the camera keeps moving (e.g. the globe rotating on
+ * its own): with only the pause, a rotating close view never asked for a tile (8 Nov 2026). */
+const MAX_WAIT_MS = 1000;
 
 interface Job {
   url: string;
@@ -219,6 +222,9 @@ export class DetailLayer {
   private dirty = false;
   private lastUpload = 0;
   private timer = 0;
+  /** When the camera started moving without the tiles being updated (0: up to date). */
+  private pendingSince = 0;
+  private latest: { view: { lat: number; lng: number; altitude: number }; fov: number; aspect: number; screenPx: number } | null = null;
   private gotFirst = false;
   private failures = 0;
   private pausedUntil = 0;
@@ -248,19 +254,31 @@ export class DetailLayer {
     this.cacheSize = options.maxTiles * options.maxTiles * 3;
   }
 
-  /** The camera moved: after a short pause, cover the new view. */
+  /** The camera moved: after a short pause (or at most MAX_WAIT_MS while it keeps moving),
+   * cover the new view. */
   update(view: { lat: number; lng: number; altitude: number }, fovDegrees: number, aspect: number, screenPx: number): void {
     window.clearTimeout(this.timer);
     if (view.altitude >= DETAIL_ALTITUDE || Date.now() < this.pausedUntil) {
+      this.pendingSince = 0;
       this.hide();
       return;
     }
-    this.timer = window.setTimeout(() => {
-      const level = levelFor(screenKmPerPixel(view.altitude, fovDegrees, screenPx));
-      const next = tileWindow(view.lat, view.lng, viewHalfHeight(view.altitude, fovDegrees), aspect, level, this.options.maxTiles);
-      if (!next) this.hide();
-      else if (!sameWindow(this.window, next)) this.show(next);
-    }, DEBOUNCE_MS);
+    this.latest = { view, fov: fovDegrees, aspect, screenPx };
+    const now = performance.now();
+    if (this.pendingSince === 0) this.pendingSince = now;
+    const wait = Math.max(0, Math.min(DEBOUNCE_MS, this.pendingSince + MAX_WAIT_MS - now));
+    this.timer = window.setTimeout(() => this.cover(), wait);
+  }
+
+  /** Shows the tiles for the latest view (a new window only when it changed). */
+  private cover(): void {
+    this.pendingSince = 0;
+    if (!this.latest) return;
+    const { view, fov, aspect, screenPx } = this.latest;
+    const level = levelFor(screenKmPerPixel(view.altitude, fov, screenPx));
+    const next = tileWindow(view.lat, view.lng, viewHalfHeight(view.altitude, fov), aspect, level, this.options.maxTiles);
+    if (!next) this.hide();
+    else if (!sameWindow(this.window, next)) this.show(next);
   }
 
   /** Once a frame: hands newly drawn tiles to the graphics card, a few times a second. */
