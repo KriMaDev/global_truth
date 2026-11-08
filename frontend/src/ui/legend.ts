@@ -1,21 +1,26 @@
-/** The always-visible legend, built from SEVERITY_STYLES so it can never drift from the globe. */
+/**
+ * The always-visible legend: what each severity means and what the markers are. Built from
+ * SEVERITY_STYLES so the samples can never drift from the globe. Severity rows and marker rows
+ * share one set of columns (sample, name, explanation).
+ */
 
 import { HAZARD_ICONS, iconSvg } from "../globe/hazard-icons";
 import { SEVERITY_STYLES } from "../severity";
-import { SEVERITIES } from "../types";
+import { SEVERITIES, type Severity } from "../types";
 
 /** Pillar height in pixels for the lowest level; grows like the pillars on the globe. */
 const PILLAR_PX = 7;
 
-export function pulseLabel(pulseSeconds: number | null): string {
-  if (pulseSeconds === null) return "steady";
-  if (pulseSeconds >= 2) return "slow pulse";
-  if (pulseSeconds >= 1.2) return "pulse";
-  return "fast pulse";
-}
+/** What a level means, in short. The full rules are in docs/severity.md (keep in step). */
+export const LEVEL_MEANING: Record<Severity, string> = {
+  critical: "100+ dead · red alert",
+  high: "10+ dead · orange alert",
+  moderate: "1+ dead · listed danger",
+  low: "everything else",
+};
 
-/** The symbols' highlight colour in the legend (on the globe it is the severity colour). */
-const LEGEND_ACCENT = "#f2b24c";
+/** Marker samples are grey: on the legend, as on the globe, colour only ever means severity. */
+const SAMPLE_COLOR = "#a6a8a3";
 
 function span(className: string, text?: string): HTMLSpanElement {
   const node = document.createElement("span");
@@ -24,77 +29,98 @@ function span(className: string, text?: string): HTMLSpanElement {
   return node;
 }
 
+function paragraph(className: string, text: string): HTMLParagraphElement {
+  const node = document.createElement("p");
+  node.className = className;
+  node.textContent = text;
+  return node;
+}
+
+function heading(text: string, className = "legend-title"): HTMLHeadingElement {
+  const node = document.createElement("h2");
+  node.className = className;
+  node.textContent = text;
+  return node;
+}
+
+/** One row: a sample of the marker, its name, and what it means. */
+function row(sample: HTMLElement, name: string, how: string): HTMLLIElement {
+  sample.setAttribute("aria-hidden", "true");
+  const item = document.createElement("li");
+  item.append(sample, span("legend-name", name), span("legend-how", how));
+  return item;
+}
+
+function rows(items: HTMLLIElement[]): HTMLUListElement {
+  const list = document.createElement("ul");
+  list.className = "legend-list";
+  list.append(...items);
+  return list;
+}
+
+/** A small pillar of light, like those on the globe. */
+function pillar(height: number, width: number, color: string, pulseSeconds: number | null = null): HTMLSpanElement {
+  const node = span(pulseSeconds === null ? "legend-pillar" : "legend-pillar pulsing");
+  node.style.setProperty("--pillar-h", `${height}px`);
+  node.style.setProperty("--pillar-w", `${width.toFixed(1)}px`);
+  node.style.setProperty("--dot-color", color);
+  if (pulseSeconds !== null) node.style.setProperty("--pulse", `${pulseSeconds}s`);
+  return node;
+}
+
 /** A small glass disc with a symbol, like those on the globe. */
 export function symbolBadge(code: string): HTMLSpanElement {
   const badge = span("legend-symbol");
   badge.setAttribute("aria-hidden", "true");
   const icon = HAZARD_ICONS.find((i) => i.code === code) ?? HAZARD_ICONS[HAZARD_ICONS.length - 1];
-  badge.append(iconSvg(icon, LEGEND_ACCENT));
+  badge.append(iconSvg(icon, SAMPLE_COLOR));
   return badge;
 }
 
-/** "Pillar = news report, symbol = natural disaster", and every symbol by name on request. */
-function markersKey(): HTMLElement[] {
-  const key = document.createElement("p");
-  key.className = "legend-markers";
-  const pillar = span("legend-pillar");
-  pillar.setAttribute("aria-hidden", "true");
-  pillar.style.setProperty("--pillar-h", "13px");
-  pillar.style.setProperty("--pillar-w", "3px");
-  pillar.style.setProperty("--dot-color", "var(--accent)");
-  const news = span("legend-marker");
-  news.append(pillar, "News report");
-  const disaster = span("legend-marker");
-  disaster.append(symbolBadge("EQ"), "Natural disaster");
-  key.append(news, disaster);
+function severityRows(): HTMLUListElement {
+  return rows(
+    [...SEVERITIES].reverse().map((level) => {
+      const style = SEVERITY_STYLES[level];
+      const sample = pillar(
+        Math.round(PILLAR_PX * style.size ** 1.6),
+        3 * Math.sqrt(style.size),
+        style.color,
+        style.pulseSeconds,
+      );
+      return row(sample, style.label, LEVEL_MEANING[level]);
+    }),
+  );
+}
 
+function markerRows(): HTMLUListElement {
+  return rows([
+    row(pillar(16, 3, SAMPLE_COLOR), "News", "pillar of light"),
+    row(symbolBadge("EQ"), "Natural disaster", "symbol shows its type"),
+    row(span("legend-count", "3"), "Group", "events close together"),
+  ]);
+}
+
+/** Every symbol by name, on request. */
+function symbolList(): HTMLDetailsElement {
   const details = document.createElement("details");
   details.className = "legend-symbols";
   const summary = document.createElement("summary");
-  summary.textContent = "Disaster symbols";
+  summary.textContent = "All disaster symbols";
   const list = document.createElement("ul");
   for (const icon of HAZARD_ICONS) {
     const item = document.createElement("li");
-    item.append(symbolBadge(icon.code), icon.label);
+    item.append(symbolBadge(icon.code), span("", icon.label));
     list.append(item);
   }
   details.append(summary, list);
-  return [key, details];
+  return details;
 }
 
 export function renderLegend(root: HTMLElement): void {
-  const heading = document.createElement("h2");
-  heading.className = "legend-title";
-  heading.textContent = "Severity";
-
-  const list = document.createElement("ul");
-  list.className = "legend-list";
-  for (const level of [...SEVERITIES].reverse()) {
-    const style = SEVERITY_STYLES[level];
-    const item = document.createElement("li");
-    const dot = document.createElement("span");
-    dot.className = style.pulseSeconds === null ? "legend-pillar" : "legend-pillar pulsing";
-    dot.setAttribute("aria-hidden", "true");
-    dot.style.setProperty("--pillar-h", `${Math.round(PILLAR_PX * style.size ** 1.6)}px`);
-    dot.style.setProperty("--pillar-w", `${(3 * Math.sqrt(style.size)).toFixed(1)}px`);
-    dot.style.setProperty("--dot-color", style.color);
-    if (style.pulseSeconds !== null) dot.style.setProperty("--pulse", `${style.pulseSeconds}s`);
-    const name = document.createElement("span");
-    name.className = "legend-name";
-    name.textContent = style.label;
-    const how = document.createElement("span");
-    how.className = "legend-how";
-    how.textContent = style.rings ? `${pulseLabel(style.pulseSeconds)}, rings` : pulseLabel(style.pulseSeconds);
-    item.append(dot, name, how);
-    list.append(item);
-  }
-
   const link = document.createElement("a");
   link.className = "legend-link";
-  link.href = "https://github.com/KriMaDev/global_truth/blob/main/docs/severity.md";
+  link.href = "/about/#severity";
   link.textContent = "How severity is decided";
-  link.target = "_blank";
-  link.rel = "noopener";
 
   const summary = document.createElement("p");
   summary.className = "legend-summary";
@@ -102,12 +128,22 @@ export function renderLegend(root: HTMLElement): void {
   summary.setAttribute("aria-live", "polite");
   summary.hidden = true;
 
-  // Shown in the geography view only (by CSS, body.geo-view).
-  const geoNote = document.createElement("p");
-  geoNote.className = "legend-geo-note";
-  geoNote.textContent = "Countries take the colour of their most severe event";
-
-  root.replaceChildren(heading, list, ...markersKey(), geoNote, link, summary);
+  root.replaceChildren(
+    heading("Severity"),
+    paragraph("legend-note", "How serious an event is. Each card says why it got its level."),
+    severityRows(),
+    paragraph(
+      "legend-note",
+      "Deaths as stated in the headline; alerts from USGS and GDACS. More severe events are taller and pulse faster; high and critical also send out rings.",
+    ),
+    heading("On the globe", "legend-title legend-section"),
+    markerRows(),
+    symbolList(),
+    // Shown in the geography view only (by CSS, body.geo-view).
+    paragraph("legend-geo-note", "Countries take the colour of their most severe event."),
+    link,
+    summary,
+  );
 }
 
 /** "Showing 37 of 412 events · Clear filters" while filters are on; hidden otherwise. */

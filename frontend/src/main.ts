@@ -173,7 +173,7 @@ function clearFilters(): void {
 }
 
 /** On wide screens Filters and Headlines sit side by side; otherwise one replaces the other. */
-const roomForBothPanels = window.matchMedia("(min-width: 1200px)");
+const roomForBothPanels = window.matchMedia("(min-width: 1240px)");
 
 const panel = createFilterPanel(
   byId("filter-panel"),

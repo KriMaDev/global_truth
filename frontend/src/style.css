@@ -491,10 +491,10 @@ button {
 
 .legend-geo-note {
   display: none;
-  margin: 0.4rem 0 0;
+  margin: 0 0 0.55rem;
   color: var(--muted);
-  font: 400 0.7rem/1.4 var(--ff-mono);
-  letter-spacing: 0.04em;
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .geo-view .legend-geo-note {
@@ -749,29 +749,52 @@ a.card-source-meta:focus-visible {
   pointer-events: auto;
 }
 
+/* Every row (severity and markers) shares the same three columns: sample, name, meaning. */
 .legend {
-  padding: 0.75rem 0.95rem 0.8rem;
+  width: 21.25rem;
+  max-width: 100%;
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
+  padding: 0.8rem 0.95rem 0.85rem;
   font-size: 0.85rem;
 }
 
 .legend-title {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.25rem;
   color: var(--muted);
+}
+
+.legend-section {
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
+}
+
+.legend-note {
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .legend-list {
   display: grid;
-  gap: 0.3rem;
-  margin: 0 0 0.55rem;
+  gap: 0.15rem;
+  margin: 0 0 0.45rem;
   padding: 0;
   list-style: none;
 }
 
 .legend-list li {
   display: grid;
-  grid-template-columns: 22px 5.5rem auto;
+  grid-template-columns: 22px 6.6rem 1fr;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
+  min-height: 28px;
+}
+
+.legend-name {
+  font-weight: 600;
 }
 
 /* A small pillar of light, like those on the globe: taller and wider with severity. */
@@ -811,38 +834,29 @@ a.card-source-meta:focus-visible {
   animation: pillar-pulse var(--pulse) ease-in-out infinite;
 }
 
-/* News is a pillar of light, a natural disaster a symbol on a glass disc (globe/markers.ts). */
-.legend-markers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.9rem;
-  margin: 0 0 0.35rem;
-  color: var(--muted);
-  font-size: 0.78rem;
-}
-
-.legend-marker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.legend-markers .legend-pillar {
-  width: 12px;
-  height: 18px;
-}
-
+/* Samples of the markers. Grey and independent of --accent: colour only means severity. */
 .legend-symbol {
   display: inline-grid;
   flex: none;
   place-items: center;
+  justify-self: center;
   width: 20px;
   height: 20px;
-  border: 1.5px solid color-mix(in srgb, var(--accent) 80%, transparent);
+  border: 1.5px solid var(--muted);
   border-radius: 50%;
   color: var(--fg);
   background: radial-gradient(circle at 50% 35%, #161c24, #05080c 75%);
-  box-shadow: 0 0 7px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.legend-count {
+  justify-self: center;
+  min-width: 20px;
+  padding: 0.05rem 0.25rem;
+  border: 1px solid var(--muted);
+  border-radius: 2px;
+  background: rgb(5 7 10 / 82%);
+  font: 500 0.66rem/1.3 var(--ff-mono);
+  text-align: center;
 }
 
 .hazard-icon {
@@ -851,7 +865,7 @@ a.card-source-meta:focus-visible {
 }
 
 .legend-symbols {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.55rem;
   font-size: 0.78rem;
 }
 
@@ -871,23 +885,24 @@ a.card-source-meta:focus-visible {
 
 .legend-symbols ul {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, max-content));
-  gap: 0.3rem 0.9rem;
-  margin: 0.4rem 0 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.5rem;
+  margin: 0.45rem 0 0;
   padding: 0;
   list-style: none;
 }
 
 .legend-symbols li {
-  display: flex;
+  display: grid;
+  grid-template-columns: 22px 1fr;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
+  line-height: 1.2;
 }
 
 .legend-how {
   color: var(--muted);
-  font: 400 0.7rem/1.2 var(--ff-mono);
-  letter-spacing: 0.04em;
+  font: 400 0.68rem/1.25 var(--ff-mono);
 }
 
 .legend-link {
@@ -1205,7 +1220,7 @@ a.card-source-meta:focus-visible {
 }
 
 /* With room for both, Filters stay open beside the list, clear of the legend. */
-@media (min-width: 1200px) {
+@media (min-width: 1240px) {
   .filter-panel:not([hidden]) ~ .news-panel {
     right: calc(var(--gutter) + 26rem + 0.75rem);
   }
@@ -1494,18 +1509,23 @@ body.page {
     padding-bottom: max(var(--gutter), env(safe-area-inset-bottom));
   }
 
-  /* One compact row: the dots still differ in size and pulse; the words stay for screen
-     readers. */
+  /* Compact rows: the samples still differ in size and pulse. The explanations stay for
+     screen readers; "How severity is decided" links to the full version. */
   .legend {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.35rem 0.8rem;
+    width: auto;
     padding: 0.55rem 0.75rem;
   }
 
   .legend-title {
     margin: 0;
+  }
+
+  .legend-section {
+    display: none;
   }
 
   .legend-list {
@@ -1518,15 +1538,22 @@ body.page {
   .legend-list li {
     display: flex;
     gap: 0.35rem;
+    min-height: 0;
   }
 
-  .legend-how {
+  .legend-how,
+  .legend-note {
     position: absolute;
     width: 1px;
     height: 1px;
+    margin: 0;
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  .legend-symbols {
+    margin: 0;
   }
 
   .bottom-right {
@@ -1597,5 +1624,18 @@ body.page {
 @media (max-height: 520px) and (min-width: 641px) {
   .news-panel {
     max-height: calc(100dvh - 6.5rem);
+  }
+}
+
+/* Short wide screens (a phone held sideways): the rows stay, the sentences go. */
+@media (max-height: 640px) and (min-width: 641px) {
+  .legend-note {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

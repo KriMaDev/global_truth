@@ -57,6 +57,7 @@ How many outlets cover a story is shown as **coverage**, separately. It never ra
 - Severity shows the same way on both: colour, size, pulse speed and (high, critical) rings. The symbol adds the type, a second signal that does not depend on colour.
 - The symbols are our own drawings (`frontend/src/globe/hazard-icons.ts`); the legend lists them all under "Disaster symbols".
 - In the geography view, news shrinks to small dots and the symbols sit smaller and lower.
+- The legend sums up each level in a few words (`LEVEL_MEANING` in `frontend/src/ui/legend.ts`) and the About page in a table (`frontend/about/index.html`). Any change to a rule must change those too. Its marker samples are grey, so colour only ever means severity.
 
 ### Groups of events
 Where pillars would crowd (closer than 4°, 2° or 1° on screen depending on zoom; never when zoomed right in), they merge into one pillar (or one symbol: natural disasters and news are grouped separately, so a group is always one or the other). It takes the **highest severity among its events** and stands at that event's place, with a badge showing how many events it holds. Grouping never changes any event's own severity. Code: `frontend/src/clusters.ts`.
