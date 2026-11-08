@@ -6,13 +6,13 @@
  *
  * It has no web address and no fetch handler: only the cron runs it.
  *
- * Secret: GITHUB_TOKEN, a fine-grained token for KriMaDev/global_truth with "Actions: Read
+ * Secret: GITHUB_TOKEN, a fine-grained token for KriMaDev/world_news_globe with "Actions: Read
  * and write" only, set with `npx wrangler secret put GITHUB_TOKEN -c worker/wrangler.jsonc`.
  * Never in a file.
  */
 
 export const DISPATCH_URL =
-  "https://api.github.com/repos/KriMaDev/global_truth/actions/workflows/update.yml/dispatches";
+  "https://api.github.com/repos/KriMaDev/world_news_globe/actions/workflows/update.yml/dispatches";
 
 /**
  * Asks GitHub to run the update workflow on main. Throws when the token is missing or GitHub

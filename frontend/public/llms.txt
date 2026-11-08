@@ -26,6 +26,6 @@ Severity (low, moderate, high, critical) comes from published rules, not from an
 
 ## Rules in full
 
-- [Severity rules](https://github.com/KriMaDev/global_truth/blob/main/docs/severity.md)
-- [Category rules](https://github.com/KriMaDev/global_truth/blob/main/docs/categories.md)
-- [Source code](https://github.com/KriMaDev/global_truth)
+- [Severity rules](https://github.com/KriMaDev/world_news_globe/blob/main/docs/severity.md)
+- [Category rules](https://github.com/KriMaDev/world_news_globe/blob/main/docs/categories.md)
+- [Source code](https://github.com/KriMaDev/world_news_globe)
