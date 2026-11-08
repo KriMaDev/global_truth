@@ -161,6 +161,23 @@ if (footer) {
   }).observe(footer);
 }
 
+// Where the top row ends and the footer's right side begins, so panels on the right fit between
+// them at any screen size (the row can be taller, or the footer have more lines).
+const topRow = document.querySelector<HTMLElement>('.topbar-actions');
+const footerRight = document.querySelector<HTMLElement>('.bottom-right');
+if (topRow && footerRight) {
+  const measureEdges = (): void => {
+    const root = document.documentElement.style;
+    root.setProperty('--top-h', `${Math.round(topRow.getBoundingClientRect().bottom)}px`);
+    const foot = window.innerHeight - footerRight.getBoundingClientRect().top;
+    root.setProperty('--foot-h', `${Math.round(foot)}px`);
+  };
+  const observer = new ResizeObserver(measureEdges);
+  observer.observe(topRow);
+  observer.observe(footerRight);
+  window.addEventListener('resize', measureEdges);
+}
+
 let app: GlobeApp | null = null;
 const card = createEventCard(byId('event-card'), () => {
   app?.select(null);
