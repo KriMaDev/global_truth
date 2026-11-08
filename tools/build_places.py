@@ -83,6 +83,12 @@ FACTS: dict[str, list[tuple[str, str]]] = {
         ("area_m2", quantity("P2046")),
         ("countries", f"?item wdt:P17 ?v . {CURRENT} {LABEL}"),
     ],
+    "water": [
+        ("area_m2", quantity("P2046")),
+        ("max_depth_m", quantity("P4511")),
+        ("length_m", quantity("P2043")),
+        ("countries", f"?item wdt:P17 ?v . {CURRENT} {LABEL}"),
+    ],
     "peak": [
         ("range", f"?item wdt:P4552 ?v . {LABEL}"),
         ("prominence_m", quantity("P2660")),
@@ -212,8 +218,18 @@ def places_by_kind() -> dict[str, list[str]]:
         "sea": [s["wikidata"] for s in labels["seas"]],
         "region": [r["wikidata"] for r in labels["regions"]],
         "peak": [p["wikidata"] for p in labels["peaks"]],
+        # Lakes (Natural Earth gives rivers no Wikidata ID).
+        "water": [w["wikidata"] for w in labels.get("waters", [])],
     }
     return {kind: sorted({i for i in items if i}) for kind, items in ids.items()}
+
+
+def as_of() -> str:
+    """The date the facts and text are from: the oldest answer in the cache (a run reuses
+    cached answers, so "today" would overstate how recent some of them are)."""
+    files = [f for f in CACHE.rglob("*") if f.is_file()] if CACHE.exists() else []
+    oldest = min((f.stat().st_mtime for f in files), default=time.time())
+    return datetime.fromtimestamp(oldest, UTC).strftime("%Y-%m-%d")
 
 
 def main() -> None:
@@ -233,7 +249,7 @@ def main() -> None:
     out.write_text(
         json.dumps(
             {
-                "generated": datetime.now(UTC).strftime("%Y-%m-%d"),
+                "generated": as_of(),
                 "places": places,
             },
             ensure_ascii=False,

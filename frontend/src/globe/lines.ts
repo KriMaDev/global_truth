@@ -113,6 +113,19 @@ function layer(
   return result;
 }
 
+/** Rivers and lake shores (/geo/water.bin, the same layout: rivers first, then lake shores),
+ * for the geography view. Clear blue by day, still visible at night. */
+export function createWaterLines(
+  data: GeoLines,
+  coords: (lat: number, lng: number) => { x: number; y: number; z: number },
+  sunDirection: Vector3,
+): LineSegments[] {
+  return [
+    layer(data.coastlines, coords, sunDirection, "#4fb0ff", 0.8, 0.55),
+    layer(data.borders, coords, sunDirection, "#8fd0ff", 0.65, 0.45),
+  ];
+}
+
 /** The coastline and border lines, ready to add to the scene. */
 export function createLines(
   data: GeoLines,

@@ -470,6 +470,17 @@ button {
   text-transform: none;
 }
 
+/* Rivers and lakes: water blue, in the italic of map hydrography, smaller than seas. */
+.map-label.kind-river,
+.map-label.kind-lake {
+  color: rgb(143 208 255 / 90%);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  text-transform: none;
+}
+
 /* visibility, not opacity: hidden labels are then not painted at all (hundreds of them). */
 .map-label.is-hidden,
 .map-label.is-crowded {

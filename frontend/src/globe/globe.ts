@@ -17,6 +17,7 @@ import {
   type PerspectiveCamera,
   type Texture,
   type Vector3,
+  type LineSegments,
   type WebGLRenderer,
 } from "three";
 import { clusterDegrees, clusterEvents, clusterOf, type Cluster } from "../clusters";
@@ -24,7 +25,9 @@ import {
   labelLevel,
   labelPriority,
   labelsFor,
+  lakeLabel,
   type GeographyData,
+  type LakeShape,
   type MapLabel,
 } from "../geography";
 import { SEVERITY_STYLES } from "../severity";
@@ -32,7 +35,7 @@ import { hazardLabel, type GlobeEvent, type Severity } from "../types";
 import { createAtmosphere } from "./atmosphere";
 import { createDayNightMaterial, setSunDirection } from "./daynight";
 import { DetailLayer } from "./detail";
-import { createLines, parseLines } from "./lines";
+import { createLines, createWaterLines, parseLines } from "./lines";
 import { PillarField } from "./markers";
 import { createStars } from "./stars";
 import { sunPosition } from "./sun";
@@ -84,8 +87,12 @@ const LIGHT_ALTITUDE = 0.002;
 const LINE_ALTITUDE = 0.0012;
 const RING_ALTITUDE = 0.004;
 const BADGE_ALTITUDE = 0.004;
-/** Country shapes in the geography view sit just above the coastlines. */
+/** Country shapes in the geography view sit just above the coastlines... */
 const COUNTRY_ALTITUDE = 0.0035;
+/** ...lakes just above the countries (water over the country colour), and rivers and lake
+ * shores above both. */
+const LAKE_ALTITUDE = 0.0038;
+const WATER_ALTITUDE = 0.0041;
 /** Map labels this close to the globe's edge (cosine of the angle from the view's centre)
  * are hidden: they would be squeezed together there. */
 const LABEL_EDGE = 0.3;
@@ -196,7 +203,20 @@ interface CountryFeature {
   iso2: string;
   name: string;
   geometry: { type: "MultiPolygon"; coordinates: number[][][][] };
+  lake?: undefined;
 }
+
+/** A lake, painted as water over the country colours in the geography view. */
+interface LakeFeature {
+  lake: LakeShape;
+  name: string;
+  geometry: { type: "MultiPolygon"; coordinates: number[][][][] };
+}
+
+type ShapeFeature = CountryFeature | LakeFeature;
+
+/** Lakes: deep water blue, nearly opaque, unlit like the countries. */
+const lakeMaterial = new MeshBasicMaterial({ color: "#123e66", transparent: true, opacity: 0.9, depthWrite: false });
 
 /**
  * A country's tint: its severity colour, or a faint neutral glass without events. Five
@@ -248,6 +268,10 @@ export async function createGlobeApp(
   let clusters: Cluster[] = [];
   let geography: GeographyData | null = null;
   let countryFeatures: CountryFeature[] = [];
+  let lakeFeatures: LakeFeature[] = [];
+  /** Rivers and lake shores, loaded the first time the geography view opens. */
+  let waterLines: LineSegments[] = [];
+  let waterRequested = false;
   let labelsAt = -1;
   /** The HTML layer's items, badges first, then labels by importance (for decluttering). */
   let htmlItems: HtmlItem[] = [];
@@ -317,23 +341,33 @@ export async function createGlobeApp(
     // Flat shapes: no sides, and no outline (the borders are drawn already, see ./lines.ts).
     .polygonSideColor(() => "")
     .polygonStrokeColor(() => "")
-    .polygonAltitude(COUNTRY_ALTITUDE)
+    .polygonAltitude((d) => ((d as ShapeFeature).lake ? LAKE_ALTITUDE : COUNTRY_ALTITUDE))
     .polygonsTransitionDuration(0)
     .polygonLabel((d) => {
-      const country = d as CountryFeature;
+      const shape = d as ShapeFeature;
       const label = document.createElement("div");
       label.className = "globe-label";
       const title = document.createElement("strong");
-      title.textContent = country.name;
+      title.textContent = shape.name;
       label.append(title);
-      for (const line of options.describeCountry?.(country.iso2) ?? []) {
+      if (shape.lake) {
+        const span = document.createElement("span");
+        span.textContent = "Lake · click for more";
+        label.append(span);
+        return label;
+      }
+      for (const line of options.describeCountry?.(shape.iso2) ?? []) {
         const span = document.createElement("span");
         span.textContent = line;
         label.append(span);
       }
       return label;
     })
-    .onPolygonClick((d) => options.onCountry?.((d as CountryFeature).iso2))
+    .onPolygonClick((d) => {
+      const shape = d as ShapeFeature;
+      if (!shape.lake) options.onCountry?.(shape.iso2);
+      else if (geography) options.onPlace?.(lakeLabel(shape.lake, geography));
+    })
     .htmlElementVisibilityModifier((el, isVisible) => {
       el.classList.toggle("is-hidden", !isVisible);
     })
@@ -452,6 +486,25 @@ export async function createGlobeApp(
       for (const lines of createLines(parseLines(buffer), coords, sunVector)) globe.scene().add(lines);
     })
     .catch((error: unknown) => console.warn("Coastlines and borders unavailable:", error));
+
+  /** Rivers and lake shores for the geography view; the map works without them. */
+  function loadWater(): void {
+    if (waterRequested) return;
+    waterRequested = true;
+    void fetch("/geo/water.bin")
+      .then((response) =>
+        response.ok ? response.arrayBuffer() : Promise.reject(new Error(`HTTP ${response.status}`)),
+      )
+      .then((buffer) => {
+        const coords = (lat: number, lng: number) => globe.getCoords(lat, lng, WATER_ALTITUDE);
+        waterLines = createWaterLines(parseLines(buffer), coords, sunVector);
+        for (const line of waterLines) {
+          line.visible = geography !== null;
+          globe.scene().add(line);
+        }
+      })
+      .catch((error: unknown) => console.warn("Rivers and lakes unavailable:", error));
+  }
 
   // Sharp NASA tiles over the area in view when zooming in. Once they show, the zoom may go
   // closer; without them (offline, blocked) the old limit stays.
@@ -603,11 +656,21 @@ export async function createGlobeApp(
           name: c.name,
           geometry: { type: "MultiPolygon", coordinates: c.polygons },
         }));
+        lakeFeatures = data.lakes.map((lake) => ({
+          lake,
+          name: lake.name,
+          geometry: { type: "MultiPolygon", coordinates: lake.polygons },
+        }));
       }
       // A new accessor function makes globe.gl recolour the existing shapes.
       globe
-        .polygonCapMaterial((d) => countryMaterial(severities.get((d as CountryFeature).iso2)))
-        .polygonsData(data ? countryFeatures : []);
+        .polygonCapMaterial((d) => {
+          const shape = d as ShapeFeature;
+          return shape.lake ? lakeMaterial : countryMaterial(severities.get(shape.iso2));
+        })
+        .polygonsData(data ? [...countryFeatures, ...lakeFeatures] : []);
+      if (data) loadWater();
+      for (const line of waterLines) line.visible = data !== null;
       if (switched) {
         pillars.setFlat(data !== null);
         globe.ringsData(ringClusters());

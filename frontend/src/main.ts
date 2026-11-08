@@ -338,15 +338,21 @@ function withView(query: string): string {
 }
 
 async function loadGeography(): Promise<GeographyData> {
-  const [countries, labels] = await Promise.all([
+  const [countries, labels, lakes] = await Promise.all([
     fetchJson("/geo/countries.json"),
     fetchJson("/geo/labels.json"),
+    // Lakes are extra: the map works without them.
+    fetchJson("/geo/lakes.json").catch((error: unknown) => {
+      console.warn("Lakes unavailable:", error);
+      return [];
+    }),
   ]);
   const parts = labels as Partial<GeographyData["labels"]> | null;
   if (!Array.isArray(countries) || !parts) throw new Error("geography files are malformed");
   return {
     countries: countries as GeographyData["countries"],
-    labels: { seas: parts.seas ?? [], regions: parts.regions ?? [], peaks: parts.peaks ?? [] },
+    labels: { seas: parts.seas ?? [], regions: parts.regions ?? [], peaks: parts.peaks ?? [], waters: parts.waters ?? [] },
+    lakes: Array.isArray(lakes) ? (lakes as GeographyData["lakes"]) : [],
   };
 }
 
@@ -422,7 +428,7 @@ function openPlace(label: MapLabel, extra: { where?: string | null; events?: { s
   );
   app?.setCardOpen(true);
   // Closer for small places, never further out than now.
-  const reach: Record<MapLabel["kind"], number> = { ocean: 2.4, country: 1.6, sea: 1.6, range: 1.4, desert: 1.6, peak: 1 };
+  const reach: Record<MapLabel["kind"], number> = { ocean: 2.4, country: 1.6, sea: 1.6, range: 1.4, desert: 1.6, peak: 1, river: 1.4, lake: 1 };
   app?.flyOver(label.lat, label.lng, Math.min(view.altitude, reach[label.kind]));
 }
 
