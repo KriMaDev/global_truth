@@ -8,7 +8,7 @@ describe("startUpdate", () => {
     expect(fetchImpl).toHaveBeenCalledOnce();
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toBe(DISPATCH_URL);
-    expect(url).toContain("/repos/KriMaDev/global_truth/actions/workflows/update.yml/dispatches");
+    expect(url).toContain("/repos/KriMaDev/world_news_globe/actions/workflows/update.yml/dispatches");
     expect(init.method).toBe("POST");
     expect(init.headers.Authorization).toBe("Bearer secret-token");
     expect(init.headers["User-Agent"]).toBe("world-news-globe-cron");

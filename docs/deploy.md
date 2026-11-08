@@ -24,7 +24,7 @@ npm run deploy        # builds frontend/dist (with the data), then `wrangler dep
 
 The timer needs one Worker secret, **`GITHUB_TOKEN`**:
 1. GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate new token.
-2. Repository access: **Only select repositories** → `KriMaDev/global_truth`. Permissions → Repository permissions → **Actions: Read and write** (nothing else). Expiration: the longest offered; write the date in CLAUDE.md.
+2. Repository access: **Only select repositories** → `KriMaDev/world_news_globe`. Permissions → Repository permissions → **Actions: Read and write** (nothing else). Expiration: the longest offered; write the date in CLAUDE.md.
 3. In the project folder: `npx wrangler secret put GITHUB_TOKEN -c worker/wrangler.jsonc`, then paste the token when asked. It is stored by Cloudflare only, never in a file. Secrets survive deploys.
 4. When the token expires (or is revoked), the timer's runs fail with "401" in its logs (Cloudflare dashboard → Workers & Pages → `world-news-globe-timer` → Logs), and the backup schedule keeps the site updated every 3 hours until a new token is set the same way.
 
