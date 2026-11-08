@@ -250,6 +250,7 @@ export class DetailLayer {
   private gotFirst = false;
   private failures = 0;
   private pausedUntil = 0;
+  private gesturing = false;
 
   constructor(private readonly options: DetailOptions) {
     const canvas = (): HTMLCanvasElement => {
@@ -291,6 +292,8 @@ export class DetailLayer {
       return;
     }
     this.latest = { view, fov: fovDegrees, aspect, screenPx };
+    // The first tile still loads mid-gesture: it is what allows zooming closer (onFirstTile).
+    if (this.gesturing && this.gotFirst) return;
     const now = performance.now();
     if (this.pendingSince === 0) this.pendingSince = now;
     const wait = Math.max(0, Math.min(DEBOUNCE_MS, this.pendingSince + MAX_WAIT_MS - now));
@@ -315,9 +318,24 @@ export class DetailLayer {
     else if (!sameWindow(this.window, next)) this.show(next);
   }
 
+  /**
+   * While someone is dragging or pinching, the tiles stay as they are: swapping them and
+   * sending them to the graphics card is what made the movement stutter. They catch up as soon
+   * as the fingers lift. (Auto-rotation is not a gesture, so a turning view still loads.)
+   */
+  setGesturing(on: boolean): void {
+    this.gesturing = on;
+    if (on) {
+      window.clearTimeout(this.timer);
+      this.pendingSince = 0;
+    } else if (this.latest) {
+      this.timer = window.setTimeout(() => this.cover(), DEBOUNCE_MS);
+    }
+  }
+
   /** Once a frame: hands newly drawn tiles to the graphics card, a few times a second. */
   tick(now: number): void {
-    if (!this.dirty || now - this.lastUpload < UPLOAD_MS) return;
+    if (this.gesturing || !this.dirty || now - this.lastUpload < UPLOAD_MS) return;
     this.dirty = false;
     this.lastUpload = now;
     this.textures.day.needsUpdate = true;

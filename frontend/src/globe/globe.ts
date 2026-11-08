@@ -22,9 +22,10 @@ import {
 } from 'three';
 import { clusterDegrees, clusterEvents, clusterOf, type Cluster } from '../clusters';
 import {
+  angularDegrees,
   labelLevel,
-  labelPriority,
   labelsFor,
+  labelsInView,
   lakeLabel,
   type GeographyData,
   type LakeShape,
@@ -37,6 +38,7 @@ import { createDayNightMaterial, setSunDirection } from './daynight';
 import { DetailLayer } from './detail';
 import { createLines, createWaterLines, parseLines } from './lines';
 import { PillarField } from './markers';
+import { PressTracker } from './press';
 import { createStars } from './stars';
 import { sunPosition } from './sun';
 
@@ -99,6 +101,11 @@ const WATER_ALTITUDE = 0.0041;
  * are hidden: they would be squeezed together there. */
 const LABEL_EDGE = 0.3;
 const DECLUTTER_MS = 120;
+/** Most map labels in the page at once (only a few dozen fit on screen after decluttering). */
+const MAX_HTML_LABELS = 150;
+/** Labels are chosen again once the view has turned this far. */
+const LABEL_REFRESH_DEGREES = 8;
+const FOLLOW_VIEW_MS = 200;
 /** Screen space a count badge keeps clear of labels (half width, half height in px). */
 const BADGE_HALF: [number, number] = [14, 10];
 /** Panels that map labels keep clear of. */
@@ -347,6 +354,21 @@ export async function createGlobeApp(
   resize();
   window.addEventListener('resize', resize);
 
+  const press = new PressTracker(DRAG_PX);
+  window.addEventListener(
+    'pointerdown',
+    (event) => press.down(event.pointerId, event.clientX, event.clientY),
+    true,
+  );
+  window.addEventListener(
+    'pointermove',
+    (event) => press.move(event.pointerId, event.clientX, event.clientY),
+    true,
+  );
+  for (const type of ['pointerup', 'pointercancel'] as const) {
+    window.addEventListener(type, (event) => press.up(event.pointerId), true);
+  }
+
   const pillarCoords = (lat: number, lng: number) => globe.getCoords(lat, lng, LIGHT_ALTITUDE);
   let pillars = new PillarField([], pillarCoords);
 
@@ -363,7 +385,9 @@ export async function createGlobeApp(
       );
     })
     .customLayerLabel((d) => labelFor(d as Cluster))
-    .onCustomLayerClick((d) => options.onSelect(d as Cluster))
+    .onCustomLayerClick((d) => {
+      if (press.wasTap) options.onSelect(d as Cluster);
+    })
     .ringAltitude(RING_ALTITUDE)
     .ringColor((d: object) => ringColor(d as Cluster))
     .ringMaxRadius((d) => ((d as Cluster).severity === 'critical' ? 5 : 3.2))
@@ -409,6 +433,7 @@ export async function createGlobeApp(
       return label;
     })
     .onPolygonClick((d) => {
+      if (!press.wasTap) return;
       const shape = d as ShapeFeature;
       if (!shape.lake) options.onCountry?.(shape.iso2);
       else if (geography) options.onPlace?.(lakeLabel(shape.lake, geography));
@@ -422,18 +447,38 @@ export async function createGlobeApp(
   const ringClusters = (): Cluster[] =>
     reducedMotion || geography ? [] : clusters.filter((c) => SEVERITY_STYLES[c.severity].rings);
 
-  /** The group badges and, in the geography view, the map labels for the current zoom. */
+  /** The same item for the same label or group, so the page keeps its element between
+   * refreshes instead of rebuilding it. */
+  const labelItems = new Map<string, HtmlItem>();
+  const badgeItems = new WeakMap<Cluster, HtmlItem>();
+  let labelsCentre = { lat: 0, lng: 0 };
+
+  /** The group badges and, in the geography view, the map labels for the current view. Only
+   * labels that can be on screen are kept in the page: every one is moved on every frame. */
   const refreshHtml = (): void => {
     const items: HtmlItem[] = clusters
       .filter((c) => c.events.length > 1)
-      .map((cluster) => ({ type: 'badge', cluster, lat: cluster.lat, lng: cluster.lng }));
+      .map((cluster) => {
+        let item = badgeItems.get(cluster);
+        if (!item) {
+          item = { type: 'badge', cluster, lat: cluster.lat, lng: cluster.lng };
+          badgeItems.set(cluster, item);
+        }
+        return item;
+      });
     if (geography) {
-      const labels = labelsFor(globe.pointOfView().altitude, geography);
-      labels.sort((a, b) => labelPriority(a) - labelPriority(b));
-      for (const label of labels)
-        items.push({ type: 'label', label, lat: label.lat, lng: label.lng });
+      const pov = globe.pointOfView();
+      labelsCentre = pov;
+      const all = labelsFor(pov.altitude, geography);
+      for (const label of labelsInView(all, pov.lat, pov.lng, pov.altitude, MAX_HTML_LABELS)) {
+        let item = labelItems.get(label.id);
+        if (!item) {
+          item = { type: 'label', label, lat: label.lat, lng: label.lng };
+          labelItems.set(label.id, item);
+        }
+        items.push(item);
+      }
     }
-    labelElements.clear();
     htmlItems = items;
     globe.htmlElementsData(items);
   };
@@ -583,13 +628,24 @@ export async function createGlobeApp(
     detail.update(pov, camera.fov, container.clientWidth / container.clientHeight, screenPx);
   };
 
-  globe.onZoom((pov) => {
-    updateDetail(pov);
+  /** Groups and labels follow the camera a few times a second, not on every frame. */
+  let viewTimer = 0;
+  const followView = (): void => {
+    viewTimer = 0;
+    const pov = globe.pointOfView();
     regroupForAltitude(pov.altitude);
-    if (geography && labelLevel(pov.altitude) !== labelsAt) {
-      labelsAt = labelLevel(pov.altitude);
+    if (!geography) return;
+    const level = labelLevel(pov.altitude);
+    const moved = angularDegrees(pov.lat, pov.lng, labelsCentre.lat, labelsCentre.lng);
+    if (level !== labelsAt || moved > LABEL_REFRESH_DEGREES) {
+      labelsAt = level;
       refreshHtml();
     }
+  };
+
+  globe.onZoom((pov) => {
+    updateDetail(pov);
+    if (!viewTimer) viewTimer = window.setTimeout(followView, FOLLOW_VIEW_MS);
     options.onView?.(pov);
   });
 
@@ -613,6 +669,14 @@ export async function createGlobeApp(
   controls.maxDistance = GLOBE_RADIUS * (1 + MAX_ALTITUDE);
   const clampAltitude = (altitude: number): number =>
     Math.max(minAltitude, Math.min(MAX_ALTITUDE, altitude));
+
+  // A pinch zooms straight in. globe.gl's zoom towards the fingers fights its own rule that the
+  // camera always faces the centre, which made the view wander; the mouse wheel keeps it.
+  renderer.domElement.addEventListener('pointerdown', (event) => {
+    controls.zoomToCursor = event.pointerType !== 'touch';
+  });
+  controls.addEventListener('start', () => detail.setGesturing(true));
+  controls.addEventListener('end', () => detail.setGesturing(false));
 
   // Auto-rotation: the Rotate button switches it on or off (off at first with reduced
   // motion). Any interaction pauses it; it comes back after 10 s, but not while a card is

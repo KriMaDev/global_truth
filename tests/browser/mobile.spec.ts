@@ -239,6 +239,60 @@ test('a drag that starts on a map label turns the globe, and a tap opens the lab
   await expect(page.locator('#event-card')).toBeVisible();
 });
 
+test('geography: slow gestures open nothing, and a pinch stays centred', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'The touch tool exists in Chromium and Edge only');
+  test.setTimeout(120_000); // Software graphics here run at a few frames a second.
+  await openGlobe(page, '/?view=geo');
+  await page.locator('#rotate-toggle').click();
+  for (let i = 0; i < 2; i += 1) {
+    await page.locator('#zoom-in').click();
+    await page.waitForTimeout(500);
+  }
+  await page.waitForTimeout(1500);
+  expect(await page.locator('.map-label').count()).toBeLessThanOrEqual(150);
+
+  const card = page.locator('#event-card');
+  const client = await page.context().newCDPSession(page);
+  const touch = (
+    type: 'touchStart' | 'touchMove' | 'touchEnd',
+    touchPoints: { x: number; y: number; id?: number }[],
+  ) => client.send('Input.dispatchTouchEvent', { type, touchPoints });
+
+  const spot = { x: 206, y: 380 };
+
+  // One finger, in steps too small for the library to call it a drag.
+  await touch('touchStart', [spot]);
+  for (let i = 1; i <= 40; i += 1) {
+    await touch('touchMove', [{ x: spot.x + i * 0.5, y: spot.y }]);
+    await page.waitForTimeout(16);
+  }
+  await touch('touchEnd', []);
+  await page.waitForTimeout(800);
+  await expect(card).toBeHidden();
+
+  // Two fingers, slowly, around the middle of the screen.
+  const before = await view(page);
+  const middle = { x: 206, y: 370 };
+  const fingers = (spread: number) => [
+    { x: middle.x - spread * 0.7, y: middle.y - spread, id: 1 },
+    { x: middle.x + spread * 0.7, y: middle.y + spread, id: 2 },
+  ];
+  await touch('touchStart', fingers(70));
+  for (let i = 1; i <= 60; i += 1) {
+    await touch('touchMove', fingers(70 + i * 0.5));
+    await page.waitForTimeout(16);
+  }
+  await touch('touchEnd', []);
+  await page.waitForTimeout(800);
+  await expect(card).toBeHidden();
+  const after = await view(page);
+  expect(Math.abs(after[0] - before[0])).toBeLessThan(1);
+  expect(Math.abs(after[1] - before[1])).toBeLessThan(1);
+});
+
 test.describe('a panel that scrolls', () => {
   test.use({ viewport: { width: 412, height: 640 } });
 

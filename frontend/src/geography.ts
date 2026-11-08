@@ -146,6 +146,35 @@ export function labelPriority(label: MapLabel): number {
   return KIND_ORDER[label.kind] * 100 + label.rank;
 }
 
+/** Degrees along the globe's surface between two places. */
+export function angularDegrees(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const rad = Math.PI / 180;
+  const cosine =
+    Math.sin(lat1 * rad) * Math.sin(lat2 * rad) +
+    Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.cos((lng1 - lng2) * rad);
+  return Math.acos(Math.min(1, Math.max(-1, cosine))) / rad;
+}
+
+/** Past the horizon, so that a small turn doesn't show an empty edge. */
+const LABEL_MARGIN_DEGREES = 15;
+
+/** The labels that can be on screen from this view, most important first, at most `limit`. */
+export function labelsInView(
+  labels: MapLabel[],
+  lat: number,
+  lng: number,
+  altitude: number,
+  limit: number,
+): MapLabel[] {
+  const horizon = (Math.acos(1 / (1 + altitude)) * 180) / Math.PI;
+  return labels
+    .filter(
+      (label) => angularDegrees(lat, lng, label.lat, label.lng) <= horizon + LABEL_MARGIN_DEGREES,
+    )
+    .sort((a, b) => labelPriority(a) - labelPriority(b))
+    .slice(0, limit);
+}
+
 /** A country's label (also what its card is built from). */
 export function countryLabel(country: CountryShape): MapLabel {
   return {

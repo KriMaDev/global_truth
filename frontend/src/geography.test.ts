@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  angularDegrees,
   countryCounts,
   countrySeverity,
   factRows,
@@ -7,8 +8,10 @@ import {
   labelLevel,
   labelPriority,
   labelsFor,
+  labelsInView,
   lakeLabel,
   type GeographyData,
+  type MapLabel,
 } from './geography';
 import type { GlobeEvent, Severity } from './types';
 
@@ -36,6 +39,46 @@ function event(id: string, code: string | null, severity: Severity): GlobeEvent 
     },
   };
 }
+
+describe('labelsInView', () => {
+  const label = (id: string, lat: number, lng: number, rank: number): MapLabel => ({
+    id,
+    kind: 'country',
+    type: 'Country',
+    name: id,
+    text: id,
+    rank,
+    wikidata: null,
+    lat,
+    lng,
+  });
+
+  it('leaves out labels on the far side of the globe', () => {
+    const seen = labelsInView(
+      [label('near', 10, 10, 2), label('far', -10, -170, 2)],
+      0,
+      0,
+      0.5,
+      10,
+    );
+    expect(seen.map((l) => l.id)).toEqual(['near']);
+  });
+
+  it('keeps the most important when there are too many', () => {
+    const seen = labelsInView(
+      [label('minor', 0, 1, 7), label('major', 0, 2, 2), label('middle', 0, 3, 4)],
+      0,
+      0,
+      1,
+      2,
+    );
+    expect(seen.map((l) => l.id)).toEqual(['major', 'middle']);
+  });
+
+  it('measures across the date line', () => {
+    expect(angularDegrees(0, 179, 0, -179)).toBeCloseTo(2);
+  });
+});
 
 describe('countrySeverity', () => {
   it('colours each country by its most severe event', () => {
