@@ -38,3 +38,6 @@ Thumbs.db
 
 # Owner's private notes and drafts on this PC (e.g. permission emails), never published
 private/
+
+# Local session handover notes (read at the start of every session; never published)
+NOTES.md

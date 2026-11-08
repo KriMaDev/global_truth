@@ -1,6 +1,6 @@
 # CLAUDE.md: World News Globe
 
-Project guide for Claude Code. Read this at the start of every session.
+Project guide for Claude Code. Read this at the start of every session, then the local `NOTES.md` (git-ignored, on the owner's PC: current branch state, next step, owner to-dos, test scripts in `private/scripts/`). Update `NOTES.md` after each step and before the conversation is cleared.
 
 ## Project summary
 An interactive, visually stunning 3D globe that shows current world events as glowing lights, colored by severity. Users can filter by location (All → Continent → Region → Country → Province/State → City) and by category, and read current news for the selection. The goal is an honest, transparent, RSS-style way for anyone to follow global news.
