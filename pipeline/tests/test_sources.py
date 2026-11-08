@@ -172,6 +172,19 @@ def test_gdelt_sport_page_is_sport_only(gazetteer, now) -> None:
     assert event.categories == ["sport"]
 
 
+def test_gdelt_whole_country_takes_gdelts_country_code(gazetteer, now) -> None:
+    # Israel's country point lies next to Gaza; a whole-country mention stays Israel.
+    locations = "1#Israel#IS#IS##31.5#34.75#IS#20"
+    row = gkg_row(
+        "https://www.aljazeera.com/news/4",
+        "Sample: Israeli president names a new prime minister",
+        locations,
+    )
+    event = gdelt.parse_rows(row, gazetteer, now)[0][0]
+    assert event.geo.country == "Israel"
+    assert event.geo.precision == "country"
+
+
 def test_gdelt_stamps_to_fetch(now) -> None:
     latest = gdelt.parse_stamp("20261107120000")
     stamps = gdelt.stamps_to_fetch(gdelt.parse_stamp("20261107113000"), latest)

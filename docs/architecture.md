@@ -9,7 +9,8 @@ GitHub Actions (.github/workflows/update.yml, once LIVE is on; its own schedule 
        sources: USGS · GDACS · GDELT GKG (allowlisted outlets)
        → place (GeoNames + UN M49) → categorize → severity → group duplicates
        → merge with the last published data, keep 7 days
-       → events.json (last 72 h), days/YYYY-MM-DD.json + days/index.json (7 days), feeds.json
+       → events.json (last 72 h), days/YYYY-MM-DD.json + days/index.json (7 days), feeds.json,
+         outlets.json (outlets' country and ownership, events per outlet; data providers' credits)
   └─ npm run build (frontend + data) → wrangler deploy
 Cloudflare Workers static assets @ globe.krimadev.com
   └─ browser: Vite + TypeScript + globe.gl (three.js) reads /data/events.json,
@@ -17,7 +18,7 @@ Cloudflare Workers static assets @ globe.krimadev.com
 ```
 
 - **Cost and speed.** Static files cost nothing to host and are cached at Cloudflare's edge.
-- **Public data.** `/data/events.json`, `/data/days/` and `/data/feeds.json` are public URLs, which also serve as an open JSON API.
+- **Public data.** `/data/events.json`, `/data/days/`, `/data/feeds.json` and `/data/outlets.json` are public URLs, which also serve as an open JSON API.
 - **Failures stay contained.** Each source is fetched on its own. If one fails, its last good events are kept, and `feeds.json` gives it status `error` with the time of its last success.
 - **State between runs.** Each run reads the previous `days/index.json`, the day files it lists, `events.json` and `feeds.json` from the live site. That keeps events for 7 days, keeps the time each story was first seen, and keeps GDELT's cursor (the last 15-minute file read). With nothing published yet, it starts fresh with the last 6 hours.
 - **Fallback.** If redeploying every 30 minutes ever causes trouble, `data/` moves to a free R2 bucket.
@@ -55,7 +56,7 @@ Cloudflare Workers static assets @ globe.krimadev.com
   - The city is the most populous place within 30 km, else the nearest place within 75 km.
   - Within 250 km, the event is at region level ("Valparaiso, Chile").
   - Further away it is "remote" (sea, desert, ice), and the source's own place text is shown.
-  - The coordinates decide the country, not a source's country code.
+  - The coordinates decide the country, not a source's country code (GDELT tags Gaza with Israel's code). Exception: when GDELT names a whole country, its country code decides, since its point for a country is only a centroid (Israel's lies next to Gaza; fixed 8 Nov 2026).
 - **News** is placed only where its headline names a place:
   1. A place the headline names itself: the most specific one (city, then region, then country).
   2. Else a country the headline names as part of a place (GDELT records adjectives too: "Russian" names Russia), at country level.

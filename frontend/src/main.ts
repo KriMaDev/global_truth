@@ -45,6 +45,7 @@ import { SEVERITY_STYLES } from "./severity";
 import type { GlobeEvent } from "./types";
 import { createEventCard } from "./ui/event-card";
 import { renderEventList } from "./ui/event-list";
+import { parseOutletDirectory, setOutletDirectory } from "./outlets";
 import { renderLegend, renderSummary } from "./ui/legend";
 import { initialReducedMotion, setupMotionToggle } from "./ui/motion";
 
@@ -512,6 +513,11 @@ async function start(): Promise<void> {
     // Rotate button.
     if (on) app?.setRotating(false);
   });
+
+  // Who reported what (country, ownership, credit lines on cards): extra, loaded alongside.
+  void fetchJson("/data/outlets.json")
+    .then((doc) => setOutletDirectory(parseOutletDirectory(doc)))
+    .catch((error: unknown) => console.warn("Outlet details unavailable:", error));
 
   let loadFailed = false;
   try {

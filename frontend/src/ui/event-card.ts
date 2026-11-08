@@ -5,6 +5,7 @@
  */
 
 import type { Cluster } from "../clusters";
+import { coverageHeading, sourceDetails } from "../outlets";
 import { SEVERITY_STYLES } from "../severity";
 import { categoryBasisLines } from "./category-basis";
 import { CATEGORY_LABELS, KIND_LABELS, hazardLabel, type GlobeEvent } from "../types";
@@ -85,8 +86,7 @@ function notes(event: GlobeEvent): string[] {
 function sourcesBlock(event: GlobeEvent): HTMLElement {
   const block = el("div", "card-sources");
   if (event.sources.length === 0) return block;
-  const count = event.coverage ?? event.sources.length;
-  block.append(el("h3", "card-subtitle", count > 1 ? `Reported by ${count}` : "Source"));
+  block.append(el("h3", "card-subtitle", coverageHeading(event)));
   const list = el("ul", "card-source-list");
   for (const source of event.sources) {
     const link = el("a", "", source.name);
@@ -99,6 +99,22 @@ function sourcesBlock(event: GlobeEvent): HTMLElement {
       const badge = el("span", "badge-state", "State-affiliated");
       badge.title = "Funded and editorially controlled by a government (see Sources)";
       item.append(" ", badge);
+    }
+    // Country and ownership (linked to the outlet's row on the outlet table), or a data
+    // provider's credit line (linked to its website).
+    const details = sourceDetails(source);
+    if (details) {
+      const line = details.href ? el("a", "card-source-meta", details.text) : el("span", "card-source-meta", details.text);
+      if (line instanceof HTMLAnchorElement && details.href) {
+        line.href = details.href;
+        if (/^https?:/.test(details.href)) {
+          line.target = "_blank";
+          line.rel = "noopener noreferrer";
+        } else {
+          line.title = "About this outlet";
+        }
+      }
+      item.append(line);
     }
     list.append(item);
   }

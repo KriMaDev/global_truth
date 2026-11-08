@@ -682,6 +682,22 @@ body:not(.no-globe) .event-list-button:focus {
   display: block;
 }
 
+/* Under a source's name: its country and ownership, or a data provider's credit line. */
+.card-source-meta {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--muted);
+  font: 400 0.68rem/1.4 var(--ff-mono);
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+a.card-source-meta:hover,
+a.card-source-meta:focus-visible {
+  color: var(--fg);
+  text-decoration: underline;
+}
+
 .badge-state {
   display: inline-block;
   padding: 0.05rem 0.4rem;

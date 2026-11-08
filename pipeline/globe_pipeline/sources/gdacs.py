@@ -22,6 +22,9 @@ from . import REMOTE
 ID = "gdacs"
 NAME = "GDACS (Global Disaster Alert and Coordination System)"
 HOMEPAGE = "https://www.gdacs.org/"
+#: The source name on events, and the credit the provider asks for (docs/sources.md).
+SOURCE = "GDACS"
+CREDIT = "GDACS (European Commission JRC, UN OCHA)"
 URL = (
     "https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH"
     "?eventlist=EQ;TC;FL;VO;DR;WF&alertlevel=Green;Orange;Red&fromdate={start}&todate={end}"
@@ -79,7 +82,7 @@ def parse(collection: dict[str, Any], gazetteer: Gazetteer, now: datetime) -> li
                 hazard=props["eventtype"],
                 published=parse_iso(props["fromdate"]),
                 first_seen=now,
-                sources=[Source("GDACS", props["url"]["report"])],
+                sources=[Source(SOURCE, props["url"]["report"])],
                 geo=geo or REMOTE,
                 location_method="source",
             )

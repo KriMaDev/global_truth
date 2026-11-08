@@ -139,14 +139,20 @@ def main_place(mentions: list[Mention], headline: str) -> tuple[Mention, bool] |
 
 
 def geo_for(mention: Mention, gazetteer: Gazetteer, country_only: bool) -> Geo:
-    """The place hierarchy for a GDELT place mention. The coordinates decide the country
-    (via the gazetteer), not GDELT's own country code."""
+    """The place hierarchy for a GDELT place mention.
+
+    For a town or region, the coordinates decide the country (via the gazetteer), not
+    GDELT's own country code (GDELT tags Gaza with Israel's code). For a whole country,
+    GDELT's country code decides: its point for a country is only a representative centroid,
+    and Israel's lies so close to Gaza that the nearest town is in the Palestinian
+    Territory (seen 8 Nov 2026)."""
     found = gazetteer.reverse(mention.lat, mention.lng)
-    iso2 = (
-        found.country_code
-        if found and found.country_code
-        else gazetteer.iso_from_fips(mention.fips)
-    )
+    from_coordinates = found.country_code if found and found.country_code else None
+    from_code = gazetteer.iso_from_fips(mention.fips)
+    if mention.type in COUNTRY_TYPES:
+        iso2 = from_code or from_coordinates
+    else:
+        iso2 = from_coordinates or from_code
     if country_only or mention.type in COUNTRY_TYPES:
         return gazetteer.geo_for_country(iso2, "country")
     first = _name_parts(mention)[0] if _name_parts(mention) else None

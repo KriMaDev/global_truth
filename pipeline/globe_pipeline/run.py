@@ -116,7 +116,10 @@ def run(out: Path, previous_location: str | None, now: datetime | None = None) -
 
     events = balance_outlets(cluster(within_window(quakes + alerts + news, now)))
     news_status.count = sum(1 for e in events if e.kind == "news")
-    write(out, events, statuses, now, cursor)
+    providers = [
+        {"name": m.SOURCE, "credit": m.CREDIT, "homepage": m.HOMEPAGE} for m in (usgs, gdacs)
+    ]
+    write(out, events, statuses, now, cursor, providers)
     LOG.info(
         "wrote %d events (%s)",
         len(events),

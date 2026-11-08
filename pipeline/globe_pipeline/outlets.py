@@ -13,7 +13,9 @@ Only these outlets appear on the globe. Every outlet is listed publicly in docs/
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Any
 from urllib.parse import urlsplit
 
 #: At most this many news events per outlet per UTC day (the most severe, most
@@ -239,6 +241,42 @@ OUTLETS: tuple[Outlet, ...] = (
         ("UN News",),
     ),
 )
+
+
+#: How ownership is written for visitors (cards, the outlet table).
+OWNERSHIP_LABELS = {
+    "state": "State-affiliated",
+    "public": "Public",
+    "private": "Private",
+    "intergovernmental": "Intergovernmental",
+}
+
+
+def outlet_slug(name: str) -> str:
+    """The outlet's anchor on the outlet table, e.g. "BBC News" -> "bbc-news"."""
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+def outlets_document(source_names: Iterable[list[str]]) -> list[dict[str, Any]]:
+    """Every outlet for data/outlets.json, with how many published events it reports
+    (`source_names`: the source names of each event)."""
+    counts: dict[str, int] = {}
+    for names in source_names:
+        for name in set(names):
+            counts[name] = counts.get(name, 0) + 1
+    return [
+        {
+            "name": outlet.name,
+            "slug": outlet_slug(outlet.name),
+            "domain": outlet.domains[0],
+            "country": outlet.country,
+            "region": outlet.region,
+            "ownership": outlet.ownership,
+            "ownership_label": OWNERSHIP_LABELS[outlet.ownership],
+            "events": counts.get(outlet.name, 0),
+        }
+        for outlet in OUTLETS
+    ]
 
 
 def _host_matches(host: str, domain: str) -> bool:
