@@ -1,5 +1,6 @@
 /** The always-visible legend, built from SEVERITY_STYLES so it can never drift from the globe. */
 
+import { HAZARD_ICONS, iconSvg } from "../globe/hazard-icons";
 import { SEVERITY_STYLES } from "../severity";
 import { SEVERITIES } from "../types";
 
@@ -11,6 +12,54 @@ export function pulseLabel(pulseSeconds: number | null): string {
   if (pulseSeconds >= 2) return "slow pulse";
   if (pulseSeconds >= 1.2) return "pulse";
   return "fast pulse";
+}
+
+/** The symbols' highlight colour in the legend (on the globe it is the severity colour). */
+const LEGEND_ACCENT = "#f2b24c";
+
+function span(className: string, text?: string): HTMLSpanElement {
+  const node = document.createElement("span");
+  node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+/** A small glass disc with a symbol, like those on the globe. */
+export function symbolBadge(code: string): HTMLSpanElement {
+  const badge = span("legend-symbol");
+  badge.setAttribute("aria-hidden", "true");
+  const icon = HAZARD_ICONS.find((i) => i.code === code) ?? HAZARD_ICONS[HAZARD_ICONS.length - 1];
+  badge.append(iconSvg(icon, LEGEND_ACCENT));
+  return badge;
+}
+
+/** "Pillar = news report, symbol = natural disaster", and every symbol by name on request. */
+function markersKey(): HTMLElement[] {
+  const key = document.createElement("p");
+  key.className = "legend-markers";
+  const pillar = span("legend-pillar");
+  pillar.setAttribute("aria-hidden", "true");
+  pillar.style.setProperty("--pillar-h", "13px");
+  pillar.style.setProperty("--pillar-w", "3px");
+  pillar.style.setProperty("--dot-color", "var(--accent)");
+  const news = span("legend-marker");
+  news.append(pillar, "News report");
+  const disaster = span("legend-marker");
+  disaster.append(symbolBadge("EQ"), "Natural disaster");
+  key.append(news, disaster);
+
+  const details = document.createElement("details");
+  details.className = "legend-symbols";
+  const summary = document.createElement("summary");
+  summary.textContent = "Disaster symbols";
+  const list = document.createElement("ul");
+  for (const icon of HAZARD_ICONS) {
+    const item = document.createElement("li");
+    item.append(symbolBadge(icon.code), icon.label);
+    list.append(item);
+  }
+  details.append(summary, list);
+  return [key, details];
 }
 
 export function renderLegend(root: HTMLElement): void {
@@ -58,7 +107,7 @@ export function renderLegend(root: HTMLElement): void {
   geoNote.className = "legend-geo-note";
   geoNote.textContent = "Countries take the colour of their most severe event";
 
-  root.replaceChildren(heading, list, geoNote, link, summary);
+  root.replaceChildren(heading, list, ...markersKey(), geoNote, link, summary);
 }
 
 /** "Showing 37 of 412 events · Clear filters" while filters are on; hidden otherwise. */

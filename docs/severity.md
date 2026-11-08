@@ -50,8 +50,16 @@ How many outlets cover a story is shown as **coverage**, separately. It never ra
 
 ## On the globe
 
+### News and natural disasters look different
+
+- **News** (every category except Natural disasters) is a **pillar of light**.
+- **Natural disasters** (data feeds, and news headlines in Natural disasters) are a **symbol on a glass disc**, floating just above a small glowing spot, with a rim and a soft halo in the severity colour. The symbol shows the type: earthquake (seismograph trace), tsunami (curling wave), tropical cyclone (the weather-map sign), volcano, wildfire (flame), flood (house in water), landslide (rocks on a slope), avalanche, drought (sun over cracked ground), heatwave (thermometer), storm (cloud and bolt), and a warning sign for a disaster of unknown type.
+- Severity shows the same way on both: colour, size, pulse speed and (high, critical) rings. The symbol adds the type, a second signal that does not depend on colour.
+- The symbols are our own drawings (`frontend/src/globe/hazard-icons.ts`); the legend lists them all under "Disaster symbols".
+- In the geography view, news shrinks to small dots and the symbols sit smaller and lower.
+
 ### Groups of events
-Where pillars would crowd (closer than 4°, 2° or 1° on screen depending on zoom; never when zoomed right in), they merge into one pillar. It takes the **highest severity among its events** and stands at that event's place, with a badge showing how many events it holds. Grouping never changes any event's own severity. Code: `frontend/src/clusters.ts`.
+Where pillars would crowd (closer than 4°, 2° or 1° on screen depending on zoom; never when zoomed right in), they merge into one pillar (or one symbol: natural disasters and news are grouped separately, so a group is always one or the other). It takes the **highest severity among its events** and stands at that event's place, with a badge showing how many events it holds. Grouping never changes any event's own severity. Code: `frontend/src/clusters.ts`.
 
 ### Geography view: country colours
 Each country takes the **highest severity among its events** that pass the current filters and time window, matched by the event's `geo.country_code`. Countries without such events stay a neutral tint. Events without a country (e.g. remote earthquakes at sea) do not colour any country. Code: `countrySeverity` in `frontend/src/geography.ts`.

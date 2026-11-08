@@ -757,6 +757,79 @@ body:not(.no-globe) .event-list-button:focus {
   animation: pillar-pulse var(--pulse) ease-in-out infinite;
 }
 
+/* News is a pillar of light, a natural disaster a symbol on a glass disc (globe/markers.ts). */
+.legend-markers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  margin: 0 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.legend-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legend-markers .legend-pillar {
+  width: 12px;
+  height: 18px;
+}
+
+.legend-symbol {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 80%, transparent);
+  border-radius: 50%;
+  color: var(--fg);
+  background: radial-gradient(circle at 50% 35%, #161c24, #05080c 75%);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.hazard-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.legend-symbols {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+}
+
+.legend-symbols summary {
+  width: max-content;
+  color: var(--muted);
+  font: 400 0.7rem/1.6 var(--ff-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.legend-symbols summary:hover,
+.legend-symbols summary:focus-visible {
+  color: var(--fg);
+}
+
+.legend-symbols ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  gap: 0.3rem 0.9rem;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legend-symbols li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .legend-how {
   color: var(--muted);
   font: 400 0.7rem/1.2 var(--ff-mono);
