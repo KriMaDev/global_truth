@@ -113,3 +113,9 @@ export function compareBySeverity(a: GlobeEvent, b: GlobeEvent): number {
   const bySeverity = SEVERITIES.indexOf(b.severity) - SEVERITIES.indexOf(a.severity);
   return bySeverity !== 0 ? bySeverity : Date.parse(b.published) - Date.parse(a.published);
 }
+
+/** Newest first, then most severe first. */
+export function compareByNewest(a: GlobeEvent, b: GlobeEvent): number {
+  const byTime = Date.parse(b.published) - Date.parse(a.published);
+  return byTime !== 0 ? byTime : SEVERITIES.indexOf(b.severity) - SEVERITIES.indexOf(a.severity);
+}

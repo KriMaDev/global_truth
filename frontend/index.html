@@ -32,6 +32,15 @@
           ><span class="view-option" data-view="geo">Geography</span>
         </button>
         <button
+          id="news-toggle"
+          class="motion-toggle glass"
+          type="button"
+          aria-expanded="false"
+          aria-controls="news-panel"
+        >
+          Headlines
+        </button>
+        <button
           id="filter-toggle"
           class="motion-toggle glass"
           type="button"
@@ -90,6 +99,25 @@
         </div>
         <div class="chips" role="group" aria-label="Severity" data-filter="severities"></div>
         <button type="button" class="card-back filter-clear" data-filter="clear">Clear filters</button>
+      </section>
+      <section id="news-panel" class="news-panel glass" aria-labelledby="news-title" hidden>
+        <div class="filter-head">
+          <h2 id="news-title" class="label" tabindex="-1" data-news="title">Headlines</h2>
+          <button type="button" class="card-close" data-news="close" aria-label="Close headlines">
+            ×
+          </button>
+        </div>
+        <p class="news-count" data-news="count" aria-live="polite"></p>
+        <p class="news-updated" data-news="updated"></p>
+        <p class="news-updated" data-news="details" hidden></p>
+        <div data-news="warnings"></div>
+        <div class="chips news-sort" role="group" aria-label="Sort the headlines">
+          <button type="button" class="chip" data-news="sort-severity">Most severe first</button>
+          <button type="button" class="chip" data-news="sort-newest">Newest first</button>
+        </div>
+        <div class="news-body" data-news="body">
+          <p class="news-empty">Loading the headlines…</p>
+        </div>
       </section>
     </main>
 

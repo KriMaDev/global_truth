@@ -22,13 +22,16 @@ import {
   matchesExceptTime,
   toQuery,
   windowOf,
+  withPageState,
   type FilterState,
 } from "./filters";
+import { parseFeeds } from "./feeds";
 import { CATEGORIES, SEVERITIES } from "./types";
 import { createFilterPanel, type Counts } from "./ui/filter-panel";
+import { createNewsPanel } from "./ui/news-panel";
 import { createTimeline } from "./ui/timeline";
 import { createPlacePicker } from "./ui/place-picker";
-import { placeAltitude, placeCenter } from "./places";
+import { placeAltitude, placeCenter, placeNames } from "./places";
 import {
   countryCounts,
   countryLabel,
@@ -99,7 +102,10 @@ async function loadEvents(): Promise<Loaded> {
 let allEvents: GlobeEvent[] = [];
 let events: GlobeEvent[] = [];
 let filters: FilterState = fromQuery(window.location.search);
+/** Read now: the address is rewritten as soon as the filters are applied. */
+const startWithHeadlines = new URLSearchParams(window.location.search).get("list") === "1";
 let dataTime: string | null = null;
+let loadFailed = false;
 const container = byId<HTMLDivElement>("globe");
 const status = byId<HTMLParagraphElement>("status");
 const list = byId<HTMLElement>("event-list");
@@ -161,6 +167,14 @@ function showRotation(on: boolean): void {
   rotateToggle.title = on ? "Stop the globe turning" : "Let the globe turn by itself";
 }
 
+function clearFilters(): void {
+  filters = defaultFilters();
+  applyFilters();
+}
+
+/** On wide screens Filters and Headlines sit side by side; otherwise one replaces the other. */
+const roomForBothPanels = window.matchMedia("(min-width: 1200px)");
+
 const panel = createFilterPanel(
   byId("filter-panel"),
   byId<HTMLButtonElement>("filter-toggle"),
@@ -168,12 +182,40 @@ const panel = createFilterPanel(
     filters = { ...filters, ...change };
     applyFilters();
   },
+  clearFilters,
   () => {
-    filters = defaultFilters();
-    applyFilters();
+    card.close();
+    if (!roomForBothPanels.matches) headlines.close();
   },
-  () => card.close(),
 );
+
+const headlines = createNewsPanel(byId("news-panel"), byId<HTMLButtonElement>("news-toggle"), {
+  onPick: (event) => {
+    // A back button normally means the globe is already there; from the list it is not.
+    app?.flyTo(event);
+    openEvent(
+      event,
+      true,
+      () => {
+        card.close();
+        headlines.open(true, event.id);
+      },
+      "← Back to the headlines",
+    );
+  },
+  onClear: clearFilters,
+  onOpen: () => {
+    card.close();
+    if (!roomForBothPanels.matches) panel.close();
+  },
+  onToggle: updateAddress,
+});
+
+/** A card takes the place of the panels. */
+function closePanels(): void {
+  panel.close();
+  headlines.close();
+}
 
 /** How many kinds of filter are on (categories, severities, time, place). */
 function activeFilters(state: FilterState): number {
@@ -302,11 +344,15 @@ function applyFilters(): void {
     filters.place,
     inWindow.filter((e) => matchesExceptTime(e, { ...filters, place: [] })),
   );
-  renderSummary(events.length, allEvents.length, !isDefault(filters), () => {
-    filters = defaultFilters();
-    applyFilters();
+  renderSummary(events.length, allEvents.length, !isDefault(filters), clearFilters);
+  headlines.render({
+    events,
+    place: placeNames(allEvents, filters.place),
+    dataTime,
+    canClear: !isDefault(filters),
+    failed: loadFailed,
   });
-  window.history.replaceState(null, "", window.location.pathname + withView(toQuery(filters)));
+  updateAddress();
   if (app) {
     app.setEvents(events);
     if (geoView && geoData) app.setGeography(geoData, countrySeverity(events));
@@ -332,10 +378,10 @@ let geoData: GeographyData | null = null;
 let placesData: PlacesData | null = null;
 const geoToggle = byId<HTMLButtonElement>("geo-toggle");
 
-/** Adds the view to a filter query ("?cat=war" → "?cat=war&view=geo"). */
-function withView(query: string): string {
-  if (!geoView) return query;
-  return query ? `${query}&view=geo` : "?view=geo";
+/** Keeps the web address in step with the filters, the view and the Headlines panel. */
+function updateAddress(): void {
+  const query = withPageState(toQuery(filters), { geo: geoView, list: headlines.isOpen });
+  window.history.replaceState(null, "", window.location.pathname + query);
 }
 
 async function loadGeography(): Promise<GeographyData> {
@@ -419,7 +465,7 @@ function describeCountry(iso2: string): string[] {
 
 /** Opens "About this place" for a label (or a country) and turns the globe to it. */
 function openPlace(label: MapLabel, extra: { where?: string | null; events?: { summary: string; onShow?: () => void } | null } = {}): void {
-  panel.close();
+  closePanels();
   app?.select(null);
   const facts = label.wikidata ? placesData?.places[label.wikidata] : undefined;
   card.openPanel(
@@ -460,13 +506,13 @@ function chooseCountry(iso2: string): void {
   });
 }
 
-function openEvent(event: GlobeEvent, focus: boolean, back?: () => void): void {
-  panel.close();
+function openEvent(event: GlobeEvent, focus: boolean, back?: () => void, backLabel?: string): void {
+  closePanels();
   app?.select(event.id);
   if (!back) app?.flyTo(event);
   setAccent(SEVERITY_STYLES[event.severity].color);
   app?.setCardOpen(true);
-  card.open(event, focus, back);
+  card.open(event, focus, back, backLabel);
 }
 
 /** A pillar was chosen: one event opens its card, a group opens its list. */
@@ -475,7 +521,7 @@ function openCluster(cluster: Cluster, focus: boolean): void {
     openEvent(cluster.lead, focus);
     return;
   }
-  panel.close();
+  closePanels();
   app?.select(cluster.id);
   app?.flyTo(cluster);
   setAccent(SEVERITY_STYLES[cluster.severity].color);
@@ -519,7 +565,11 @@ async function start(): Promise<void> {
     .then((doc) => setOutletDirectory(parseOutletDirectory(doc)))
     .catch((error: unknown) => console.warn("Outlet details unavailable:", error));
 
-  let loadFailed = false;
+  // Each feed's last update and any failure (Headlines panel): extra as well.
+  void fetchJson("/data/feeds.json")
+    .then((doc) => headlines.setFeeds(parseFeeds(doc)))
+    .catch((error: unknown) => console.warn("Feed status unavailable:", error));
+
   try {
     const loaded = await loadEvents();
     allEvents = loaded.events;
@@ -530,6 +580,7 @@ async function start(): Promise<void> {
     loadFailed = true;
   }
   applyFilters();
+  if (startWithHeadlines) headlines.open(false);
 
   if (!hasWebGL()) {
     showList("This browser cannot show the 3D globe, so the events are listed instead.");

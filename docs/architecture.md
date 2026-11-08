@@ -78,6 +78,7 @@ Cloudflare Workers static assets @ globe.krimadev.com
 | Pillars of light, drawn instanced (about 12 draw calls in all), with invisible hit columns; small dots in the geography view | `frontend/src/globe/markers.ts` |
 | Groups: pillars closer than 4°, 2° or 1° (by zoom; none when zoomed right in) merge into one, led by the most severe event, with a count badge; clicking opens a list | `frontend/src/clusters.ts` |
 | Filters (category, severity, place, time window), kept in the web address (`cat`, `sev`, `place`, `range`, `end`, `view`) | `frontend/src/filters.ts`, `frontend/src/ui/filter-panel.ts` |
+| Headlines panel (the globe's events as a list, feed status, "out of date" after 2 h; `list=1` in the web address) | `frontend/src/ui/news-panel.ts`, `frontend/src/feeds.ts` |
 | Place drill-down (continent → region → country → province/state → city), built from the events' `geo` | `frontend/src/places.ts`, `frontend/src/ui/place-picker.ts` |
 | Timeline: 6 h, 24 h, 3 days, 7 days, and an "ending at" slider; loads day files on demand | `frontend/src/ui/timeline.ts`, `frontend/src/main.ts` |
 | Coastlines and borders (Natural Earth 50m), brighter on the night side | `frontend/src/globe/lines.ts`, `frontend/public/geo/lines.bin` |

@@ -110,6 +110,13 @@ export function toQuery(state: FilterState): string {
   return query ? `?${query}` : "";
 }
 
+/** Adds the page's own switches to a filter query ("?cat=war" → "?cat=war&view=geo&list=1"). */
+export function withPageState(query: string, page: { geo: boolean; list: boolean }): string {
+  const extras = [page.geo ? "view=geo" : "", page.list ? "list=1" : ""].filter(Boolean);
+  if (extras.length === 0) return query;
+  return `${query ? `${query}&` : "?"}${extras.join("&")}`;
+}
+
 /** A list from the address; "none" means none chosen, and a missing list or one with no valid
  * value at all (a broken link) gives the default rather than an empty globe. */
 function listFrom<T extends string>(

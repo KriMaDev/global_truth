@@ -8,11 +8,14 @@ import type { Cluster } from "../clusters";
 import { coverageHeading, sourceDetails } from "../outlets";
 import { SEVERITY_STYLES } from "../severity";
 import { categoryBasisLines } from "./category-basis";
+import { FEED_NAMES } from "../feeds";
 import { CATEGORY_LABELS, KIND_LABELS, hazardLabel, type GlobeEvent } from "../types";
+import { el, severityDot, stateBadge, timeFormat } from "./dom";
 
 export interface EventCard {
-  /** One event's card; `back`, if given, adds "Back to the list". */
-  open(event: GlobeEvent, focus: boolean, back?: () => void): void;
+  /** One event's card; `back`, if given, adds a back button ("Back to the list" unless
+   * `backLabel` says otherwise). */
+  open(event: GlobeEvent, focus: boolean, back?: () => void, backLabel?: string): void;
   /** A group's list of events. */
   openList(cluster: Cluster, focus: boolean, onPick: (event: GlobeEvent) => void): void;
   /** Other content in the same card (e.g. a place, ui/place-card.ts), under the close
@@ -20,21 +23,6 @@ export interface EventCard {
   openPanel(id: string, parts: HTMLElement[], focus: boolean): void;
   close(): void;
   readonly openId: string | null;
-}
-
-const timeFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
-
-const FEED_NAMES: Record<string, string> = { usgs: "USGS", gdacs: "GDACS", gdelt: "GDELT" };
-
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className: string,
-  text?: string,
-): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
 }
 
 function kindLine(event: GlobeEvent): string {
@@ -95,11 +83,7 @@ function sourcesBlock(event: GlobeEvent): HTMLElement {
     link.rel = "noopener noreferrer";
     const item = el("li", "");
     item.append(link);
-    if (source.state_affiliated) {
-      const badge = el("span", "badge-state", "State-affiliated");
-      badge.title = "Funded and editorially controlled by a government (see Sources)";
-      item.append(" ", badge);
-    }
+    if (source.state_affiliated) item.append(" ", stateBadge());
     // Country and ownership (linked to the outlet's row on the outlet table), or a data
     // provider's credit line (linked to its website).
     const details = sourceDetails(source);
@@ -154,14 +138,14 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
     }
   };
 
-  const open = (event: GlobeEvent, focus: boolean, back?: () => void): void => {
+  const open = (event: GlobeEvent, focus: boolean, back?: () => void, backLabel = "← Back to the list"): void => {
     const style = SEVERITY_STYLES[event.severity];
     openId = event.id;
     rememberFocus(focus);
 
     const parts: HTMLElement[] = [closeButton()];
     if (back) {
-      const backButton = el("button", "card-back", "← Back to the list");
+      const backButton = el("button", "card-back", backLabel);
       backButton.type = "button";
       backButton.addEventListener("click", back);
       parts.push(backButton);
@@ -172,10 +156,7 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
     title.tabIndex = -1;
 
     const severity = el("li", "card-severity");
-    const dot = el("span", "card-dot");
-    dot.setAttribute("aria-hidden", "true");
-    dot.style.setProperty("--dot-color", style.color);
-    severity.append(dot, document.createTextNode(`${style.label} severity`));
+    severity.append(severityDot(event.severity), document.createTextNode(`${style.label} severity`));
 
     const time = el("time", "", timeFormat.format(new Date(event.published)));
     time.dateTime = event.published;
@@ -218,9 +199,6 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
     for (const event of cluster.events) {
       const button = el("button", "card-list-item");
       button.type = "button";
-      const dot = el("span", "card-dot");
-      dot.setAttribute("aria-hidden", "true");
-      dot.style.setProperty("--dot-color", SEVERITY_STYLES[event.severity].color);
       const text = el("span", "card-list-text");
       text.append(
         el("span", "card-list-title", event.title),
@@ -237,7 +215,7 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
             .join(" · "),
         ),
       );
-      button.append(dot, text);
+      button.append(severityDot(event.severity), text);
       button.addEventListener("click", () => onPick(event));
       const item = el("li", "");
       item.append(button);

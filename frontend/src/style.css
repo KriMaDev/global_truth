@@ -138,7 +138,8 @@ button {
    which stay at the panel's corners while the text scrolls; the ::before/::after brackets would
    scroll away with it. Defined on the panel itself so --accent is the open event's colour. */
 .event-card,
-.filter-panel {
+.filter-panel,
+.news-panel {
   --corner: linear-gradient(var(--accent), var(--accent));
   --scroll-panel-bg:
     var(--corner) left top / 10px 2px no-repeat border-box,
@@ -1174,6 +1175,96 @@ a.card-source-meta:focus-visible {
   cursor: pointer;
 }
 
+/* ---------- Headlines panel ---------- */
+
+/* The header stays put and only the list scrolls, so the panel itself keeps its corner
+   brackets. Solid enough to read over the globe, so no costly blur behind a long list. */
+.news-panel {
+  position: fixed;
+  top: 5.2rem;
+  right: var(--gutter);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: min(26rem, calc(100vw - 2 * var(--gutter)));
+  /* Stops above the Rotate button and the credits. */
+  max-height: calc(100dvh - 11rem);
+  padding: 0.9rem 1.1rem 0;
+  background: var(--panel-solid);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  animation: card-in 0.3s var(--ease-out);
+}
+
+.news-panel[hidden] {
+  display: none;
+}
+
+.news-panel h2:focus {
+  outline: none;
+}
+
+/* With room for both, Filters stay open beside the list, clear of the legend. */
+@media (min-width: 1200px) {
+  .filter-panel:not([hidden]) ~ .news-panel {
+    right: calc(var(--gutter) + 26rem + 0.75rem);
+  }
+}
+
+.news-count {
+  margin: 0.25rem 0 0.2rem;
+  font-weight: 600;
+}
+
+.news-updated {
+  margin: 0;
+  color: var(--muted);
+  font: 400 0.7rem/1.5 var(--ff-mono);
+  letter-spacing: 0.02em;
+}
+
+.news-warning {
+  margin: 0.5rem 0 0;
+  padding: 0.4rem 0.6rem;
+  border-left: 2px solid var(--ember);
+  background: rgb(255 255 255 / 3%);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.news-sort {
+  margin: 0.7rem 0;
+}
+
+.news-sort .chip {
+  font-size: 0.78rem;
+}
+
+.news-body {
+  flex: 1;
+  min-height: 0;
+  /* Room for the focus outline of the rows. */
+  margin: 0 -0.4rem;
+  padding: 0.25rem 0.4rem 1.1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Rows out of sight aren't laid out, so a week of events stays quick. */
+.news-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 5.5rem;
+}
+
+.news-empty {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+}
+
+.news-empty p {
+  margin: 0 0 0.6rem;
+}
+
 /* ---------- Groups: count badges and the list card ---------- */
 
 .cluster-badge {
@@ -1361,17 +1452,23 @@ body.page {
     font-size: 0.6rem;
   }
 
-  /* The title on one line, the three switches in one row below it. */
+  /* The title on one line, the switches below it (Reduce motion wraps to a second row on
+     most phones; what sits under the top bar starts at 7.75rem to clear it). */
   .topbar {
     flex-direction: column;
     gap: 0.6rem;
   }
 
   .topbar-actions {
-    flex-wrap: nowrap;
     justify-content: flex-start;
     gap: 0.4rem;
     width: 100%;
+  }
+
+  .status.notice,
+  .no-globe .status,
+  body:not(.no-globe) .event-list-button:focus {
+    top: 7.75rem;
   }
 
   .motion-toggle {
@@ -1458,7 +1555,47 @@ body.page {
     right: var(--gutter);
     bottom: calc(var(--bottom-h, 0px) - 0.75rem);
     width: auto;
-    max-height: calc(100dvh - var(--bottom-h, 0px) - 6rem);
+    max-height: calc(100dvh - var(--bottom-h, 0px) - 8rem);
     background: var(--scroll-panel-bg);
+  }
+
+  .news-panel {
+    top: auto;
+    left: var(--gutter);
+    right: var(--gutter);
+    bottom: calc(var(--bottom-h, 0px) - 0.75rem);
+    width: auto;
+    max-height: calc(100dvh - var(--bottom-h, 0px) - 8rem);
+  }
+}
+
+/* On short screens the header would leave no room for the list, so the whole panel scrolls
+   (with its corners drawn as backgrounds, as on the other scrolling panels). */
+@media (max-height: 520px), (max-width: 640px) and (max-height: 700px) {
+  .news-panel {
+    overflow-y: auto;
+    background: var(--scroll-panel-bg);
+  }
+
+  .news-panel::before,
+  .news-panel::after {
+    content: none;
+  }
+
+  .news-panel .filter-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .news-body {
+    flex: none;
+    overflow: visible;
+  }
+}
+
+@media (max-height: 520px) and (min-width: 641px) {
+  .news-panel {
+    max-height: calc(100dvh - 6.5rem);
   }
 }

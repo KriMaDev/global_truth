@@ -1,8 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { defaultFilters, fromQuery, isDefault, matches, toQuery, windowOf } from "./filters";
+import { defaultFilters, fromQuery, isDefault, matches, toQuery, windowOf, withPageState } from "./filters";
 import { CATEGORIES, type GlobeEvent } from "./types";
 
 const NOW = Date.parse("2026-11-08T12:00:00Z");
+
+describe("withPageState", () => {
+  it.each([
+    ["", false, false, ""],
+    ["?cat=war", false, false, "?cat=war"],
+    ["", true, false, "?view=geo"],
+    ["", false, true, "?list=1"],
+    ["?cat=war", true, true, "?cat=war&view=geo&list=1"],
+  ])("%j geo=%s list=%s gives %j", (query, geo, list, expected) => {
+    expect(withPageState(query, { geo, list })).toBe(expected);
+  });
+
+  it("leaves the filters readable", () => {
+    const state = fromQuery(withPageState("?range=24h", { geo: true, list: true }));
+    expect(state.range).toBe("24h");
+  });
+});
 
 function event(overrides: Partial<GlobeEvent> = {}): GlobeEvent {
   return {
