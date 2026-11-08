@@ -48,7 +48,8 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["src/**/*.test.ts"],
+    // The Worker's timer script (../worker) is tested here too.
+    include: ["src/**/*.test.ts", "../worker/**/*.test.js"],
     environment: "node",
   },
 });
