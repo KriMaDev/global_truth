@@ -15,8 +15,10 @@ import argparse
 import logging
 import sys
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from .cluster import cluster
 from .geocode import Gazetteer
@@ -93,6 +95,17 @@ def balance_outlets(
     return kept
 
 
+def web_links_only(events: list[Event]) -> list[Event]:
+    """Drops sources whose link is not http(s), and events left with no source: a link from a
+    feed is shown to visitors, so a `javascript:` address must never reach a page."""
+    kept = []
+    for event in events:
+        sources = [s for s in event.sources if urlsplit(s.url).scheme in ("http", "https")]
+        if sources:
+            kept.append(replace(event, sources=sources))
+    return kept
+
+
 def run(
     out: Path,
     previous_location: str | None,
@@ -135,7 +148,7 @@ def run(
     _mark_partial(news_status, last_news_success)
     statuses.append(news_status)
 
-    events = balance_outlets(cluster(within_window(quakes + alerts + news, now)))
+    events = balance_outlets(cluster(web_links_only(within_window(quakes + alerts + news, now))))
     news_status.count = sum(1 for e in events if e.kind == "news")
     providers = [
         {"name": m.SOURCE, "credit": m.CREDIT, "homepage": m.HOMEPAGE} for m in (usgs, gdacs)

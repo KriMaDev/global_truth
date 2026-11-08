@@ -5,6 +5,7 @@ Standard library only, so the pipeline has nothing to install at run time.
 
 from __future__ import annotations
 
+import http.client
 import json
 import time
 import urllib.error
@@ -35,7 +36,12 @@ def get(url: str, *, timeout: float = 30, retries: int = 2, backoff: float = 3.0
             last_error = error
             if error.code < 500 and error.code != 429:
                 break
-        except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
+        except (
+            urllib.error.URLError,
+            http.client.HTTPException,
+            TimeoutError,
+            ConnectionError,
+        ) as error:
             last_error = error
         if attempt < retries:
             time.sleep(backoff * (attempt + 1))

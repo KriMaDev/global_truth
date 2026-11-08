@@ -1,7 +1,13 @@
 """The three sources, on synthetic data in each feed's format (no real headlines)."""
 
-from datetime import timedelta
+import http.client
+import io
+import zipfile
+from datetime import UTC, datetime, timedelta
 
+import pytest
+
+from globe_pipeline import http as pipeline_http
 from globe_pipeline.http import FetchError
 from globe_pipeline.outlets import OUTLETS, clean_headline, is_sport_page, outlet_for_url
 from globe_pipeline.sources import gdacs, gdelt, usgs
@@ -259,3 +265,45 @@ def test_headline_cleaning_removes_only_the_outlet_name() -> None:
     assert clean_headline("Talks resume: officials-Xinhua", xinhua) == "Talks resume: officials"
     assert clean_headline("Ship hit | Iran War News | Al Jazeera", jazeera) == "Ship hit"
     assert clean_headline("Guardian angels honoured", guardian) == "Guardian angels honoured"
+
+
+FILE_MOMENT = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
+
+
+def test_gdelt_treats_a_damaged_zip_as_a_failed_file(monkeypatch) -> None:
+    monkeypatch.setattr(gdelt, "get", lambda *a, **k: b"this is not a zip file")
+    with pytest.raises(FetchError):
+        gdelt.read_file(FILE_MOMENT)
+
+
+def test_gdelt_treats_an_empty_zip_as_a_failed_file(monkeypatch) -> None:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w"):
+        pass
+    monkeypatch.setattr(gdelt, "get", lambda *a, **k: buffer.getvalue())
+    with pytest.raises(FetchError):
+        gdelt.read_file(FILE_MOMENT)
+
+
+def test_gdelt_refuses_a_file_that_unzips_too_big(monkeypatch) -> None:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("a.csv", b"0" * 2048)
+    monkeypatch.setattr(gdelt, "get", lambda *a, **k: buffer.getvalue())
+    monkeypatch.setattr(gdelt, "MAX_UNZIPPED_BYTES", 1024)
+    with pytest.raises(FetchError):
+        gdelt.read_file(FILE_MOMENT)
+
+
+def test_a_download_cut_off_half_way_is_a_failed_fetch(monkeypatch) -> None:
+    def cut_off(*_args, **_kwargs):
+        raise http.client.IncompleteRead(b"partial")
+
+    monkeypatch.setattr(pipeline_http.urllib.request, "urlopen", cut_off)
+    with pytest.raises(FetchError):
+        pipeline_http.get("https://example.org/file", retries=0)
+
+
+def test_only_web_addresses_count_as_an_outlets_article() -> None:
+    domain = OUTLETS[0].domains[0]
+    assert outlet_for_url(f"javascript://{domain}/%0aalert(1)") is None

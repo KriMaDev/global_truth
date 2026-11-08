@@ -322,3 +322,16 @@ def test_every_outlet_is_listed_publicly(outlet) -> None:
             f"| {outlet.name} | {outlet.domains[0]} | {outlet.country} | State-affiliated |"
             in sources
         )
+
+
+def test_links_that_are_not_web_addresses_never_reach_a_page(now) -> None:
+    good = Source("Good", "https://example.org/a")
+    bad = Source("Bad", "javascript:alert(1)")
+    base = news("base", "A headline long enough to keep", "good", now)
+    mixed = replace(base, id="mixed", sources=[good, bad])
+    only_bad = replace(base, id="only-bad", sources=[bad])
+
+    result = run_module.web_links_only([mixed, only_bad])
+
+    assert [event.id for event in result] == ["mixed"]
+    assert result[0].sources == [good]

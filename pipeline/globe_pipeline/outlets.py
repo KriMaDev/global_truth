@@ -286,6 +286,8 @@ def _host_matches(host: str, domain: str) -> bool:
 def outlet_for_url(url: str) -> Outlet | None:
     """The allowlisted outlet that published `url`, or None (also for non-news pages)."""
     parts = urlsplit(url)
+    if parts.scheme not in ("http", "https"):
+        return None
     host = parts.hostname or ""
     path = parts.path.lower()
     for outlet in OUTLETS:

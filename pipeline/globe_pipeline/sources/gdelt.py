@@ -42,6 +42,8 @@ PAUSE_SECONDS = 2.0
 #: given up on, so a file GDELT never publishes can't make every run re-read the same hours.
 RETRY_FOR = timedelta(hours=2)
 MIN_TITLE_LENGTH = 20
+#: A real GKG file unzips to a few tens of megabytes; anything far larger is not one.
+MAX_UNZIPPED_BYTES = 500_000_000
 
 _TITLE = re.compile(r"<PAGE_TITLE>(.*?)</PAGE_TITLE>", re.S)
 # GKG 2.1 columns used (0-based).
@@ -247,10 +249,21 @@ def next_cursor(failed: list[datetime], latest: datetime, now: datetime) -> date
 
 
 def read_file(moment: datetime) -> str:
-    """Downloads and unzips one GKG file."""
-    data = get(FILE_URL.format(stamp=stamp(moment)), timeout=90)
-    with zipfile.ZipFile(io.BytesIO(data)) as archive:
-        return archive.read(archive.namelist()[0]).decode("utf-8", "replace")
+    """Downloads and unzips one GKG file.
+
+    Raises:
+        FetchError: when the download fails, or the file is damaged, empty or implausibly big.
+    """
+    url = FILE_URL.format(stamp=stamp(moment))
+    data = get(url, timeout=90)
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            member = archive.infolist()[0]
+            if member.file_size > MAX_UNZIPPED_BYTES:
+                raise FetchError(f"{url}: unzips to {member.file_size} bytes")
+            return archive.read(member).decode("utf-8", "replace")
+    except (zipfile.BadZipFile, IndexError, EOFError, OSError) as error:
+        raise FetchError(f"{url}: damaged file ({error})") from error
 
 
 def fetch(
