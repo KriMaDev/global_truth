@@ -11,22 +11,22 @@ import {
   windowOf,
   type FilterState,
   type RangeKey,
-} from "../filters";
+} from '../filters';
 
 const HOUR = 3_600_000;
 const local = new Intl.DateTimeFormat(undefined, {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
 });
-const utc = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "UTC",
+const utc = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'UTC',
 });
 
 export interface Timeline {
@@ -47,45 +47,45 @@ export function createTimeline(
   root: HTMLElement,
   onChange: (change: Partial<FilterState>) => void,
 ): Timeline {
-  const presets = document.createElement("div");
-  presets.className = "chips";
-  presets.setAttribute("role", "group");
-  presets.setAttribute("aria-label", "Time window");
+  const presets = document.createElement('div');
+  presets.className = 'chips';
+  presets.setAttribute('role', 'group');
+  presets.setAttribute('aria-label', 'Time window');
   const buttons = new Map<RangeKey, HTMLButtonElement>();
   for (const key of Object.keys(RANGES) as RangeKey[]) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "chip";
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'chip';
     button.textContent = RANGE_LABELS[key];
-    button.addEventListener("click", () => onChange({ range: key }));
+    button.addEventListener('click', () => onChange({ range: key }));
     buttons.set(key, button);
     presets.append(button);
   }
 
-  const sliderRow = document.createElement("div");
-  sliderRow.className = "timeline-row";
-  const slider = document.createElement("input");
-  slider.type = "range";
-  slider.className = "timeline-slider";
-  slider.min = "0";
-  slider.step = "1";
-  slider.id = "timeline-slider";
-  slider.setAttribute("aria-label", "Hours before now that the window ends");
+  const sliderRow = document.createElement('div');
+  sliderRow.className = 'timeline-row';
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.className = 'timeline-slider';
+  slider.min = '0';
+  slider.step = '1';
+  slider.id = 'timeline-slider';
+  slider.setAttribute('aria-label', 'Hours before now that the window ends');
   // Right is now, left is further back: the slider's value counts hours back.
-  slider.style.direction = "rtl";
-  const nowButton = document.createElement("button");
-  nowButton.type = "button";
-  nowButton.className = "card-back";
-  nowButton.textContent = "Now";
-  nowButton.addEventListener("click", () => onChange({ end: null }));
+  slider.style.direction = 'rtl';
+  const nowButton = document.createElement('button');
+  nowButton.type = 'button';
+  nowButton.className = 'card-back';
+  nowButton.textContent = 'Now';
+  nowButton.addEventListener('click', () => onChange({ end: null }));
   sliderRow.append(slider, nowButton);
 
-  const readout = document.createElement("p");
-  readout.className = "timeline-readout";
-  readout.setAttribute("aria-live", "polite");
+  const readout = document.createElement('p');
+  readout.className = 'timeline-readout';
+  readout.setAttribute('aria-live', 'polite');
 
   let pending = 0;
-  slider.addEventListener("input", () => {
+  slider.addEventListener('input', () => {
     // Apply at most once per frame while dragging.
     cancelAnimationFrame(pending);
     pending = requestAnimationFrame(() => {
@@ -98,13 +98,14 @@ export function createTimeline(
 
   return {
     update(state, now) {
-      for (const [key, button] of buttons) button.setAttribute("aria-pressed", String(key === state.range));
+      for (const [key, button] of buttons)
+        button.setAttribute('aria-pressed', String(key === state.range));
       slider.max = String(maxHoursBack(state.range));
       const back = Math.min(hoursBack(state, now), maxHoursBack(state.range));
       if (document.activeElement !== slider) slider.value = String(back);
       nowButton.disabled = state.end === null;
       const { from, to } = windowOf(state, now);
-      const ending = state.end === null ? "now" : local.format(to);
+      const ending = state.end === null ? 'now' : local.format(to);
       readout.textContent = `${local.format(from)} → ${ending} · UTC ${utc.format(from)} → ${utc.format(to)}`;
     },
   };

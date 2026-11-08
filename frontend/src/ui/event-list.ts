@@ -4,8 +4,8 @@
  * and press Enter to open one. Without 3D graphics the same list is shown as a plain list.
  */
 
-import { SEVERITY_STYLES } from "../severity";
-import { hazardLabel, type GlobeEvent } from "../types";
+import { SEVERITY_STYLES } from '../severity';
+import { hazardLabel, type GlobeEvent } from '../types';
 
 export interface EventListHandlers {
   onFocus?: (event: GlobeEvent) => void;
@@ -17,27 +17,27 @@ export function renderEventList(
   events: GlobeEvent[],
   handlers: EventListHandlers,
 ): void {
-  const list = document.createElement("ul");
-  list.className = "event-list-items";
+  const list = document.createElement('ul');
+  list.className = 'event-list-items';
   for (const event of events) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "event-list-button glass";
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'event-list-button glass';
     button.dataset.eventId = event.id;
-    const dot = document.createElement("span");
-    dot.className = "card-dot";
-    dot.setAttribute("aria-hidden", "true");
-    dot.style.setProperty("--dot-color", SEVERITY_STYLES[event.severity].color);
-    const text = document.createElement("span");
+    const dot = document.createElement('span');
+    dot.className = 'card-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    dot.style.setProperty('--dot-color', SEVERITY_STYLES[event.severity].color);
+    const text = document.createElement('span');
     const details = [hazardLabel(event), SEVERITY_STYLES[event.severity].label, event.place];
-    text.textContent = `${event.title} (${details.filter(Boolean).join(", ")})`;
+    text.textContent = `${event.title} (${details.filter(Boolean).join(', ')})`;
     button.append(dot, text);
     if (handlers.onFocus) {
       const onFocus = handlers.onFocus;
-      button.addEventListener("focus", () => onFocus(event));
+      button.addEventListener('focus', () => onFocus(event));
     }
-    button.addEventListener("click", () => handlers.onOpen(event));
-    const item = document.createElement("li");
+    button.addEventListener('click', () => handlers.onOpen(event));
+    const item = document.createElement('li');
     item.append(button);
     list.append(item);
   }

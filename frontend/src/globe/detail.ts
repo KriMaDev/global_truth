@@ -25,13 +25,13 @@ import {
   type Vector3,
   type Vector4,
   type WebGLRenderer,
-} from "three";
-import { createDetailMaterial } from "./daynight";
+} from 'three';
+import { createDetailMaterial } from './daynight';
 
-export const GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best";
+export const GIBS = 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best';
 export const LAYERS = {
-  day: { id: "BlueMarble_ShadedRelief_Bathymetry", ext: "jpeg" },
-  night: { id: "VIIRS_Black_Marble", ext: "png" },
+  day: { id: 'BlueMarble_ShadedRelief_Bathymetry', ext: 'jpeg' },
+  night: { id: 'VIIRS_Black_Marble', ext: 'png' },
 } as const;
 export type LayerName = keyof typeof LAYERS;
 
@@ -86,7 +86,12 @@ export interface TileWindow {
 }
 
 /** The window's edges in degrees (west and east may lie beyond ±180°). */
-export function windowBounds(w: TileWindow): { west: number; east: number; south: number; north: number } {
+export function windowBounds(w: TileWindow): {
+  west: number;
+  east: number;
+  south: number;
+  north: number;
+} {
   const size = tileDegrees(w.level);
   return {
     west: -180 + w.col0 * size,
@@ -111,7 +116,10 @@ export function tileWindow(
   maxTiles: number,
 ): TileWindow | null {
   const halfLat = Math.min(90, halfHeight * MARGIN);
-  const halfLng = Math.min(180, (halfHeight * MARGIN * Math.max(1, aspect)) / Math.max(0.1, Math.cos((lat * Math.PI) / 180)));
+  const halfLng = Math.min(
+    180,
+    (halfHeight * MARGIN * Math.max(1, aspect)) / Math.max(0.1, Math.cos((lat * Math.PI) / 180)),
+  );
   for (let l = level; ; l--) {
     const size = tileDegrees(l);
     const rows = Math.round(180 / size);
@@ -119,7 +127,8 @@ export function tileWindow(
     const row1 = Math.min(rows - 1, Math.floor((90 - Math.max(-90, lat - halfLat)) / size - 1e-9));
     const col0 = Math.floor((lng - halfLng + 180) / size);
     const col1 = Math.floor((lng + halfLng + 180) / size - 1e-9);
-    if (row1 - row0 + 1 <= maxTiles && col1 - col0 + 1 <= maxTiles) return { level: l, row0, row1, col0, col1 };
+    if (row1 - row0 + 1 <= maxTiles && col1 - col0 + 1 <= maxTiles)
+      return { level: l, row0, row1, col0, col1 };
     if (l <= MIN_LEVEL) return null;
   }
 }
@@ -171,7 +180,15 @@ export function viewHalfHeight(altitude: number, fovDegrees: number): number {
 
 /** Same window (level and tiles)? */
 function sameWindow(a: TileWindow | null, b: TileWindow | null): boolean {
-  return !!a && !!b && a.level === b.level && a.row0 === b.row0 && a.row1 === b.row1 && a.col0 === b.col0 && a.col1 === b.col1;
+  return (
+    !!a &&
+    !!b &&
+    a.level === b.level &&
+    a.row0 === b.row0 &&
+    a.row1 === b.row1 &&
+    a.col0 === b.col0 &&
+    a.col1 === b.col1
+  );
 }
 
 interface DetailOptions {
@@ -224,14 +241,19 @@ export class DetailLayer {
   private timer = 0;
   /** When the camera started moving without the tiles being updated (0: up to date). */
   private pendingSince = 0;
-  private latest: { view: { lat: number; lng: number; altitude: number }; fov: number; aspect: number; screenPx: number } | null = null;
+  private latest: {
+    view: { lat: number; lng: number; altitude: number };
+    fov: number;
+    aspect: number;
+    screenPx: number;
+  } | null = null;
   private gotFirst = false;
   private failures = 0;
   private pausedUntil = 0;
 
   constructor(private readonly options: DetailOptions) {
     const canvas = (): HTMLCanvasElement => {
-      const element = document.createElement("canvas");
+      const element = document.createElement('canvas');
       element.width = element.height = TILE_PX;
       return element;
     };
@@ -256,7 +278,12 @@ export class DetailLayer {
 
   /** The camera moved: after a short pause (or at most MAX_WAIT_MS while it keeps moving),
    * cover the new view. */
-  update(view: { lat: number; lng: number; altitude: number }, fovDegrees: number, aspect: number, screenPx: number): void {
+  update(
+    view: { lat: number; lng: number; altitude: number },
+    fovDegrees: number,
+    aspect: number,
+    screenPx: number,
+  ): void {
     window.clearTimeout(this.timer);
     if (view.altitude >= DETAIL_ALTITUDE || Date.now() < this.pausedUntil) {
       this.pendingSince = 0;
@@ -276,7 +303,14 @@ export class DetailLayer {
     if (!this.latest) return;
     const { view, fov, aspect, screenPx } = this.latest;
     const level = levelFor(screenKmPerPixel(view.altitude, fov, screenPx));
-    const next = tileWindow(view.lat, view.lng, viewHalfHeight(view.altitude, fov), aspect, level, this.options.maxTiles);
+    const next = tileWindow(
+      view.lat,
+      view.lng,
+      viewHalfHeight(view.altitude, fov),
+      aspect,
+      level,
+      this.options.maxTiles,
+    );
     if (!next) this.hide();
     else if (!sameWindow(this.window, next)) this.show(next);
   }
@@ -305,7 +339,7 @@ export class DetailLayer {
       day: w,
       night: w.level > NIGHT_MAX_LEVEL ? coverWindow(bounds, NIGHT_MAX_LEVEL) : w,
     };
-    for (const layer of ["day", "night"] as const) {
+    for (const layer of ['day', 'night'] as const) {
       const canvas = this.canvases[layer];
       canvas.width = (windows[layer].col1 - windows[layer].col0 + 1) * TILE_PX;
       canvas.height = (windows[layer].row1 - windows[layer].row0 + 1) * TILE_PX;
@@ -313,11 +347,13 @@ export class DetailLayer {
       this.textures[layer].dispose();
     }
     this.buildGeometry(w);
-    (this.material.uniforms.nightBounds.value as Vector4).set(...uvWithin(bounds, windowBounds(windows.night)));
+    (this.material.uniforms.nightBounds.value as Vector4).set(
+      ...uvWithin(bounds, windowBounds(windows.night)),
+    );
 
     // Which tiles to fetch: the needed image of each, nearest the middle first.
     const jobs: Job[] = [];
-    for (const layer of ["day", "night"] as const) {
+    for (const layer of ['day', 'night'] as const) {
       const lw = windows[layer];
       const size = tileDegrees(lw.level);
       const scale = 2 ** (w.level - lw.level);
@@ -325,7 +361,7 @@ export class DetailLayer {
       const centreCol = (lw.col0 + lw.col1) / 2;
       for (let row = lw.row0; row <= lw.row1; row++) {
         for (let col = lw.col0; col <= lw.col1; col++) {
-          if (layer === "night" && w.level < NIGHT_MIN_LEVEL) continue;
+          if (layer === 'night' && w.level < NIGHT_MIN_LEVEL) continue;
           if (!this.needed(90 - row * size, -180 + col * size, size)[layer]) continue;
           jobs.push({
             url: tileUrl(layer, lw.level, row, col),
@@ -344,8 +380,8 @@ export class DetailLayer {
       const row = Math.round((w.row0 + w.row1) / 2);
       const col = Math.round((w.col0 + w.col1) / 2);
       jobs.push({
-        url: tileUrl("day", w.level, row, col),
-        layer: "day",
+        url: tileUrl('day', w.level, row, col),
+        layer: 'day',
         x: (col - w.col0) * TILE_PX,
         y: (row - w.row0) * TILE_PX,
         distance: 0,
@@ -369,7 +405,13 @@ export class DetailLayer {
     let min = Infinity;
     let max = -Infinity;
     const sun = this.options.sun;
-    for (const [dy, dx] of [[0, 0], [0, 1], [1, 0], [1, 1], [0.5, 0.5]]) {
+    for (const [dy, dx] of [
+      [0, 0],
+      [0, 1],
+      [1, 0],
+      [1, 1],
+      [0.5, 0.5],
+    ]) {
       const p = this.options.coords(north - dy * size, west + dx * size, 0);
       const dot = (p.x * sun.x + p.y * sun.y + p.z * sun.z) / Math.hypot(p.x, p.y, p.z);
       min = Math.min(min, dot);
@@ -385,8 +427,8 @@ export class DetailLayer {
       const generation = this.generation;
       this.inFlight++;
       const image = new Image();
-      image.crossOrigin = "anonymous";
-      image.decoding = "async";
+      image.crossOrigin = 'anonymous';
+      image.decoding = 'async';
       image.src = job.url;
       image
         .decode()
@@ -413,7 +455,7 @@ export class DetailLayer {
   }
 
   private draw(job: Job, image: HTMLImageElement): void {
-    this.canvases[job.layer].getContext("2d")?.drawImage(image, job.x, job.y, TILE_PX, TILE_PX);
+    this.canvases[job.layer].getContext('2d')?.drawImage(image, job.x, job.y, TILE_PX, TILE_PX);
     this.dirty = true;
     if (!this.gotFirst) {
       this.gotFirst = true;
@@ -454,9 +496,9 @@ export class DetailLayer {
       }
     }
     const geometry = new BufferGeometry();
-    geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
-    geometry.setAttribute("normal", new Float32BufferAttribute(normals, 3));
-    geometry.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+    geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('normal', new Float32BufferAttribute(normals, 3));
+    geometry.setAttribute('uv', new Float32BufferAttribute(uvs, 2));
     geometry.setIndex(index);
     this.mesh.geometry.dispose();
     this.mesh.geometry = geometry;

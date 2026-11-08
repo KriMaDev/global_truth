@@ -14,7 +14,7 @@ takes the highest severity (with its reason) and the union of categories.
 from __future__ import annotations
 
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 from functools import lru_cache
 
 from .geocode import distance_km
@@ -94,7 +94,7 @@ def merge(primary: Event, other: Event) -> Event:
     return primary
 
 
-def _bucket(event: Event) -> tuple:
+def _bucket(event: Event) -> tuple[object, ...]:
     """Only events in the same bucket can be the same story (keeps clustering fast)."""
     if event.kind == "news":
         return ("news", event.geo.country_code)
@@ -105,11 +105,11 @@ def cluster(events: list[Event]) -> list[Event]:
     """Merges events that report the same story. The earliest report leads; for earthquakes
     the USGS report leads, since its coordinates and magnitude are the reference."""
 
-    def lead_order(event: Event) -> tuple:
+    def lead_order(event: Event) -> tuple[bool, datetime, str]:
         return (event.feed != "usgs", event.published, event.id)
 
     merged: list[Event] = []
-    buckets: dict[tuple, list[Event]] = {}
+    buckets: dict[tuple[object, ...], list[Event]] = {}
     for event in sorted(events, key=lead_order):
         group = buckets.setdefault(_bucket(event), [])
         for existing in group:

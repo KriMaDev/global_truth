@@ -11,7 +11,7 @@ import {
   LineSegments,
   ShaderMaterial,
   type Vector3,
-} from "three";
+} from 'three';
 
 export interface GeoLines {
   coastlines: number[][][];
@@ -22,7 +22,7 @@ export interface GeoLines {
 export function parseLines(buffer: ArrayBuffer): GeoLines {
   const view = new DataView(buffer);
   const magic = String.fromCharCode(...new Uint8Array(buffer, 0, 4));
-  if (magic !== "WNGL") throw new Error("lines.bin: unknown format");
+  if (magic !== 'WNGL') throw new Error('lines.bin: unknown format');
   const counts = [view.getUint32(4, true), view.getUint32(8, true)];
   let offset = 12;
   const groups: number[][][][] = [];
@@ -95,7 +95,7 @@ function layer(
   nightOpacity: number,
 ): LineSegments {
   const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new Float32BufferAttribute(segments(lines, coords), 3));
+  geometry.setAttribute('position', new Float32BufferAttribute(segments(lines, coords), 3));
   const material = new ShaderMaterial({
     uniforms: {
       color: { value: new Color(color) },
@@ -121,8 +121,8 @@ export function createWaterLines(
   sunDirection: Vector3,
 ): LineSegments[] {
   return [
-    layer(data.coastlines, coords, sunDirection, "#4fb0ff", 0.8, 0.55),
-    layer(data.borders, coords, sunDirection, "#8fd0ff", 0.65, 0.45),
+    layer(data.coastlines, coords, sunDirection, '#4fb0ff', 0.8, 0.55),
+    layer(data.borders, coords, sunDirection, '#8fd0ff', 0.65, 0.45),
   ];
 }
 
@@ -133,7 +133,7 @@ export function createLines(
   sunDirection: Vector3,
 ): LineSegments[] {
   return [
-    layer(data.coastlines, coords, sunDirection, "#9fd4ff", 0.12, 0.55),
-    layer(data.borders, coords, sunDirection, "#d6dae0", 0.1, 0.3),
+    layer(data.coastlines, coords, sunDirection, '#9fd4ff', 0.12, 0.55),
+    layer(data.borders, coords, sunDirection, '#d6dae0', 0.1, 0.3),
   ];
 }

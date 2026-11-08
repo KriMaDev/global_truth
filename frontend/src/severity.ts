@@ -4,7 +4,7 @@
  * Size and pulse also grow with severity, so colour is never the only signal.
  */
 
-import type { Severity } from "./types";
+import type { Severity } from './types';
 
 export interface SeverityStyle {
   label: string;
@@ -18,10 +18,10 @@ export interface SeverityStyle {
 }
 
 export const SEVERITY_STYLES: Record<Severity, SeverityStyle> = {
-  low: { label: "Low", color: "#56B4E9", size: 1, pulseSeconds: null, rings: false },
-  moderate: { label: "Moderate", color: "#F0E442", size: 1.35, pulseSeconds: 2.4, rings: false },
-  high: { label: "High", color: "#E69F00", size: 1.75, pulseSeconds: 1.5, rings: true },
-  critical: { label: "Critical", color: "#D55E00", size: 2.2, pulseSeconds: 0.9, rings: true },
+  low: { label: 'Low', color: '#56B4E9', size: 1, pulseSeconds: null, rings: false },
+  moderate: { label: 'Moderate', color: '#F0E442', size: 1.35, pulseSeconds: 2.4, rings: false },
+  high: { label: 'High', color: '#E69F00', size: 1.75, pulseSeconds: 1.5, rings: true },
+  critical: { label: 'Critical', color: '#D55E00', size: 2.2, pulseSeconds: 0.9, rings: true },
 };
 
 /** How much a pulse enlarges a light at its peak. */

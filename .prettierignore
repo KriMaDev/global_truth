@@ -1,0 +1,10 @@
+package-lock.json
+frontend/dist/
+frontend/public/geo/
+frontend/public/textures/
+pipeline/
+private/
+.wrangler/
+node_modules/
+# Kept by hand, with long lines of decisions.
+CLAUDE.md

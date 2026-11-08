@@ -12,7 +12,7 @@
  */
 
 export const DISPATCH_URL =
-  "https://api.github.com/repos/KriMaDev/world_news_globe/actions/workflows/update.yml/dispatches";
+  'https://api.github.com/repos/KriMaDev/world_news_globe/actions/workflows/update.yml/dispatches';
 
 /**
  * Asks GitHub to run the update workflow on main. Throws when the token is missing or GitHub
@@ -22,17 +22,20 @@ export const DISPATCH_URL =
  * @returns {Promise<void>}
  */
 export async function startUpdate(token, fetchImpl = fetch) {
-  if (!token) throw new Error("GITHUB_TOKEN is not set (npx wrangler secret put GITHUB_TOKEN -c worker/wrangler.jsonc)");
+  if (!token)
+    throw new Error(
+      'GITHUB_TOKEN is not set (npx wrangler secret put GITHUB_TOKEN -c worker/wrangler.jsonc)',
+    );
   const response = await fetchImpl(DISPATCH_URL, {
-    method: "POST",
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "world-news-globe-cron",
-      "Content-Type": "application/json",
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'world-news-globe-cron',
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ ref: "main" }),
+    body: JSON.stringify({ ref: 'main' }),
   });
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 300);

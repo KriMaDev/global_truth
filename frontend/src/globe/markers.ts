@@ -34,11 +34,11 @@ import {
   ShaderMaterial,
   Vector3,
   type BufferGeometry,
-} from "three";
-import { SEVERITY_STYLES } from "../severity";
-import type { Cluster } from "../clusters";
-import { SEVERITIES, type Severity } from "../types";
-import { ATLAS_COLUMNS, ATLAS_ROWS, ICON_FILL, drawAtlas, iconIndex } from "./hazard-icons";
+} from 'three';
+import { SEVERITY_STYLES } from '../severity';
+import type { Cluster } from '../clusters';
+import { SEVERITIES, type Severity } from '../types';
+import { ATLAS_COLUMNS, ATLAS_ROWS, ICON_FILL, drawAtlas, iconIndex } from './hazard-icons';
 
 /** World units; the globe's radius is 100. */
 const BASE_HEIGHT = 8;
@@ -220,7 +220,7 @@ let atlasTexture: CanvasTexture | null = null;
 /** The symbols' texture atlas, drawn once on first use. */
 function symbolAtlas(): CanvasTexture {
   if (atlasTexture) return atlasTexture;
-  const canvas = document.createElement("canvas");
+  const canvas = document.createElement('canvas');
   drawAtlas(canvas);
   atlasTexture = new CanvasTexture(canvas);
   atlasTexture.colorSpace = NoColorSpace;
@@ -240,9 +240,22 @@ function uniformsFor(severity: Severity, strength: number) {
 
 // Shared geometries, built standing on the ground (y = 0) and 1 unit tall, so scaling y
 // sets the height.
-const coreGeometry = new CylinderGeometry(CORE_RADIUS, CORE_RADIUS * 0.6, 1, 10, 1, true).translate(0, 0.5, 0);
-const glowGeometry = new CylinderGeometry(GLOW_RADIUS * 0.55, GLOW_RADIUS, 1, 20, 1, true).translate(0, 0.5, 0);
-const spotGeometry = new PlaneGeometry(SPOT_SIZE, SPOT_SIZE).rotateX(-Math.PI / 2).translate(0, 0.05, 0);
+const coreGeometry = new CylinderGeometry(CORE_RADIUS, CORE_RADIUS * 0.6, 1, 10, 1, true).translate(
+  0,
+  0.5,
+  0,
+);
+const glowGeometry = new CylinderGeometry(
+  GLOW_RADIUS * 0.55,
+  GLOW_RADIUS,
+  1,
+  20,
+  1,
+  true,
+).translate(0, 0.5, 0);
+const spotGeometry = new PlaneGeometry(SPOT_SIZE, SPOT_SIZE)
+  .rotateX(-Math.PI / 2)
+  .translate(0, 0.05, 0);
 const hitGeometry = new CylinderGeometry(HIT_RADIUS, HIT_RADIUS, 1, 8).translate(0, 0.5, 0);
 const discGeometry = new PlaneGeometry(1, 1);
 const hitMaterial = new MeshBasicMaterial();
@@ -257,7 +270,7 @@ interface Anchor {
   icon: number | null;
 }
 
-type PartKind = "beam" | "spot" | "stem" | "disc";
+type PartKind = 'beam' | 'spot' | 'stem' | 'disc';
 
 /** How much wider a group's pillar is than a single event's. */
 export function groupWidening(count: number): number {
@@ -294,7 +307,7 @@ export class PillarField {
     clusters: Cluster[],
     coords: (lat: number, lng: number) => { x: number; y: number; z: number },
   ) {
-    this.group.name = "pillars";
+    this.group.name = 'pillars';
     for (const severity of SEVERITIES) {
       const all: Anchor[] = clusters
         .filter((c) => c.severity === severity)
@@ -316,7 +329,12 @@ export class PillarField {
     }
   }
 
-  private mesh(geometry: BufferGeometry, material: ShaderMaterial, count: number, order: number): InstancedMesh {
+  private mesh(
+    geometry: BufferGeometry,
+    material: ShaderMaterial,
+    count: number,
+    order: number,
+  ): InstancedMesh {
     const mesh = new InstancedMesh(geometry, material, count);
     mesh.frustumCulled = false;
     mesh.renderOrder = order;
@@ -325,25 +343,52 @@ export class PillarField {
   }
 
   private pillarLevel(severity: Severity, anchors: Anchor[]): Level {
-    const core = new ShaderMaterial({ uniforms: uniformsFor(severity, 2.0), vertexShader: beamVertex, fragmentShader: beamFragment, ...lightBlending });
-    const glow = new ShaderMaterial({ uniforms: uniformsFor(severity, 0.7), vertexShader: beamVertex, fragmentShader: beamFragment, ...lightBlending });
-    const spot = new ShaderMaterial({ uniforms: uniformsFor(severity, 1), vertexShader: spotVertex, fragmentShader: spotFragment, side: DoubleSide, ...lightBlending });
+    const core = new ShaderMaterial({
+      uniforms: uniformsFor(severity, 2.0),
+      vertexShader: beamVertex,
+      fragmentShader: beamFragment,
+      ...lightBlending,
+    });
+    const glow = new ShaderMaterial({
+      uniforms: uniformsFor(severity, 0.7),
+      vertexShader: beamVertex,
+      fragmentShader: beamFragment,
+      ...lightBlending,
+    });
+    const spot = new ShaderMaterial({
+      uniforms: uniformsFor(severity, 1),
+      vertexShader: spotVertex,
+      fragmentShader: spotFragment,
+      side: DoubleSide,
+      ...lightBlending,
+    });
     return {
       severity,
       symbols: false,
       anchors,
       parts: [
-        { mesh: this.mesh(spotGeometry, spot, anchors.length, 2), kind: "spot" },
-        { mesh: this.mesh(glowGeometry, glow, anchors.length, 2), kind: "beam" },
-        { mesh: this.mesh(coreGeometry, core, anchors.length, 2), kind: "beam" },
+        { mesh: this.mesh(spotGeometry, spot, anchors.length, 2), kind: 'spot' },
+        { mesh: this.mesh(glowGeometry, glow, anchors.length, 2), kind: 'beam' },
+        { mesh: this.mesh(coreGeometry, core, anchors.length, 2), kind: 'beam' },
       ],
       materials: [core, glow, spot],
     };
   }
 
   private symbolLevel(severity: Severity, anchors: Anchor[]): Level {
-    const stem = new ShaderMaterial({ uniforms: uniformsFor(severity, 0.8), vertexShader: beamVertex, fragmentShader: beamFragment, ...lightBlending });
-    const spot = new ShaderMaterial({ uniforms: uniformsFor(severity, 1), vertexShader: spotVertex, fragmentShader: spotFragment, side: DoubleSide, ...lightBlending });
+    const stem = new ShaderMaterial({
+      uniforms: uniformsFor(severity, 0.8),
+      vertexShader: beamVertex,
+      fragmentShader: beamFragment,
+      ...lightBlending,
+    });
+    const spot = new ShaderMaterial({
+      uniforms: uniformsFor(severity, 1),
+      vertexShader: spotVertex,
+      fragmentShader: spotFragment,
+      side: DoubleSide,
+      ...lightBlending,
+    });
     const disc = new ShaderMaterial({
       uniforms: {
         ...uniformsFor(severity, 1),
@@ -360,15 +405,18 @@ export class PillarField {
     });
     // Each symbol mesh has its own copy of the quad, carrying which symbol each instance shows.
     const quad = discGeometry.clone();
-    quad.setAttribute("aIcon", new InstancedBufferAttribute(new Float32Array(anchors.map((a) => a.icon ?? 0)), 1));
+    quad.setAttribute(
+      'aIcon',
+      new InstancedBufferAttribute(new Float32Array(anchors.map((a) => a.icon ?? 0)), 1),
+    );
     return {
       severity,
       symbols: true,
       anchors,
       parts: [
-        { mesh: this.mesh(spotGeometry, spot, anchors.length, 2), kind: "spot" },
-        { mesh: this.mesh(coreGeometry, stem, anchors.length, 2), kind: "stem" },
-        { mesh: this.mesh(quad, disc, anchors.length, 3), kind: "disc" },
+        { mesh: this.mesh(spotGeometry, spot, anchors.length, 2), kind: 'spot' },
+        { mesh: this.mesh(coreGeometry, stem, anchors.length, 2), kind: 'stem' },
+        { mesh: this.mesh(quad, disc, anchors.length, 3), kind: 'disc' },
       ],
       materials: [stem, spot, disc],
     };
@@ -389,7 +437,7 @@ export class PillarField {
     for (const level of this.levels) {
       for (const part of level.parts) {
         part.mesh.dispose();
-        if (part.kind === "disc") part.mesh.geometry.dispose();
+        if (part.kind === 'disc') part.mesh.geometry.dispose();
       }
       for (const material of level.materials) material.dispose();
     }
@@ -440,8 +488,8 @@ export class PillarField {
           const radius = (side * DISC_RADIUS) / 2;
           const lift = radius * (this.flat ? 0.9 : SYMBOL_LIFT);
           for (const part of level.parts) {
-            if (part.kind === "spot") scale.setScalar(width * SYMBOL_SPOT);
-            else if (part.kind === "stem") scale.set(width * STEM_WIDTH, lift, width * STEM_WIDTH);
+            if (part.kind === 'spot') scale.setScalar(width * SYMBOL_SPOT);
+            else if (part.kind === 'stem') scale.set(width * STEM_WIDTH, lift, width * STEM_WIDTH);
             else scale.set(side, lift, side);
             matrix.compose(anchor.position, anchor.turn, scale);
             part.mesh.setMatrixAt(index, matrix);
@@ -450,9 +498,10 @@ export class PillarField {
           this.hits.get(anchor.cluster.id)?.scale.set(reach, lift + radius, reach);
           return;
         }
-        const height = pillarHeight(level.severity) * heightZoom * selected * (this.flat ? 0.12 : 1);
+        const height =
+          pillarHeight(level.severity) * heightZoom * selected * (this.flat ? 0.12 : 1);
         for (const part of level.parts) {
-          if (part.kind === "spot") scale.setScalar(width);
+          if (part.kind === 'spot') scale.setScalar(width);
           else scale.set(width, height, width);
           matrix.compose(anchor.position, anchor.turn, scale);
           part.mesh.setMatrixAt(index, matrix);

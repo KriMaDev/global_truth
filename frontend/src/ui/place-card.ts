@@ -6,7 +6,7 @@
  * Built from text nodes only.
  */
 
-import { factRows, type MapLabel, type PlaceFacts } from "../geography";
+import { factRows, type MapLabel, type PlaceFacts } from '../geography';
 
 export interface PlaceCardInput {
   label: MapLabel;
@@ -19,9 +19,13 @@ export interface PlaceCardInput {
   events?: { summary: string; onShow?: () => void } | null;
 }
 
-const LICENCE_URL = "https://creativecommons.org/licenses/by-sa/4.0/";
+const LICENCE_URL = 'https://creativecommons.org/licenses/by-sa/4.0/';
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text?: string): HTMLElementTagNameMap[K] {
+function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className: string,
+  text?: string,
+): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
   node.className = className;
   if (text !== undefined) node.textContent = text;
@@ -29,10 +33,10 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, te
 }
 
 function link(text: string, href: string): HTMLAnchorElement {
-  const a = el("a", "", text);
+  const a = el('a', '', text);
   a.href = href;
-  a.target = "_blank";
-  a.rel = "noopener noreferrer";
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
   return a;
 }
 
@@ -40,59 +44,67 @@ function link(text: string, href: string): HTMLAnchorElement {
 export function placeCardParts(input: PlaceCardInput): HTMLElement[] {
   const { label, facts } = input;
   const parts: HTMLElement[] = [];
-  parts.push(el("p", "card-kind", input.where ? `${label.type} · ${input.where}` : label.type));
-  const title = el("h2", "card-title", label.name);
-  title.id = "event-card-title";
+  parts.push(el('p', 'card-kind', input.where ? `${label.type} · ${input.where}` : label.type));
+  const title = el('h2', 'card-title', label.name);
+  title.id = 'event-card-title';
   title.tabIndex = -1;
   parts.push(title);
 
   // Short things first (the description, facts and events), then the article's text.
   const wiki = facts?.wikipedia;
-  if (wiki?.description) parts.push(el("p", "card-place", wiki.description));
+  if (wiki?.description) parts.push(el('p', 'card-place', wiki.description));
 
   const rows = factRows(label, facts);
   if (rows.length) {
-    const list = el("dl", "place-facts");
-    for (const [name, value] of rows) list.append(el("dt", "", name), el("dd", "", value));
+    const list = el('dl', 'place-facts');
+    for (const [name, value] of rows) list.append(el('dt', '', name), el('dd', '', value));
     parts.push(list);
   }
   if (!wiki && rows.length === 0) {
-    parts.push(el("p", "card-reason", "No description is available for this place yet."));
+    parts.push(el('p', 'card-reason', 'No description is available for this place yet.'));
   }
 
   if (input.events) {
-    const block = el("div", "place-events");
-    block.append(el("h3", "card-subtitle", "Events here now"), el("p", "", input.events.summary));
+    const block = el('div', 'place-events');
+    block.append(el('h3', 'card-subtitle', 'Events here now'), el('p', '', input.events.summary));
     if (input.events.onShow) {
-      const show = el("button", "card-back", "Show only these events");
-      show.type = "button";
-      show.addEventListener("click", input.events.onShow);
+      const show = el('button', 'card-back', 'Show only these events');
+      show.type = 'button';
+      show.addEventListener('click', input.events.onShow);
       block.append(show);
     }
     parts.push(block);
   }
 
-  if (wiki?.extract) parts.push(el("p", "card-snippet place-text", wiki.extract));
+  if (wiki?.extract) parts.push(el('p', 'card-snippet place-text', wiki.extract));
 
   // Credits: what came from where, with links.
-  const credits = el("p", "card-notes place-credits");
+  const credits = el('p', 'card-notes place-credits');
   if (wiki) {
     const revision = wiki.revision
-      ? `${wiki.url.replace(/\/wiki\/.*/, "")}/w/index.php?oldid=${encodeURIComponent(wiki.revision)}`
+      ? `${wiki.url.replace(/\/wiki\/.*/, '')}/w/index.php?oldid=${encodeURIComponent(wiki.revision)}`
       : wiki.url;
     credits.append(
-      "Text: from the Wikipedia article ",
+      'Text: from the Wikipedia article ',
       link(`“${wiki.title}”`, revision),
-      " by its contributors, ",
-      link("CC BY-SA 4.0", LICENCE_URL),
-      ". ",
+      ' by its contributors, ',
+      link('CC BY-SA 4.0', LICENCE_URL),
+      '. ',
     );
   }
   if (rows.length && label.wikidata) {
-    credits.append("Facts: ", link("Wikidata", `https://www.wikidata.org/wiki/${label.wikidata}`), " (CC0). ");
+    credits.append(
+      'Facts: ',
+      link('Wikidata', `https://www.wikidata.org/wiki/${label.wikidata}`),
+      ' (CC0). ',
+    );
   }
   if (input.asOf && (wiki || rows.length)) credits.append(`As of ${input.asOf}. `);
-  credits.append(label.kind === "peak" ? "Name, position and elevation: Natural Earth." : "Name and position: Natural Earth.");
+  credits.append(
+    label.kind === 'peak'
+      ? 'Name, position and elevation: Natural Earth.'
+      : 'Name and position: Natural Earth.',
+  );
   parts.push(credits);
   return parts;
 }

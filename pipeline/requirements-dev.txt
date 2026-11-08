@@ -1,5 +1,6 @@
 -r requirements.txt
 pytest==9.1.1
 ruff==0.17.2
+mypy==2.4.0
 # Only for tools/build_textures.py (Earth textures)
 pillow==13.0.0

@@ -13,7 +13,7 @@ import {
   ShaderMaterial,
   SphereGeometry,
   type Vector3,
-} from "three";
+} from 'three';
 
 const vertexShader = /* glsl */ `
   varying vec3 vViewNormal;
@@ -50,8 +50,8 @@ export function createAtmosphere(globeRadius: number, sunDirection: Vector3): Me
   const material = new ShaderMaterial({
     uniforms: {
       sunDirection: { value: sunDirection },
-      dayColor: { value: new Color("#4fa8ff") },
-      nightColor: { value: new Color("#3b3f9c") },
+      dayColor: { value: new Color('#4fa8ff') },
+      nightColor: { value: new Color('#3b3f9c') },
     },
     vertexShader,
     fragmentShader,
@@ -67,6 +67,6 @@ export function createAtmosphere(globeRadius: number, sunDirection: Vector3): Me
     depthWrite: false,
   });
   const atmosphere = new Mesh(new SphereGeometry(globeRadius * 1.16, 96, 64), material);
-  atmosphere.name = "atmosphere";
+  atmosphere.name = 'atmosphere';
   return atmosphere;
 }

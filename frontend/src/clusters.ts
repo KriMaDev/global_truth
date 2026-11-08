@@ -8,8 +8,8 @@
  * (pillars of light) are grouped separately, so a group is always one or the other.
  */
 
-import { isDisaster } from "./globe/hazard-icons";
-import { SEVERITIES, type GlobeEvent, type Severity } from "./types";
+import { isDisaster } from './globe/hazard-icons';
+import { SEVERITIES, type GlobeEvent, type Severity } from './types';
 
 export interface Cluster {
   /** "event id" for a single event, "group:" + lead id for a group. */
@@ -56,7 +56,10 @@ export function leadOrder(a: GlobeEvent, b: GlobeEvent): number {
 export function clusterEvents(events: GlobeEvent[], degrees: number): Cluster[] {
   if (degrees <= 0) return groupNearby(events, degrees);
   const disasters = groupNearby(events.filter(isDisaster), degrees);
-  const others = groupNearby(events.filter((event) => !isDisaster(event)), degrees);
+  const others = groupNearby(
+    events.filter((event) => !isDisaster(event)),
+    degrees,
+  );
   return [...disasters, ...others].sort((a, b) => leadOrder(a.lead, b.lead));
 }
 
@@ -85,7 +88,8 @@ function groupNearby(events: GlobeEvent[], degrees: number): Cluster[] {
     let home: Cluster | undefined;
     search: for (let dr = -1; dr <= 1; dr++) {
       for (let dc = -1; dc <= 1; dc++) {
-        const wrapped = ((col + dc + lngCells / 2) % lngCells + lngCells) % lngCells - lngCells / 2;
+        const wrapped =
+          ((((col + dc + lngCells / 2) % lngCells) + lngCells) % lngCells) - lngCells / 2;
         for (const cluster of grid.get(`${row + dr}:${wrapped}`) ?? []) {
           if (angularDistance(event.lat, event.lng, cluster.lat, cluster.lng) <= degrees) {
             home = cluster;
@@ -101,7 +105,7 @@ function groupNearby(events: GlobeEvent[], degrees: number): Cluster[] {
     }
     const cluster = single(event);
     clusters.push(cluster);
-    const key = `${row}:${((col + lngCells / 2) % lngCells + lngCells) % lngCells - lngCells / 2}`;
+    const key = `${row}:${((((col + lngCells / 2) % lngCells) + lngCells) % lngCells) - lngCells / 2}`;
     grid.set(key, [...(grid.get(key) ?? []), cluster]);
   }
   return clusters;

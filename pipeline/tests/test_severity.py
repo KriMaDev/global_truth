@@ -40,6 +40,8 @@ def test_colors_match_docs_and_frontend() -> None:
         plain = (REPO_ROOT / "frontend" / "public" / "news.css").read_text(encoding="utf-8")
         assert f"--sev-{level.label}: {SEVERITY_COLORS[level]}".lower() in plain.lower()
         assert match.group(1).lower() == color.lower()
-        match = re.search(rf'\b{level.label}:\s*\{{[^}}]*color:\s*"(#[0-9a-fA-F]{{6}})"', styles)
+        match = re.search(
+            rf"\b{level.label}:\s*\{{[^}}]*color:\s*['\"](#[0-9a-fA-F]{{6}})['\"]", styles
+        )
         assert match, f"{level.label} missing from severity.ts"
         assert match.group(1).lower() == color.lower()

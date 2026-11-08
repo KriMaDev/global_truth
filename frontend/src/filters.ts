@@ -3,22 +3,22 @@
  * the web address (so a view can be shared) and applied to every part of the page.
  */
 
-import { CATEGORIES, SEVERITIES, type Category, type GlobeEvent, type Severity } from "./types";
+import { CATEGORIES, SEVERITIES, type Category, type GlobeEvent, type Severity } from './types';
 
 /** Time windows, in hours. The data covers 7 days. */
-export const RANGES = { "6h": 6, "24h": 24, "3d": 72, "7d": 168 } as const;
+export const RANGES = { '6h': 6, '24h': 24, '3d': 72, '7d': 168 } as const;
 export type RangeKey = keyof typeof RANGES;
 export const RANGE_LABELS: Record<RangeKey, string> = {
-  "6h": "6 h",
-  "24h": "24 h",
-  "3d": "3 days",
-  "7d": "7 days",
+  '6h': '6 h',
+  '24h': '24 h',
+  '3d': '3 days',
+  '7d': '7 days',
 };
-export const DEFAULT_RANGE: RangeKey = "3d";
+export const DEFAULT_RANGE: RangeKey = '3d';
 export const HISTORY_HOURS = 168;
 
 /** The place levels, from widest to narrowest; a path holds a value for the first few. */
-export const PLACE_LEVELS = ["continent", "region", "country_code", "admin1", "city"] as const;
+export const PLACE_LEVELS = ['continent', 'region', 'country_code', 'admin1', 'city'] as const;
 export type PlaceLevel = (typeof PLACE_LEVELS)[number];
 
 export interface FilterState {
@@ -86,31 +86,31 @@ export function isDefault(state: FilterState): boolean {
 export function toQuery(state: FilterState): string {
   const params = new URLSearchParams();
   if (state.categories.size !== CATEGORIES.length) {
-    params.set("cat", CATEGORIES.filter((c) => state.categories.has(c)).join(",") || "none");
+    params.set('cat', CATEGORIES.filter((c) => state.categories.has(c)).join(',') || 'none');
   }
   if (state.severities.size !== SEVERITIES.length) {
-    params.set("sev", SEVERITIES.filter((s) => state.severities.has(s)).join(",") || "none");
+    params.set('sev', SEVERITIES.filter((s) => state.severities.has(s)).join(',') || 'none');
   }
-  if (state.range !== DEFAULT_RANGE) params.set("range", state.range);
-  if (state.end !== null) params.set("end", new Date(state.end).toISOString().slice(0, 13) + "Z");
-  if (state.place.length) params.set("place", state.place.join("/"));
+  if (state.range !== DEFAULT_RANGE) params.set('range', state.range);
+  if (state.end !== null) params.set('end', new Date(state.end).toISOString().slice(0, 13) + 'Z');
+  if (state.place.length) params.set('place', state.place.join('/'));
   const query = params.toString();
-  return query ? `?${query}` : "";
+  return query ? `?${query}` : '';
 }
 
 /** Adds the page's own switches to a filter query ("?cat=war" → "?cat=war&view=geo&list=1"). */
 export function withPageState(query: string, page: { geo: boolean; list: boolean }): string {
-  const extras = [page.geo ? "view=geo" : "", page.list ? "list=1" : ""].filter(Boolean);
+  const extras = [page.geo ? 'view=geo' : '', page.list ? 'list=1' : ''].filter(Boolean);
   if (extras.length === 0) return query;
-  return `${query ? `${query}&` : "?"}${extras.join("&")}`;
+  return `${query ? `${query}&` : '?'}${extras.join('&')}`;
 }
 
 /** A list from the address; "none" means none chosen, and a missing list or one with no valid
  * value at all (a broken link) gives everything rather than an empty globe. */
 function listFrom<T extends string>(value: string | null, allowed: readonly T[]): Set<T> {
   if (value === null) return new Set(allowed);
-  if (value === "none") return new Set();
-  const valid = value.split(",").filter((v): v is T => (allowed as readonly string[]).includes(v));
+  if (value === 'none') return new Set();
+  const valid = value.split(',').filter((v): v is T => (allowed as readonly string[]).includes(v));
   return new Set(valid.length ? valid : allowed);
 }
 
@@ -118,16 +118,16 @@ function listFrom<T extends string>(value: string | null, allowed: readonly T[])
 export function fromQuery(search: string): FilterState {
   const params = new URLSearchParams(search);
   const state = defaultFilters();
-  state.categories = listFrom(params.get("cat"), CATEGORIES);
-  state.severities = listFrom(params.get("sev"), SEVERITIES);
-  const range = params.get("range");
+  state.categories = listFrom(params.get('cat'), CATEGORIES);
+  state.severities = listFrom(params.get('sev'), SEVERITIES);
+  const range = params.get('range');
   if (range && range in RANGES) state.range = range as RangeKey;
-  const end = params.get("end");
+  const end = params.get('end');
   if (end) {
     const parsed = Date.parse(end.length === 14 ? `${end.slice(0, 13)}:00:00Z` : end);
     if (!Number.isNaN(parsed)) state.end = parsed;
   }
-  const place = params.get("place");
-  if (place) state.place = place.split("/").filter(Boolean).slice(0, PLACE_LEVELS.length);
+  const place = params.get('place');
+  if (place) state.place = place.split('/').filter(Boolean).slice(0, PLACE_LEVELS.length);
   return state;
 }

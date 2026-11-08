@@ -6,7 +6,7 @@
  * by main.ts, so the page shell appears before three.js is downloaded.
  */
 
-import Globe from "globe.gl";
+import Globe from 'globe.gl';
 import {
   MeshBasicMaterial,
   NoColorSpace,
@@ -19,8 +19,8 @@ import {
   type Vector3,
   type LineSegments,
   type WebGLRenderer,
-} from "three";
-import { clusterDegrees, clusterEvents, clusterOf, type Cluster } from "../clusters";
+} from 'three';
+import { clusterDegrees, clusterEvents, clusterOf, type Cluster } from '../clusters';
 import {
   labelLevel,
   labelPriority,
@@ -29,16 +29,16 @@ import {
   type GeographyData,
   type LakeShape,
   type MapLabel,
-} from "../geography";
-import { SEVERITY_STYLES } from "../severity";
-import { hazardLabel, type GlobeEvent, type Severity } from "../types";
-import { createAtmosphere } from "./atmosphere";
-import { createDayNightMaterial, setSunDirection } from "./daynight";
-import { DetailLayer } from "./detail";
-import { createLines, createWaterLines, parseLines } from "./lines";
-import { PillarField } from "./markers";
-import { createStars } from "./stars";
-import { sunPosition } from "./sun";
+} from '../geography';
+import { SEVERITY_STYLES } from '../severity';
+import { hazardLabel, type GlobeEvent, type Severity } from '../types';
+import { createAtmosphere } from './atmosphere';
+import { createDayNightMaterial, setSunDirection } from './daynight';
+import { DetailLayer } from './detail';
+import { createLines, createWaterLines, parseLines } from './lines';
+import { PillarField } from './markers';
+import { createStars } from './stars';
+import { sunPosition } from './sun';
 
 export interface GlobeAppOptions {
   events: GlobeEvent[];
@@ -79,7 +79,7 @@ export interface GlobeApp {
 }
 
 /** Transparent, so the page's background and grid show behind the stars. */
-const BACKGROUND = "rgba(0, 0, 0, 0)";
+const BACKGROUND = 'rgba(0, 0, 0, 0)';
 const GLOBE_RADIUS = 100;
 /** Pillars stand on the surface (just above it, so the ground spot is not hidden). */
 const LIGHT_ALTITUDE = 0.002;
@@ -100,7 +100,7 @@ const DECLUTTER_MS = 120;
 /** Screen space a count badge keeps clear of labels (half width, half height in px). */
 const BADGE_HALF: [number, number] = [14, 10];
 /** Panels that map labels keep clear of. */
-const LABEL_OBSTACLES = ".brand h1, .preview-note, .topbar-actions > *, .legend, .bottom-right > *";
+const LABEL_OBSTACLES = '.brand h1, .preview-note, .topbar-actions > *, .legend, .bottom-right > *';
 const FLY_MS = 1400;
 const STEP_MS = 350;
 const AUTO_ROTATE_SPEED = 0.35;
@@ -108,7 +108,7 @@ const AUTO_ROTATE_SPEED = 0.35;
 const AUTO_ROTATE_RESUME_MS = 10_000;
 const SUN_UPDATE_MS = 60_000;
 /** Closest zoom with the globe's own images (2K images blur sooner)… */
-const MIN_ALTITUDE: Record<"2k" | "4k", number> = { "2k": 0.6, "4k": 0.5 };
+const MIN_ALTITUDE: Record<'2k' | '4k', number> = { '2k': 0.6, '4k': 0.5 };
 /** …and once NASA's sharp tiles show (./detail.ts). */
 const DETAIL_MIN_ALTITUDE = 0.15;
 /** Furthest zoom: the whole globe still fits across a phone screen (which starts at 3.6). */
@@ -118,10 +118,10 @@ const MAX_ALTITUDE = 4;
 const WIDE_SCREEN = 1024;
 
 /** 4K textures only on wide screens whose graphics chip can hold them. */
-function textureSize(renderer: WebGLRenderer): "2k" | "4k" {
+function textureSize(renderer: WebGLRenderer): '2k' | '4k' {
   return renderer.capabilities.maxTextureSize >= 4096 && window.innerWidth >= WIDE_SCREEN
-    ? "4k"
-    : "2k";
+    ? '4k'
+    : '2k';
 }
 
 /** Degrees the camera stays south of a chosen event: more on portrait screens, where the
@@ -151,18 +151,22 @@ function ringColor(cluster: Cluster): (t: number) => string {
 
 /** A hover label built from text nodes only: titles come from outside sources. */
 function labelFor(cluster: Cluster): HTMLElement {
-  const label = document.createElement("div");
-  label.className = "globe-label";
-  const title = document.createElement("strong");
-  const meta = document.createElement("span");
+  const label = document.createElement('div');
+  label.className = 'globe-label';
+  const title = document.createElement('strong');
+  const meta = document.createElement('span');
   if (cluster.events.length > 1) {
     title.textContent = `${cluster.events.length} events near ${cluster.lead.place}`;
     meta.textContent = `Most severe: ${SEVERITY_STYLES[cluster.severity].label} · click to list them`;
   } else {
     title.textContent = cluster.lead.title;
-    meta.textContent = [hazardLabel(cluster.lead), SEVERITY_STYLES[cluster.severity].label, cluster.lead.place]
+    meta.textContent = [
+      hazardLabel(cluster.lead),
+      SEVERITY_STYLES[cluster.severity].label,
+      cluster.lead.place,
+    ]
       .filter(Boolean)
-      .join(" · ");
+      .join(' · ');
   }
   label.append(title, meta);
   return label;
@@ -171,27 +175,27 @@ function labelFor(cluster: Cluster): HTMLElement {
 /** Keeps a button's pointer events from the globe, which would otherwise also treat the
  * press as a click on whatever lies beneath it (a country, a pillar). */
 function shield(element: HTMLElement): void {
-  for (const type of ["pointerdown", "pointerup"] as const) {
+  for (const type of ['pointerdown', 'pointerup'] as const) {
     element.addEventListener(type, (event) => event.stopPropagation());
   }
 }
 
 /** What the one HTML layer holds: group count badges and, in the geography view, map labels. */
 type HtmlItem =
-  | { type: "badge"; cluster: Cluster; lat: number; lng: number }
-  | { type: "label"; label: MapLabel; lat: number; lng: number };
+  | { type: 'badge'; cluster: Cluster; lat: number; lng: number }
+  | { type: 'label'; label: MapLabel; lat: number; lng: number };
 
 /** A map label (country, ocean, sea, range, desert, peak): a button that opens "About this
  * place". Not in the Tab order (like the count badges); hidden or crowded labels cannot be
  * clicked. */
 function mapLabelFor(label: MapLabel, onClick: (label: MapLabel) => void): HTMLElement {
-  const element = document.createElement("button");
-  element.type = "button";
+  const element = document.createElement('button');
+  element.type = 'button';
   element.tabIndex = -1;
   element.className = `map-label kind-${label.kind}`;
-  element.textContent = label.kind === "peak" ? `▲ ${label.text}` : label.text;
+  element.textContent = label.kind === 'peak' ? `▲ ${label.text}` : label.text;
   element.title = `${label.type}: ${label.name} · click for more`;
-  element.addEventListener("click", (event) => {
+  element.addEventListener('click', (event) => {
     event.stopPropagation();
     onClick(label);
   });
@@ -202,7 +206,7 @@ function mapLabelFor(label: MapLabel, onClick: (label: MapLabel) => void): HTMLE
 interface CountryFeature {
   iso2: string;
   name: string;
-  geometry: { type: "MultiPolygon"; coordinates: number[][][][] };
+  geometry: { type: 'MultiPolygon'; coordinates: number[][][][] };
   lake?: undefined;
 }
 
@@ -210,26 +214,31 @@ interface CountryFeature {
 interface LakeFeature {
   lake: LakeShape;
   name: string;
-  geometry: { type: "MultiPolygon"; coordinates: number[][][][] };
+  geometry: { type: 'MultiPolygon'; coordinates: number[][][][] };
 }
 
 type ShapeFeature = CountryFeature | LakeFeature;
 
 /** Lakes: deep water blue, nearly opaque, unlit like the countries. */
-const lakeMaterial = new MeshBasicMaterial({ color: "#123e66", transparent: true, opacity: 0.9, depthWrite: false });
+const lakeMaterial = new MeshBasicMaterial({
+  color: '#123e66',
+  transparent: true,
+  opacity: 0.9,
+  depthWrite: false,
+});
 
 /**
  * A country's tint: its severity colour, or a faint neutral glass without events. Five
  * shared, unlit materials for all countries (one each would cost a lot per frame), and
  * unlit so the colours read the same on the night side.
  */
-const countryMaterials = new Map<Severity | "none", MeshBasicMaterial>();
+const countryMaterials = new Map<Severity | 'none', MeshBasicMaterial>();
 function countryMaterial(severity: Severity | undefined): MeshBasicMaterial {
-  const key = severity ?? "none";
+  const key = severity ?? 'none';
   let material = countryMaterials.get(key);
   if (!material) {
     material = new MeshBasicMaterial({
-      color: severity ? SEVERITY_STYLES[severity].color : "#d6dae0",
+      color: severity ? SEVERITY_STYLES[severity].color : '#d6dae0',
       transparent: true,
       opacity: severity ? 0.42 : 0.05,
       depthWrite: false,
@@ -242,14 +251,14 @@ function countryMaterial(severity: Severity | undefined): MeshBasicMaterial {
 /** The count badge at the foot of a group's pillar: a clear click target for the group.
  * Not in the Tab order (keyboard users reach every event through the event list). */
 function badgeFor(cluster: Cluster, onSelect: (cluster: Cluster) => void): HTMLElement {
-  const badge = document.createElement("button");
-  badge.type = "button";
-  badge.className = "cluster-badge";
+  const badge = document.createElement('button');
+  badge.type = 'button';
+  badge.className = 'cluster-badge';
   badge.tabIndex = -1;
   badge.textContent = String(cluster.events.length);
   badge.title = `${cluster.events.length} events near ${cluster.lead.place}`;
-  badge.style.setProperty("--dot-color", SEVERITY_STYLES[cluster.severity].color);
-  badge.addEventListener("click", (event) => {
+  badge.style.setProperty('--dot-color', SEVERITY_STYLES[cluster.severity].color);
+  badge.addEventListener('click', (event) => {
     event.stopPropagation();
     onSelect(cluster);
   });
@@ -281,7 +290,7 @@ export async function createGlobeApp(
   // No grow-in animation: the atmosphere is a separate object and would not grow with it.
   const globe = new Globe(container, {
     animateIn: false,
-    rendererConfig: { antialias: true, alpha: true, powerPreference: "high-performance" },
+    rendererConfig: { antialias: true, alpha: true, powerPreference: 'high-performance' },
   });
   const renderer = globe.renderer();
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -292,7 +301,7 @@ export async function createGlobeApp(
     loadTexture(`/textures/night-${size}.webp`, renderer),
     loadTexture(`/textures/topo-${size}.webp`, renderer, false),
   ]);
-  const width = size === "4k" ? 4096 : 2048;
+  const width = size === '4k' ? 4096 : 2048;
   // The detail patch reads elevation across the date line (./detail.ts).
   topo.wrapS = RepeatWrapping;
   const material = createDayNightMaterial({ day, night, topo, width, height: width / 2 });
@@ -303,7 +312,7 @@ export async function createGlobeApp(
     globe.width(container.clientWidth).height(container.clientHeight);
   };
   resize();
-  window.addEventListener("resize", resize);
+  window.addEventListener('resize', resize);
 
   const pillarCoords = (lat: number, lng: number) => globe.getCoords(lat, lng, LIGHT_ALTITUDE);
   let pillars = new PillarField([], pillarCoords);
@@ -315,14 +324,17 @@ export async function createGlobeApp(
     .customThreeObject((d) => pillars.hitTarget(d as Cluster))
     .customThreeObjectUpdate((obj, d) => {
       const cluster = d as Cluster;
-      pillars.placeHitTarget(obj as Mesh, globe.getCoords(cluster.lat, cluster.lng, LIGHT_ALTITUDE));
+      pillars.placeHitTarget(
+        obj as Mesh,
+        globe.getCoords(cluster.lat, cluster.lng, LIGHT_ALTITUDE),
+      );
     })
     .customLayerLabel((d) => labelFor(d as Cluster))
     .onCustomLayerClick((d) => options.onSelect(d as Cluster))
     .ringAltitude(RING_ALTITUDE)
     .ringColor((d: object) => ringColor(d as Cluster))
-    .ringMaxRadius((d) => ((d as Cluster).severity === "critical" ? 5 : 3.2))
-    .ringPropagationSpeed((d) => ((d as Cluster).severity === "critical" ? 3.2 : 2))
+    .ringMaxRadius((d) => ((d as Cluster).severity === 'critical' ? 5 : 3.2))
+    .ringPropagationSpeed((d) => ((d as Cluster).severity === 'critical' ? 3.2 : 2))
     .ringRepeatPeriod(
       (d: object) => (SEVERITY_STYLES[(d as Cluster).severity].pulseSeconds ?? 2) * 1000,
     )
@@ -331,7 +343,7 @@ export async function createGlobeApp(
     .htmlAltitude(BADGE_ALTITUDE)
     .htmlElement((d) => {
       const item = d as HtmlItem;
-      if (item.type === "badge") return badgeFor(item.cluster, options.onSelect);
+      if (item.type === 'badge') return badgeFor(item.cluster, options.onSelect);
       const element = mapLabelFor(item.label, (label) =>
         label.iso2 ? options.onCountry?.(label.iso2) : options.onPlace?.(label),
       );
@@ -339,25 +351,25 @@ export async function createGlobeApp(
       return element;
     })
     // Flat shapes: no sides, and no outline (the borders are drawn already, see ./lines.ts).
-    .polygonSideColor(() => "")
-    .polygonStrokeColor(() => "")
+    .polygonSideColor(() => '')
+    .polygonStrokeColor(() => '')
     .polygonAltitude((d) => ((d as ShapeFeature).lake ? LAKE_ALTITUDE : COUNTRY_ALTITUDE))
     .polygonsTransitionDuration(0)
     .polygonLabel((d) => {
       const shape = d as ShapeFeature;
-      const label = document.createElement("div");
-      label.className = "globe-label";
-      const title = document.createElement("strong");
+      const label = document.createElement('div');
+      label.className = 'globe-label';
+      const title = document.createElement('strong');
       title.textContent = shape.name;
       label.append(title);
       if (shape.lake) {
-        const span = document.createElement("span");
-        span.textContent = "Lake · click for more";
+        const span = document.createElement('span');
+        span.textContent = 'Lake · click for more';
         label.append(span);
         return label;
       }
       for (const line of options.describeCountry?.(shape.iso2) ?? []) {
-        const span = document.createElement("span");
+        const span = document.createElement('span');
         span.textContent = line;
         label.append(span);
       }
@@ -369,7 +381,7 @@ export async function createGlobeApp(
       else if (geography) options.onPlace?.(lakeLabel(shape.lake, geography));
     })
     .htmlElementVisibilityModifier((el, isVisible) => {
-      el.classList.toggle("is-hidden", !isVisible);
+      el.classList.toggle('is-hidden', !isVisible);
     })
     .htmlTransitionDuration(0);
 
@@ -381,11 +393,12 @@ export async function createGlobeApp(
   const refreshHtml = (): void => {
     const items: HtmlItem[] = clusters
       .filter((c) => c.events.length > 1)
-      .map((cluster) => ({ type: "badge", cluster, lat: cluster.lat, lng: cluster.lng }));
+      .map((cluster) => ({ type: 'badge', cluster, lat: cluster.lat, lng: cluster.lng }));
     if (geography) {
       const labels = labelsFor(globe.pointOfView().altitude, geography);
       labels.sort((a, b) => labelPriority(a) - labelPriority(b));
-      for (const label of labels) items.push({ type: "label", label, lat: label.lat, lng: label.lng });
+      for (const label of labels)
+        items.push({ type: 'label', label, lat: label.lat, lng: label.lng });
     }
     labelElements.clear();
     htmlItems = items;
@@ -405,7 +418,13 @@ export async function createGlobeApp(
     const placed: [number, number, number, number][] = [];
     for (const panel of document.querySelectorAll<HTMLElement>(LABEL_OBSTACLES)) {
       const r = panel.getBoundingClientRect();
-      if (r.width > 0) placed.push([r.left - area.left, r.top - area.top, r.right - area.left, r.bottom - area.top]);
+      if (r.width > 0)
+        placed.push([
+          r.left - area.left,
+          r.top - area.top,
+          r.right - area.left,
+          r.bottom - area.top,
+        ]);
     }
     const inside = (box: [number, number, number, number]): boolean =>
       box[0] >= 0 && box[1] >= 0 && box[2] <= area.width && box[3] <= area.height;
@@ -417,7 +436,7 @@ export async function createGlobeApp(
         (point.x * view.x + point.y * view.y + point.z * view.z) /
         Math.hypot(point.x, point.y, point.z);
       const screen = globe.getScreenCoords(item.lat, item.lng, BADGE_ALTITUDE);
-      if (item.type === "badge") {
+      if (item.type === 'badge') {
         if (facing > 0) {
           const [w, h] = BADGE_HALF;
           placed.push([screen.x - w, screen.y - h, screen.x + w, screen.y + h]);
@@ -438,7 +457,10 @@ export async function createGlobeApp(
         for (const dy of [0, size[1] * 2, -size[1] * 2]) {
           const y = screen.y + dy;
           const candidate: [number, number, number, number] = [
-            screen.x - size[0], y - size[1], screen.x + size[0], y + size[1],
+            screen.x - size[0],
+            y - size[1],
+            screen.x + size[0],
+            y + size[1],
           ];
           if (inside(candidate) && free(candidate)) {
             box = candidate;
@@ -447,8 +469,8 @@ export async function createGlobeApp(
           }
         }
       }
-      element.classList.toggle("is-crowded", box === null);
-      element.style.translate = shift ? `0 ${shift}px` : "";
+      element.classList.toggle('is-crowded', box === null);
+      element.style.translate = shift ? `0 ${shift}px` : '';
       if (box) placed.push(box);
     }
   };
@@ -477,21 +499,22 @@ export async function createGlobeApp(
   globe.scene().add(createAtmosphere(GLOBE_RADIUS, sunVector));
 
   // Coastlines and borders: loaded after the globe shows; the globe works without them.
-  void fetch("/geo/lines.bin")
+  void fetch('/geo/lines.bin')
     .then((response) =>
       response.ok ? response.arrayBuffer() : Promise.reject(new Error(`HTTP ${response.status}`)),
     )
     .then((buffer) => {
       const coords = (lat: number, lng: number) => globe.getCoords(lat, lng, LINE_ALTITUDE);
-      for (const lines of createLines(parseLines(buffer), coords, sunVector)) globe.scene().add(lines);
+      for (const lines of createLines(parseLines(buffer), coords, sunVector))
+        globe.scene().add(lines);
     })
-    .catch((error: unknown) => console.warn("Coastlines and borders unavailable:", error));
+    .catch((error: unknown) => console.warn('Coastlines and borders unavailable:', error));
 
   /** Rivers and lake shores for the geography view; the map works without them. */
   function loadWater(): void {
     if (waterRequested) return;
     waterRequested = true;
-    void fetch("/geo/water.bin")
+    void fetch('/geo/water.bin')
       .then((response) =>
         response.ok ? response.arrayBuffer() : Promise.reject(new Error(`HTTP ${response.status}`)),
       )
@@ -503,7 +526,7 @@ export async function createGlobeApp(
           globe.scene().add(line);
         }
       })
-      .catch((error: unknown) => console.warn("Rivers and lakes unavailable:", error));
+      .catch((error: unknown) => console.warn('Rivers and lakes unavailable:', error));
   }
 
   // Sharp NASA tiles over the area in view when zooming in. Once they show, the zoom may go
@@ -514,11 +537,11 @@ export async function createGlobeApp(
     renderer,
     coords: (lat, lng, altitude) => globe.getCoords(lat, lng, altitude),
     sun: sunVector,
-    maxTiles: size === "4k" ? 6 : 4,
+    maxTiles: size === '4k' ? 6 : 4,
     onFirstTile: () => {
       minAltitude = DETAIL_MIN_ALTITUDE;
       globe.controls().minDistance = GLOBE_RADIUS * (1 + minAltitude);
-      container.dataset.detail = "on";
+      container.dataset.detail = 'on';
     },
   });
   globe.scene().add(detail.mesh);
@@ -580,7 +603,7 @@ export async function createGlobeApp(
       applyRotation();
     }, AUTO_ROTATE_RESUME_MS);
   };
-  controls.addEventListener("start", pauseAutoRotate);
+  controls.addEventListener('start', pauseAutoRotate);
   applyRotation();
 
   // Pulses and pillar sizes: one loop for every light.
@@ -600,7 +623,7 @@ export async function createGlobeApp(
   window.requestAnimationFrame(tick);
 
   // Nothing to draw while the tab is hidden.
-  document.addEventListener("visibilitychange", () => {
+  document.addEventListener('visibilitychange', () => {
     if (document.hidden) globe.pauseAnimation();
     else globe.resumeAnimation();
   });
@@ -654,12 +677,12 @@ export async function createGlobeApp(
         countryFeatures = data.countries.map((c) => ({
           iso2: c.iso2,
           name: c.name,
-          geometry: { type: "MultiPolygon", coordinates: c.polygons },
+          geometry: { type: 'MultiPolygon', coordinates: c.polygons },
         }));
         lakeFeatures = data.lakes.map((lake) => ({
           lake,
           name: lake.name,
-          geometry: { type: "MultiPolygon", coordinates: lake.polygons },
+          geometry: { type: 'MultiPolygon', coordinates: lake.polygons },
         }));
       }
       // A new accessor function makes globe.gl recolour the existing shapes.

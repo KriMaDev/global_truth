@@ -4,7 +4,7 @@
  * pipeline/globe_pipeline/outlets.py). The card works without it (names and links only).
  */
 
-import type { EventSource, GlobeEvent } from "./types";
+import type { EventSource, GlobeEvent } from './types';
 
 export interface OutletInfo {
   name: string;
@@ -12,7 +12,7 @@ export interface OutletInfo {
   domain: string;
   country: string;
   region: string;
-  ownership: "state" | "public" | "private" | "intergovernmental";
+  ownership: 'state' | 'public' | 'private' | 'intergovernmental';
   ownership_label: string;
   /** Events it reports in the published 7 days. */
   events: number;
@@ -32,16 +32,16 @@ export interface OutletDirectory {
 }
 
 /** Where the outlet table is (each row has the id "outlet-<slug>"). */
-export const OUTLET_TABLE = "/sources/";
+export const OUTLET_TABLE = '/sources/';
 
-const OWNERSHIPS = ["state", "public", "private", "intergovernmental"];
+const OWNERSHIPS = ['state', 'public', 'private', 'intergovernmental'];
 
 function isText(value: unknown, max = 200): value is string {
-  return typeof value === "string" && value.trim().length > 0 && value.length <= max;
+  return typeof value === 'string' && value.trim().length > 0 && value.length <= max;
 }
 
 function isOutlet(value: unknown): value is OutletInfo {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== 'object' || value === null) return false;
   const o = value as Record<string, unknown>;
   return (
     isText(o.name) &&
@@ -57,14 +57,19 @@ function isOutlet(value: unknown): value is OutletInfo {
 }
 
 function isProvider(value: unknown): value is ProviderInfo {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== 'object' || value === null) return false;
   const p = value as Record<string, unknown>;
-  return isText(p.name) && isText(p.credit) && isText(p.homepage, 500) && /^https:\/\//.test(p.homepage as string);
+  return (
+    isText(p.name) &&
+    isText(p.credit) &&
+    isText(p.homepage, 500) &&
+    /^https:\/\//.test(p.homepage as string)
+  );
 }
 
 /** The directory from untrusted JSON; malformed entries are left out. */
 export function parseOutletDirectory(input: unknown): OutletDirectory {
-  const doc = (typeof input === "object" && input !== null ? input : {}) as Record<string, unknown>;
+  const doc = (typeof input === 'object' && input !== null ? input : {}) as Record<string, unknown>;
   const outlets = Array.isArray(doc.outlets) ? doc.outlets.filter(isOutlet) : [];
   const providers = Array.isArray(doc.providers) ? doc.providers.filter(isProvider) : [];
   return {
@@ -88,9 +93,9 @@ export function sourceDetails(
   const outlet = dir?.outlets.get(source.name);
   if (outlet) {
     // "State-affiliated" has its own badge on the card; don't say it twice.
-    const ownership = outlet.ownership === "state" ? null : outlet.ownership_label;
+    const ownership = outlet.ownership === 'state' ? null : outlet.ownership_label;
     return {
-      text: [outlet.country, ownership].filter(Boolean).join(" · "),
+      text: [outlet.country, ownership].filter(Boolean).join(' · '),
       href: `${OUTLET_TABLE}#outlet-${outlet.slug}`,
     };
   }
@@ -102,15 +107,15 @@ export function sourceDetails(
 /** The sources heading: "Source", "Reported by 2 outlets", or "Reported by 3 outlets in 3
  * countries" when their countries are known. */
 export function coverageHeading(
-  event: Pick<GlobeEvent, "sources" | "coverage">,
+  event: Pick<GlobeEvent, 'sources' | 'coverage'>,
   dir: OutletDirectory | null = directory,
 ): string {
   const names = [...new Set(event.sources.map((s) => s.name))];
   const count = event.coverage ?? names.length;
-  if (count <= 1) return "Source";
+  if (count <= 1) return 'Source';
   const countries = new Set(names.map((name) => dir?.outlets.get(name)?.country).filter(Boolean));
   const known = names.every((name) => dir?.outlets.has(name));
-  const what = event.sources.every((s) => dir?.providers.has(s.name)) ? "providers" : "outlets";
+  const what = event.sources.every((s) => dir?.providers.has(s.name)) ? 'providers' : 'outlets';
   if (!known || countries.size === 0) return `Reported by ${count} ${what}`;
-  return `Reported by ${count} ${what} in ${countries.size} ${countries.size === 1 ? "country" : "countries"}`;
+  return `Reported by ${count} ${what} in ${countries.size} ${countries.size === 1 ? 'country' : 'countries'}`;
 }

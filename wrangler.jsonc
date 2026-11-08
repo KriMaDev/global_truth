@@ -7,7 +7,7 @@
   "assets": {
     // Output of `npm run build`.
     "directory": "./frontend/dist",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
   },
   // No timer here: it lives in its own Worker with no web address (worker/wrangler.jsonc).
   // The empty list removes the timer this Worker had briefly on 8 Nov 2026.
@@ -16,5 +16,5 @@
   "routes": [{ "pattern": "globe.krimadev.com", "custom_domain": true }],
   // No second copy of the site on *.workers.dev.
   "workers_dev": false,
-  "preview_urls": false
+  "preview_urls": false,
 }

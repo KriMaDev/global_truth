@@ -3,8 +3,8 @@
  * from the events themselves (their `geo`), so every choice shows how many events it has.
  */
 
-import { PLACE_LEVELS, type PlaceLevel } from "./filters";
-import type { GlobeEvent } from "./types";
+import { PLACE_LEVELS, type PlaceLevel } from './filters';
+import type { GlobeEvent } from './types';
 
 export interface PlaceOption {
   value: string;
@@ -13,11 +13,11 @@ export interface PlaceOption {
 }
 
 export const LEVEL_NAMES: Record<PlaceLevel, string> = {
-  continent: "Continent",
-  region: "Region",
-  country_code: "Country",
-  admin1: "Province or state",
-  city: "City",
+  continent: 'Continent',
+  region: 'Region',
+  country_code: 'Country',
+  admin1: 'Province or state',
+  city: 'City',
 };
 
 function inPlace(event: GlobeEvent, path: string[]): boolean {
@@ -29,7 +29,7 @@ function inPlace(event: GlobeEvent, path: string[]): boolean {
 function labelOf(event: GlobeEvent, level: PlaceLevel): string | null {
   const geo = event.geo;
   if (!geo) return null;
-  return level === "country_code" ? geo.country : geo[level];
+  return level === 'country_code' ? geo.country : geo[level];
 }
 
 /** The choices one level below `path`, most events first, with counts. */
@@ -51,7 +51,7 @@ export function placeOptions(events: GlobeEvent[], path: string[]): PlaceOption[
 /** Readable names for each step of a path, e.g. ["Asia", "Southern Asia", "India"]. */
 export function placeNames(events: GlobeEvent[], path: string[]): string[] {
   return path.map((value, level) => {
-    if (PLACE_LEVELS[level] !== "country_code") return value;
+    if (PLACE_LEVELS[level] !== 'country_code') return value;
     const match = events.find((e) => e.geo?.country_code === value);
     return match?.geo?.country ?? value;
   });
@@ -60,7 +60,10 @@ export function placeNames(events: GlobeEvent[], path: string[]): string[] {
 const RAD = Math.PI / 180;
 
 /** The middle of a place's events (an average on the sphere), or null with none. */
-export function placeCenter(events: GlobeEvent[], path: string[]): { lat: number; lng: number } | null {
+export function placeCenter(
+  events: GlobeEvent[],
+  path: string[],
+): { lat: number; lng: number } | null {
   let x = 0;
   let y = 0;
   let z = 0;

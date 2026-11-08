@@ -14,6 +14,7 @@ import os
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from .models import Geo
 
@@ -52,9 +53,9 @@ class Gazetteer:
     def __init__(
         self,
         cities: list[City],
-        countries: dict[str, dict],
+        countries: dict[str, dict[str, Any]],
         admin1: dict[str, str],
-        m49: dict[str, dict],
+        m49: dict[str, dict[str, Any]],
     ) -> None:
         self.cities = cities
         self.countries = countries

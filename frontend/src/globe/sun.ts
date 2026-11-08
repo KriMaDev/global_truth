@@ -33,10 +33,8 @@ export function sunPosition(date: Date): SubsolarPoint {
   const obliquity = (23.439 - 0.00000036 * d) * DEG;
 
   const rightAscension =
-    Math.atan2(
-      Math.cos(obliquity) * Math.sin(eclipticLongitude),
-      Math.cos(eclipticLongitude),
-    ) / DEG;
+    Math.atan2(Math.cos(obliquity) * Math.sin(eclipticLongitude), Math.cos(eclipticLongitude)) /
+    DEG;
   const declination = Math.asin(Math.sin(obliquity) * Math.sin(eclipticLongitude)) / DEG;
 
   // Equation of time, in degrees of rotation (1 degree = 4 minutes).

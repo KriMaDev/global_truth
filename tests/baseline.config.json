@@ -1,0 +1,12 @@
+{
+  "origin": "https://globe.krimadev.com",
+  "built": "frontend/dist",
+  "manifests": ["package.json"],
+  "sitemap": "sitemap.xml",
+  "pages": {
+    "index.html": "/",
+    "about/index.html": "/about/",
+    "sources/index.html": "/sources/",
+    "legal/index.html": "/legal/"
+  }
+}

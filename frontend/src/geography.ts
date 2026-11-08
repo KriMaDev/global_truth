@@ -7,7 +7,7 @@
  * /geo/places.json (Wikidata CC0 and Wikipedia CC BY-SA 4.0, made by tools/build_places.py).
  */
 
-import { SEVERITIES, type GlobeEvent, type Severity } from "./types";
+import { SEVERITIES, type GlobeEvent, type Severity } from './types';
 
 export interface CountryShape {
   iso2: string;
@@ -33,10 +33,10 @@ interface PlaceLabel {
 
 export interface GeoLabels {
   seas: (PlaceLabel & { kind: string })[];
-  regions: (PlaceLabel & { kind: "range" | "desert" })[];
+  regions: (PlaceLabel & { kind: 'range' | 'desert' })[];
   peaks: (PlaceLabel & { elevation: number })[];
   /** Rivers (ranked by length) and lakes. */
-  waters: (PlaceLabel & { kind: "river" | "lake" })[];
+  waters: (PlaceLabel & { kind: 'river' | 'lake' })[];
 }
 
 /** A lake's shape, painted as water over the country colours. */
@@ -53,7 +53,8 @@ export interface GeographyData {
   lakes: LakeShape[];
 }
 
-export type LabelKind = "country" | "ocean" | "sea" | "range" | "desert" | "peak" | "river" | "lake";
+export type LabelKind =
+  'country' | 'ocean' | 'sea' | 'range' | 'desert' | 'peak' | 'river' | 'lake';
 
 export interface MapLabel {
   id: string;
@@ -118,7 +119,7 @@ const LIMITS = {
   water: [0, 3, 4, 5, 7],
 } as const;
 
-const formatter = new Intl.NumberFormat("en-GB");
+const formatter = new Intl.NumberFormat('en-GB');
 
 function titleCase(text: string): string {
   // Natural Earth writes some names in capitals ("HIMALAYAS"); the labels are shown in
@@ -149,8 +150,8 @@ export function labelPriority(label: MapLabel): number {
 export function countryLabel(country: CountryShape): MapLabel {
   return {
     id: `country:${country.iso2}`,
-    kind: "country",
-    type: "Country",
+    kind: 'country',
+    type: 'Country',
     name: country.name,
     text: country.name,
     rank: country.rank,
@@ -174,7 +175,7 @@ export function labelsFor(altitude: number, data: GeographyData): MapLabel[] {
     const name = titleCase(sea.name);
     labels.push({
       id: `sea:${sea.name}`,
-      kind: sea.kind === "ocean" ? "ocean" : "sea",
+      kind: sea.kind === 'ocean' ? 'ocean' : 'sea',
       type: sea.kind.charAt(0).toUpperCase() + sea.kind.slice(1),
       name,
       text: name,
@@ -190,7 +191,7 @@ export function labelsFor(altitude: number, data: GeographyData): MapLabel[] {
     labels.push({
       id: `${region.kind}:${region.name}`,
       kind: region.kind,
-      type: region.kind === "range" ? "Mountain range" : "Desert",
+      type: region.kind === 'range' ? 'Mountain range' : 'Desert',
       name,
       text: name,
       rank: region.rank,
@@ -207,8 +208,8 @@ export function labelsFor(altitude: number, data: GeographyData): MapLabel[] {
     if (peak.rank > LIMITS.peak[level]) continue;
     labels.push({
       id: `peak:${peak.name}`,
-      kind: "peak",
-      type: "Peak",
+      kind: 'peak',
+      type: 'Peak',
       name: peak.name,
       text: `${peak.name} ${formatter.format(peak.elevation)} m`,
       rank: peak.rank,
@@ -222,11 +223,11 @@ export function labelsFor(altitude: number, data: GeographyData): MapLabel[] {
 }
 
 /** A river's or lake's label (also what its card is built from). */
-export function waterLabel(water: GeoLabels["waters"][number]): MapLabel {
+export function waterLabel(water: GeoLabels['waters'][number]): MapLabel {
   return {
     id: `${water.kind}:${water.name}`,
     kind: water.kind,
-    type: water.kind === "river" ? "River" : "Lake",
+    type: water.kind === 'river' ? 'River' : 'Lake',
     name: water.name,
     text: water.name,
     rank: water.rank,
@@ -239,11 +240,23 @@ export function waterLabel(water: GeoLabels["waters"][number]): MapLabel {
 /** The label of a lake's shape (clicked or hovered), matched by Wikidata ID or name. */
 export function lakeLabel(lake: LakeShape, data: GeographyData): MapLabel {
   const water = data.labels.waters.find(
-    (w) => w.kind === "lake" && ((lake.wikidata && w.wikidata === lake.wikidata) || w.name === lake.name),
+    (w) =>
+      w.kind === 'lake' &&
+      ((lake.wikidata && w.wikidata === lake.wikidata) || w.name === lake.name),
   );
   if (water) return waterLabel(water);
   const [lng, lat] = lake.polygons[0]?.[0]?.[0] ?? [0, 0];
-  return { id: `lake:${lake.name}`, kind: "lake", type: "Lake", name: lake.name, text: lake.name, rank: 9, wikidata: lake.wikidata ?? null, lng, lat };
+  return {
+    id: `lake:${lake.name}`,
+    kind: 'lake',
+    type: 'Lake',
+    name: lake.name,
+    text: lake.name,
+    rank: 9,
+    wikidata: lake.wikidata ?? null,
+    lng,
+    lat,
+  };
 }
 
 /** The lead text of a place's English Wikipedia article, word for word (CC BY-SA 4.0). */
@@ -291,47 +304,55 @@ export function formatPopulation(people: number): string {
 const metres = (m: number): string => `${formatter.format(Math.round(m))} m`;
 
 /** The facts shown on a place's card, as [label, value] rows in a fixed order. */
-export function factRows(label: Pick<MapLabel, "kind" | "elevation">, facts: PlaceFacts | undefined): [string, string][] {
+export function factRows(
+  label: Pick<MapLabel, 'kind' | 'elevation'>,
+  facts: PlaceFacts | undefined,
+): [string, string][] {
   const f = facts ?? {};
   const rows: [string, string][] = [];
   const add = (name: string, value: string | undefined | null | false): void => {
     if (value) rows.push([name, value]);
   };
   const list = (values: string[] | undefined): string | undefined =>
-    values && values.length ? values.join(", ") : undefined;
+    values && values.length ? values.join(', ') : undefined;
   const area = f.area_m2 ? `${formatter.format(Math.round(f.area_m2 / 1e6))} km²` : undefined;
-  if (label.kind === "country") {
-    add("Official name", f.official_name);
-    add("Capital", f.capital);
+  if (label.kind === 'country') {
+    add('Official name', f.official_name);
+    add('Capital', f.capital);
     add(
-      "Population",
-      f.population ? `${formatPopulation(f.population)}${f.population_year ? ` (${f.population_year})` : ""}` : undefined,
+      'Population',
+      f.population
+        ? `${formatPopulation(f.population)}${f.population_year ? ` (${f.population_year})` : ''}`
+        : undefined,
     );
-    add("Area", area);
-    add(f.languages && f.languages.length > 1 ? "Official languages" : "Official language", list(f.languages));
-    add("Currency", list(f.currency));
-    add("Highest point", f.highest_point);
-  } else if (label.kind === "ocean" || label.kind === "sea") {
-    add("Area", area);
-    add("Greatest depth", f.max_depth_m ? metres(f.max_depth_m) : undefined);
-    add("Bordering countries", list(f.countries));
-  } else if (label.kind === "lake") {
-    add("Area", area);
-    add("Greatest depth", f.max_depth_m ? metres(f.max_depth_m) : undefined);
-    add("Countries", list(f.countries));
-  } else if (label.kind === "river") {
-    add("Length", f.length_m ? `${formatter.format(Math.round(f.length_m / 1000))} km` : undefined);
-    add("Countries", list(f.countries));
-  } else if (label.kind === "peak") {
-    add("Elevation", label.elevation ? metres(label.elevation) : undefined);
-    add("Prominence", f.prominence_m ? metres(f.prominence_m) : undefined);
-    add("Range", f.range);
-    add("Countries", list(f.countries));
+    add('Area', area);
+    add(
+      f.languages && f.languages.length > 1 ? 'Official languages' : 'Official language',
+      list(f.languages),
+    );
+    add('Currency', list(f.currency));
+    add('Highest point', f.highest_point);
+  } else if (label.kind === 'ocean' || label.kind === 'sea') {
+    add('Area', area);
+    add('Greatest depth', f.max_depth_m ? metres(f.max_depth_m) : undefined);
+    add('Bordering countries', list(f.countries));
+  } else if (label.kind === 'lake') {
+    add('Area', area);
+    add('Greatest depth', f.max_depth_m ? metres(f.max_depth_m) : undefined);
+    add('Countries', list(f.countries));
+  } else if (label.kind === 'river') {
+    add('Length', f.length_m ? `${formatter.format(Math.round(f.length_m / 1000))} km` : undefined);
+    add('Countries', list(f.countries));
+  } else if (label.kind === 'peak') {
+    add('Elevation', label.elevation ? metres(label.elevation) : undefined);
+    add('Prominence', f.prominence_m ? metres(f.prominence_m) : undefined);
+    add('Range', f.range);
+    add('Countries', list(f.countries));
   } else {
-    add("Highest point", f.highest_point);
-    add("Length", f.length_m ? `${formatter.format(Math.round(f.length_m / 1000))} km` : undefined);
-    add("Area", area);
-    add("Countries", list(f.countries));
+    add('Highest point', f.highest_point);
+    add('Length', f.length_m ? `${formatter.format(Math.round(f.length_m / 1000))} km` : undefined);
+    add('Area', area);
+    add('Countries', list(f.countries));
   }
   return rows;
 }

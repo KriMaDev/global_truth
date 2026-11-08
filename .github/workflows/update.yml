@@ -8,10 +8,15 @@ name: Update data and deploy
 # worker/ sends a workflow_dispatch), because GitHub's own scheduler often starts runs late or
 # not at all. GitHub's schedule below is only a backup in case the timer fails: it runs every
 # 3 hours and stops early when the data on the site is fresh anyway.
+#
+# Security: the job that runs the pipeline and installs packages has no secrets. Only the deploy
+# job can read the Cloudflare token: it runs on main only (environment `production`), and the
+# token is limited to the one Worker `world-news-globe`. It uploads a new version instead of
+# using `wrangler deploy`, which would also need permission to change routes and timers.
 
 on:
   schedule:
-    - cron: "52 */3 * * *"
+    - cron: '52 */3 * * *'
   workflow_dispatch:
 
 permissions:
@@ -61,17 +66,19 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write(f"run={run}\n")
 
-  update:
+  build:
     needs: check
     if: needs.check.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7.0.1
-
-      - uses: actions/setup-python@v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: "3.13"
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
 
       - name: Month (the gazetteer is rebuilt monthly)
         id: month
@@ -79,7 +86,7 @@ jobs:
 
       - name: Gazetteer cache
         id: gazetteer
-        uses: actions/cache@v6.1.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .cache/gazetteer
           key: gazetteer-${{ steps.month.outputs.month }}-${{ hashFiles('pipeline/globe_pipeline/data/m49.csv', 'pipeline/tools/build_gazetteer.py') }}
@@ -92,7 +99,7 @@ jobs:
         working-directory: pipeline
         run: python -m globe_pipeline.run --out ../frontend/public/data
 
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -101,16 +108,44 @@ jobs:
 
       - run: npm run build
 
-      - name: Deploy to Cloudflare
-        run: npx wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Keep the built site for the deploy job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site
+          path: frontend/dist
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
 
-      # The timer Worker (worker/), so a change to it goes live like the site. Quick when
-      # nothing changed; its secret GITHUB_TOKEN survives deploys.
-      - name: Deploy the timer
-        run: npx wrangler deploy -c worker/wrangler.jsonc
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # Only wrangler is used from here on; install scripts of other packages don't run.
+      - run: npm ci --ignore-scripts
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site
+          path: frontend/dist
+
+      - name: Deploy to Cloudflare
+        shell: bash
+        run: |
+          id="$(npx wrangler versions upload --message "Data update ${GITHUB_SHA::7}" | tee /dev/stderr | sed -n 's/^Worker Version ID: //p')"
+          test -n "$id"
+          npx wrangler versions deploy "$id@100%" --yes
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

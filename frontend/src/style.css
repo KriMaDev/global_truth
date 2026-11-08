@@ -1,6 +1,6 @@
 /* Registered so the accent can fade from one colour to another. */
 @property --accent {
-  syntax: "<color>";
+  syntax: '<color>';
   inherits: true;
   initial-value: #d6dae0;
 }
@@ -31,9 +31,9 @@
   --ember: #f2b24c;
   transition: --accent 0.45s ease;
 
-  --ff-display: "Michroma", "Segoe UI", sans-serif;
-  --ff-body: "Hanken Grotesk", system-ui, sans-serif;
-  --ff-mono: "JetBrains Mono", ui-monospace, monospace;
+  --ff-display: 'Michroma', 'Segoe UI', sans-serif;
+  --ff-body: 'Hanken Grotesk', system-ui, sans-serif;
+  --ff-mono: 'JetBrains Mono', ui-monospace, monospace;
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
 
   --gutter: 16px;
@@ -112,7 +112,7 @@ button {
 
 .glass::before,
 .glass::after {
-  content: "";
+  content: '';
   position: absolute;
   width: 10px;
   height: 10px;
@@ -145,8 +145,7 @@ button {
     var(--corner) left top / 10px 2px no-repeat border-box,
     var(--corner) left top / 2px 10px no-repeat border-box,
     var(--corner) right bottom / 10px 2px no-repeat border-box,
-    var(--corner) right bottom / 2px 10px no-repeat border-box,
-    var(--panel-solid);
+    var(--corner) right bottom / 2px 10px no-repeat border-box, var(--panel-solid);
 }
 
 .event-card::before,
@@ -302,7 +301,7 @@ button {
 }
 
 .preview-note::before {
-  content: "";
+  content: '';
   width: 6px;
   height: 6px;
   background: var(--ember);
@@ -335,11 +334,11 @@ button {
     box-shadow 0.2s ease;
 }
 
-.motion-toggle[aria-pressed="true"] {
+.motion-toggle[aria-pressed='true'] {
   color: var(--accent);
 }
 
-.motion-toggle[aria-pressed="true"] .toggle-led {
+.motion-toggle[aria-pressed='true'] .toggle-led {
   border-color: var(--accent);
   background: var(--accent);
   box-shadow: 0 0 8px var(--accent);
@@ -369,8 +368,8 @@ button {
     background 0.2s ease;
 }
 
-.view-switch[aria-pressed="false"] .view-option[data-view="news"],
-.view-switch[aria-pressed="true"] .view-option[data-view="geo"] {
+.view-switch[aria-pressed='false'] .view-option[data-view='news'],
+.view-switch[aria-pressed='true'] .view-option[data-view='geo'] {
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   box-shadow: inset 0 -1px 0 var(--accent);
@@ -487,7 +486,6 @@ button {
 .map-label.is-crowded {
   visibility: hidden;
 }
-
 
 .legend-geo-note {
   display: none;
@@ -806,7 +804,7 @@ a.card-source-meta:focus-visible {
 }
 
 .legend-pillar::before {
-  content: "";
+  content: '';
   position: absolute;
   left: 50%;
   bottom: 3px;
@@ -819,7 +817,7 @@ a.card-source-meta:focus-visible {
 }
 
 .legend-pillar::after {
-  content: "";
+  content: '';
   position: absolute;
   left: 50%;
   bottom: 1px;
@@ -957,7 +955,7 @@ a.card-source-meta:focus-visible {
   border-right: 3px solid currentColor;
 }
 
-.rotate-toggle[aria-pressed="false"] .rotate-icon {
+.rotate-toggle[aria-pressed='false'] .rotate-icon {
   width: 0;
   height: 0;
   border-top: 5px solid transparent;
@@ -1009,7 +1007,7 @@ a.card-source-meta:focus-visible {
   gap: 0.5rem;
 }
 
-.motion-toggle[aria-expanded="true"] {
+.motion-toggle[aria-expanded='true'] {
   color: var(--accent);
   border-color: var(--accent-soft);
 }
@@ -1091,7 +1089,7 @@ a.card-source-meta:focus-visible {
   cursor: pointer;
 }
 
-.chip[aria-pressed="true"] {
+.chip[aria-pressed='true'] {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--fg);
@@ -1409,7 +1407,7 @@ body.page {
   letter-spacing: 0.06em;
 }
 
-.doc-nav a[aria-current="page"] {
+.doc-nav a[aria-current='page'] {
   color: var(--muted);
   text-decoration: none;
 }

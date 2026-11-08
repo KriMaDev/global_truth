@@ -31,7 +31,8 @@ def get(url: str, *, timeout: float = 30, retries: int = 2, backoff: float = 3.0
     for attempt in range(retries + 1):
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
-                return response.read()
+                data: bytes = response.read()
+                return data
         except urllib.error.HTTPError as error:
             last_error = error
             if error.code < 500 and error.code != 429:

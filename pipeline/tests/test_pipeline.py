@@ -2,6 +2,7 @@
 public outlet list."""
 
 import json
+import re
 from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
@@ -268,7 +269,13 @@ def test_load_previous_skips_damaged_entries(tmp_path) -> None:
 
 @pytest.mark.parametrize("outlet", OUTLETS, ids=lambda o: o.name)
 def test_every_outlet_is_on_the_sources_page(outlet) -> None:
-    page = (REPO / "frontend" / "sources" / "index.html").read_text(encoding="utf-8")
+    page = re.sub(
+        r">\s+<",
+        "><",
+        re.sub(
+            r"\s+", " ", (REPO / "frontend" / "sources" / "index.html").read_text(encoding="utf-8")
+        ),
+    )
     label = {
         "state": '<span class="badge-state">State-affiliated</span>',
         "public": "Public",
@@ -315,7 +322,7 @@ def test_outlets_json_lists_every_outlet_with_counts(tmp_path, now) -> None:
 
 @pytest.mark.parametrize("outlet", OUTLETS, ids=lambda o: o.name)
 def test_every_outlet_is_listed_publicly(outlet) -> None:
-    sources = (REPO / "docs" / "sources.md").read_text(encoding="utf-8")
+    sources = re.sub(r" +", " ", (REPO / "docs" / "sources.md").read_text(encoding="utf-8"))
     assert f"| {outlet.name} |" in sources, f"{outlet.name} missing from docs/sources.md"
     if outlet.state_affiliated:
         assert (

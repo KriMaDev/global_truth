@@ -54,8 +54,8 @@ An interactive, visually stunning 3D globe that shows current world events as gl
 
 ## Commands (Windows)
 Node needs `$env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;" + $env:Path` in PowerShell.
-- Frontend: `npm ci`, `npm run dev`, `npm run build` (type check + build to `frontend/dist`), `npm run deploy` (asks first: it is public).
-- Pipeline (in `pipeline/`): `.venv\Scripts\python -m pytest`, `.venv\Scripts\ruff check .`, `.venv\Scripts\ruff format --check .`. Real data: `python tools\build_gazetteer.py` once, then `python -m globe_pipeline.run --out ..\frontend\public\data` (add `--previous ""` for a fresh start; default reads the live site). Never commit `frontend/public/data/` or `.cache/` (git-ignored). Tests use synthetic fixtures only: never commit real headlines.
+- Frontend: `npm ci`, `npm run dev`, `npm run verify` (everything but the browser and live tests), `npm run build` (to `frontend/dist`), `npm run deploy` (asks first: it is public).
+- Pipeline (in `pipeline/`): `.venv\Scripts\python -m pytest`, `.venv\Scripts\ruff check .`, `.venv\Scripts\ruff format --check .`, `.venv\Scripts\python -m mypy`. Real data: `python tools\build_gazetteer.py` once, then `python -m globe_pipeline.run --out ..\frontend\public\data` (add `--previous ""` for a fresh start; default reads the live site). Never commit `frontend/public/data/` or `.cache/` (git-ignored). Tests use synthetic fixtures only: never commit real headlines.
 - Frontend tests: `npm test` (vitest). Preview the build: `npm run preview` (port 4173).
 - Textures: `pipeline\.venv\Scripts\python tools\build_textures.py` (NASA sources cached in `.cache/textures/`; output committed).
 - Geography data: `pipeline\.venv\Scripts\python tools\build_geo.py` (Natural Earth cached in `.cache/naturalearth/`; writes `frontend/public/geo/`, committed). Run ruff on it from `pipeline/` so the project's line length applies.
@@ -70,6 +70,9 @@ Node needs `$env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;" + $env:Path`
   - Clickable HTML labels/badges must stop `pointerdown`/`pointerup` from bubbling (`shield()` in globe.ts), or globe.gl also "clicks" what lies beneath.
   - `elementFromPoint` ignores `pointer-events: none` elements, so check stacking with screenshots.
 - Look and feel: the krimadev.com design language (owner's wish, 7 Nov 2026): `.glass` panels (3px corners, fine line, blur, corner brackets), Michroma title, Hanken Grotesk text, JetBrains Mono uppercase labels, a faint 64px grid behind a transparent globe canvas. **Not** krimadev's teal: the accent is greyish white `#d6dae0`, and turns to the open event's severity colour (`--accent`, set in main.ts). Events are pillars of light (`globe/markers.ts`), taller/wider/faster-pulsing with severity; on phones the event card sits above the legend, never over it. Globe surface: day/night along the real terminator, GEBCO relief lit by the sun, sun-facing atmosphere. No sun glint and no clouds: on a news globe they could be read as real weather.
+
+## Shared standards (8 Nov 2026, owner)
+krimadev.com, Star Teller and this project keep one baseline: the same tool versions, script names (`format:check`, `lint`, `typecheck`, `test`, `test:rules`, `test:browser`, `test:live`, `test:all`, `verify`), security headers, robots.txt (AI training crawlers refused, search and answer crawlers welcome) and repository rules. `tests/rules/baseline.test.ts` and `tests/live/baseline.test.ts` are identical in all three; what differs is in `tests/baseline.config.json`. To raise a version, change it in that file and copy it to the other two. Python: `ruff` and `mypy` (strict) in `pipeline/`.
 
 ## How to work
 - Start every new feature in plan mode and get approval before large changes.

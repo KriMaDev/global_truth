@@ -18,6 +18,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from types import ModuleType
 from urllib.parse import urlsplit
 
 from .cluster import cluster
@@ -32,7 +33,7 @@ LOG = logging.getLogger("globe_pipeline")
 DEFAULT_PREVIOUS = "https://globe.krimadev.com/data"
 
 
-def _status(module, kind: str, previous: Previous, now: datetime) -> FeedStatus:
+def _status(module: ModuleType, kind: str, previous: Previous, now: datetime) -> FeedStatus:
     before = previous.feeds.get(module.ID, {})
     return FeedStatus(
         id=module.ID,

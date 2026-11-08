@@ -128,15 +128,16 @@ def test_write_pages(tmp_path, now) -> None:
 def test_category_labels_match_the_site() -> None:
     types = (REPO / "frontend" / "src" / "types.ts").read_text(encoding="utf-8")
     block = types.split("CATEGORY_LABELS", 1)[1].split("};", 1)[0]
-    found = dict(re.findall(r'"?([a-z-]+)"?: "([^"]+)"', block))
+    found = dict(re.findall(r"['\"]?([a-z-]+)['\"]?: ['\"]([^'\"]+)['\"]", block))
     assert found == CATEGORY_LABELS
 
 
-def test_robots_allows_everyone_and_names_the_sitemap() -> None:
+def test_robots_welcomes_answer_crawlers_and_names_the_sitemap() -> None:
     robots = (REPO / "frontend" / "public" / "robots.txt").read_text(encoding="utf-8")
     assert "User-agent: *" in robots
     assert "Allow: /" in robots
-    assert "Disallow" not in robots
+    assert "User-agent: OAI-SearchBot" not in robots.replace("# ", "")
+    assert "User-agent: GPTBot" in robots
     assert "Sitemap: https://globe.krimadev.com/sitemap.xml" in robots
 
 

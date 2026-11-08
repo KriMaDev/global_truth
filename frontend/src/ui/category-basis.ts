@@ -4,24 +4,26 @@
  * GDELT's reading of the whole article, or the outlet's sport section.
  */
 
-import { CATEGORY_LABELS, type Category, type GlobeEvent } from "../types";
+import { CATEGORY_LABELS, type Category, type GlobeEvent } from '../types';
 
 function list(labels: string[]): string {
-  if (labels.length <= 1) return labels.join("");
-  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+  if (labels.length <= 1) return labels.join('');
+  return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
 }
 
 function describe(basis: string): string | null {
-  if (basis === "headline") return "from words in the headline";
-  if (basis === "topics") return "from GDELT's reading of the whole article";
-  if (basis === "sport-section") return "from the outlet's sport section";
-  if (basis.startsWith("section:")) return `from the outlet's own section "${basis.slice(8)}"`;
+  if (basis === 'headline') return 'from words in the headline';
+  if (basis === 'topics') return "from GDELT's reading of the whole article";
+  if (basis === 'sport-section') return "from the outlet's sport section";
+  if (basis.startsWith('section:')) return `from the outlet's own section "${basis.slice(8)}"`;
   return null;
 }
 
 /** One line per kind of basis, e.g. 'Economic from the outlet's own section "business".'
  * Empty for events without a recorded basis (data feeds, older data). */
-export function categoryBasisLines(event: Pick<GlobeEvent, "categories" | "category_basis">): string[] {
+export function categoryBasisLines(
+  event: Pick<GlobeEvent, 'categories' | 'category_basis'>,
+): string[] {
   const basis = event.category_basis;
   if (!basis) return [];
   const groups = new Map<string, Category[]>();

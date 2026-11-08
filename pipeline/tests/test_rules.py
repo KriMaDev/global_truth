@@ -226,7 +226,7 @@ def test_basis_of_headline_topics_and_sport() -> None:
 def test_categories_match_the_site() -> None:
     types = (ROOT / "frontend" / "src" / "types.ts").read_text(encoding="utf-8")
     block = types.split("export const CATEGORIES", 1)[1].split("] as const", 1)[0]
-    assert tuple(re.findall(r'"([a-z-]+)"', block)) == CATEGORIES
+    assert tuple(re.findall(r"['\"]([a-z-]+)['\"]", block)) == CATEGORIES
 
 
 def test_whole_words_only() -> None:

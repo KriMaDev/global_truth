@@ -15,7 +15,9 @@ body {
   margin: 0;
   background: #05070a;
   color: #ebe8e1;
-  font: 1rem/1.55 system-ui, sans-serif;
+  font:
+    1rem/1.55 system-ui,
+    sans-serif;
 }
 
 main {

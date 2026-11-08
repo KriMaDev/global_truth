@@ -7,15 +7,15 @@
 
 // The same fonts as krimadev.com (SIL Open Font License): Michroma for the title,
 // Hanken Grotesk for text, JetBrains Mono for labels. Bundled, so no outside requests.
-import "@fontsource/michroma/400.css";
-import "@fontsource/hanken-grotesk/400.css";
-import "@fontsource/hanken-grotesk/600.css";
-import "@fontsource/jetbrains-mono/400.css";
-import "@fontsource/jetbrains-mono/500.css";
-import "./style.css";
-import { startAnalytics } from "./analytics";
-import { compareBySeverity, parseEvents } from "./events";
-import type { Cluster } from "./clusters";
+import '@fontsource/michroma/400.css';
+import '@fontsource/hanken-grotesk/400.css';
+import '@fontsource/hanken-grotesk/600.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
+import './style.css';
+import { startAnalytics } from './analytics';
+import { compareBySeverity, parseEvents } from './events';
+import type { Cluster } from './clusters';
 import {
   defaultFilters,
   fromQuery,
@@ -25,14 +25,14 @@ import {
   windowOf,
   withPageState,
   type FilterState,
-} from "./filters";
-import { parseFeeds } from "./feeds";
-import { CATEGORIES, SEVERITIES } from "./types";
-import { createFilterPanel, type Counts } from "./ui/filter-panel";
-import { createNewsPanel } from "./ui/news-panel";
-import { createTimeline } from "./ui/timeline";
-import { createPlacePicker } from "./ui/place-picker";
-import { placeAltitude, placeCenter, placeNames } from "./places";
+} from './filters';
+import { parseFeeds } from './feeds';
+import { CATEGORIES, SEVERITIES } from './types';
+import { createFilterPanel, type Counts } from './ui/filter-panel';
+import { createNewsPanel } from './ui/news-panel';
+import { createTimeline } from './ui/timeline';
+import { createPlacePicker } from './ui/place-picker';
+import { placeAltitude, placeCenter, placeNames } from './places';
 import {
   countryCounts,
   countryLabel,
@@ -41,17 +41,17 @@ import {
   type GeographyData,
   type MapLabel,
   type PlacesData,
-} from "./geography";
-import { placeCardParts } from "./ui/place-card";
-import type { GlobeApp } from "./globe/globe";
-import { attachKeyboard } from "./globe/keyboard";
-import { SEVERITY_STYLES } from "./severity";
-import type { GlobeEvent } from "./types";
-import { createEventCard } from "./ui/event-card";
-import { renderEventList } from "./ui/event-list";
-import { parseOutletDirectory, setOutletDirectory } from "./outlets";
-import { renderLegend, renderSummary } from "./ui/legend";
-import { initialReducedMotion, setupMotionToggle } from "./ui/motion";
+} from './geography';
+import { placeCardParts } from './ui/place-card';
+import type { GlobeApp } from './globe/globe';
+import { attachKeyboard } from './globe/keyboard';
+import { SEVERITY_STYLES } from './severity';
+import type { GlobeEvent } from './types';
+import { createEventCard } from './ui/event-card';
+import { renderEventList } from './ui/event-list';
+import { parseOutletDirectory, setOutletDirectory } from './outlets';
+import { renderLegend, renderSummary } from './ui/legend';
+import { initialReducedMotion, setupMotionToggle } from './ui/motion';
 
 function byId<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -61,8 +61,8 @@ function byId<T extends HTMLElement>(id: string): T {
 
 function hasWebGL(): boolean {
   try {
-    const canvas = document.createElement("canvas");
-    return Boolean(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
+    const canvas = document.createElement('canvas');
+    return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
   } catch {
     return false;
   }
@@ -76,7 +76,7 @@ interface Loaded {
 }
 
 async function fetchJson(url: string): Promise<unknown> {
-  const response = await fetch(url, { cache: "no-cache" });
+  const response = await fetch(url, { cache: 'no-cache' });
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
   return response.json();
 }
@@ -84,15 +84,15 @@ async function fetchJson(url: string): Promise<unknown> {
 /** The latest events; in development without pipeline data, the sample events instead. */
 async function loadEvents(): Promise<Loaded> {
   try {
-    const doc = (await fetchJson("/data/events.json")) as { generated?: unknown; events?: unknown };
+    const doc = (await fetchJson('/data/events.json')) as { generated?: unknown; events?: unknown };
     return {
       events: parseEvents(doc?.events).sort(compareBySeverity),
-      generated: typeof doc?.generated === "string" ? doc.generated : null,
+      generated: typeof doc?.generated === 'string' ? doc.generated : null,
       sample: false,
     };
   } catch (error) {
     if (import.meta.env.DEV) {
-      const { default: sample } = await import("./data/sample-events.json");
+      const { default: sample } = await import('./data/sample-events.json');
       return { events: parseEvents(sample).sort(compareBySeverity), generated: null, sample: true };
     }
     throw error;
@@ -104,14 +104,14 @@ let allEvents: GlobeEvent[] = [];
 let events: GlobeEvent[] = [];
 let filters: FilterState = fromQuery(window.location.search);
 /** Read now: the address is rewritten as soon as the filters are applied. */
-const startWithHeadlines = new URLSearchParams(window.location.search).get("list") === "1";
+const startWithHeadlines = new URLSearchParams(window.location.search).get('list') === '1';
 let dataTime: string | null = null;
 let loadFailed = false;
-const container = byId<HTMLDivElement>("globe");
-const status = byId<HTMLParagraphElement>("status");
-const list = byId<HTMLElement>("event-list");
+const container = byId<HTMLDivElement>('globe');
+const status = byId<HTMLParagraphElement>('status');
+const list = byId<HTMLElement>('event-list');
 
-const hud = byId<HTMLParagraphElement>("hud");
+const hud = byId<HTMLParagraphElement>('hud');
 let view = { lat: 0, lng: 0, altitude: 0 };
 
 function degrees(value: number, positive: string, negative: string): string {
@@ -122,19 +122,20 @@ function degrees(value: number, positive: string, negative: string): string {
  * and where the camera looks. */
 function updateHud(): void {
   const utc = new Date().toISOString().slice(11, 16);
-  const data = dataTime ? ` · DATA ${new Date(dataTime).toISOString().slice(11, 16)}` : "";
+  const data = dataTime ? ` · DATA ${new Date(dataTime).toISOString().slice(11, 16)}` : '';
   const lng = ((((view.lng + 180) % 360) + 360) % 360) - 180;
-  hud.textContent = `UTC ${utc}${data} · ${degrees(view.lat, "N", "S")} ${degrees(lng, "E", "W")} · ALT ${view.altitude.toFixed(1)}`;
+  hud.textContent = `UTC ${utc}${data} · ${degrees(view.lat, 'N', 'S')} ${degrees(lng, 'E', 'W')} · ALT ${view.altitude.toFixed(1)}`;
 }
 
 /** A message that stays visible over the globe (loading problems, empty data), or none. */
 let noticeTimer = 0;
 function notice(message: string | null, hideAfterMs?: number): void {
   window.clearTimeout(noticeTimer);
-  status.textContent = message ?? "";
-  status.classList.add("notice");
+  status.textContent = message ?? '';
+  status.classList.add('notice');
   status.hidden = message === null;
-  if (message !== null && hideAfterMs) noticeTimer = window.setTimeout(() => notice(null), hideAfterMs);
+  if (message !== null && hideAfterMs)
+    noticeTimer = window.setTimeout(() => notice(null), hideAfterMs);
 }
 
 /**
@@ -142,30 +143,30 @@ function notice(message: string | null, hideAfterMs?: number): void {
  * open, so the brackets and highlights point at what is selected.
  */
 function setAccent(color: string | null): void {
-  if (color) document.documentElement.style.setProperty("--accent", color);
-  else document.documentElement.style.removeProperty("--accent");
+  if (color) document.documentElement.style.setProperty('--accent', color);
+  else document.documentElement.style.removeProperty('--accent');
 }
 
 // The footer's height, so on phones the event card sits just above the legend.
-const footer = document.querySelector<HTMLElement>(".bottom");
+const footer = document.querySelector<HTMLElement>('.bottom');
 if (footer) {
   new ResizeObserver(() => {
-    document.documentElement.style.setProperty("--bottom-h", `${footer.offsetHeight}px`);
+    document.documentElement.style.setProperty('--bottom-h', `${footer.offsetHeight}px`);
   }).observe(footer);
 }
 
 let app: GlobeApp | null = null;
-const card = createEventCard(byId("event-card"), () => {
+const card = createEventCard(byId('event-card'), () => {
   app?.select(null);
   app?.setCardOpen(false);
   setAccent(null);
 });
 
 /** The Rotate button: pressed while the globe turns by itself. */
-const rotateToggle = byId<HTMLButtonElement>("rotate-toggle");
+const rotateToggle = byId<HTMLButtonElement>('rotate-toggle');
 function showRotation(on: boolean): void {
-  rotateToggle.setAttribute("aria-pressed", String(on));
-  rotateToggle.title = on ? "Stop the globe turning" : "Let the globe turn by itself";
+  rotateToggle.setAttribute('aria-pressed', String(on));
+  rotateToggle.title = on ? 'Stop the globe turning' : 'Let the globe turn by itself';
 }
 
 function clearFilters(): void {
@@ -174,11 +175,11 @@ function clearFilters(): void {
 }
 
 /** On wide screens Filters and Headlines sit side by side; otherwise one replaces the other. */
-const roomForBothPanels = window.matchMedia("(min-width: 1240px)");
+const roomForBothPanels = window.matchMedia('(min-width: 1240px)');
 
 const panel = createFilterPanel(
-  byId("filter-panel"),
-  byId<HTMLButtonElement>("filter-toggle"),
+  byId('filter-panel'),
+  byId<HTMLButtonElement>('filter-toggle'),
   (change) => {
     filters = { ...filters, ...change };
     applyFilters();
@@ -190,7 +191,7 @@ const panel = createFilterPanel(
   },
 );
 
-const headlines = createNewsPanel(byId("news-panel"), byId<HTMLButtonElement>("news-toggle"), {
+const headlines = createNewsPanel(byId('news-panel'), byId<HTMLButtonElement>('news-toggle'), {
   onPick: (event) => {
     // A back button normally means the globe is already there; from the list it is not.
     app?.flyTo(event);
@@ -201,7 +202,7 @@ const headlines = createNewsPanel(byId("news-panel"), byId<HTMLButtonElement>("n
         card.close();
         headlines.open(true, event.id);
       },
-      "← Back to the headlines",
+      '← Back to the headlines',
     );
   },
   onClear: clearFilters,
@@ -232,8 +233,8 @@ function activeFilters(state: FilterState): number {
 /** Event counts for the chips: each chip counts the events it would show, given the other
  * filters. */
 function chipCounts(inWindow: GlobeEvent[]): Counts {
-  const categories = Object.fromEntries(CATEGORIES.map((c) => [c, 0])) as Counts["categories"];
-  const severities = Object.fromEntries(SEVERITIES.map((s) => [s, 0])) as Counts["severities"];
+  const categories = Object.fromEntries(CATEGORIES.map((c) => [c, 0])) as Counts['categories'];
+  const severities = Object.fromEntries(SEVERITIES.map((s) => [s, 0])) as Counts['severities'];
   for (const event of inWindow) {
     if (matchesExceptTime(event, { ...filters, categories: new Set(CATEGORIES) })) {
       for (const category of event.categories) categories[category] += 1;
@@ -255,7 +256,7 @@ const listHandlers = {
 
 /** Choosing a place filters to it and flies the globe there. */
 const placePicker = createPlacePicker(
-  byId("filter-panel").querySelector<HTMLElement>("[data-filter=place]")!,
+  byId('filter-panel').querySelector<HTMLElement>('[data-filter=place]')!,
   (path) => {
     filters = { ...filters, place: path };
     applyFilters();
@@ -269,10 +270,13 @@ const placePicker = createPlacePicker(
   },
 );
 
-const timeline = createTimeline(byId("filter-panel").querySelector<HTMLElement>("[data-filter=time]")!, (change) => {
-  filters = { ...filters, ...change };
-  applyFilters();
-});
+const timeline = createTimeline(
+  byId('filter-panel').querySelector<HTMLElement>('[data-filter=time]')!,
+  (change) => {
+    filters = { ...filters, ...change };
+    applyFilters();
+  },
+);
 
 /** The 72 hours in events.json are loaded first; older days come from /data/days/ when
  * the time window reaches them, each file once. */
@@ -283,11 +287,13 @@ let loadingHistory = false;
 
 async function loadHistory(from: number): Promise<boolean> {
   if (dayIndex === null) {
-    const doc = (await fetchJson("/data/days/index.json")) as { days?: unknown };
+    const doc = (await fetchJson('/data/days/index.json')) as { days?: unknown };
     dayIndex = Array.isArray(doc?.days)
       ? doc.days.filter(
           (d): d is { day: string; file: string } =>
-            typeof d?.day === "string" && typeof d?.file === "string" && /^[\d-]+\.json$/.test(d.file),
+            typeof d?.day === 'string' &&
+            typeof d?.file === 'string' &&
+            /^[\d-]+\.json$/.test(d.file),
         )
       : [];
   }
@@ -315,7 +321,7 @@ function ensureHistory(from: number): void {
   const firstDay = new Date(from).toISOString().slice(0, 10);
   if (dayIndex !== null && dayIndex.every((d) => d.day < firstDay || loadedDays.has(d.day))) return;
   loadingHistory = true;
-  notice("Loading older events…");
+  notice('Loading older events…');
   loadHistory(from)
     .then((added) => {
       loadingHistory = false;
@@ -324,7 +330,7 @@ function ensureHistory(from: number): void {
     })
     .catch((error: unknown) => {
       loadingHistory = false;
-      console.warn("Older events unavailable:", error);
+      console.warn('Older events unavailable:', error);
       notice("Older events couldn't be loaded. Please try again later.");
     });
 }
@@ -362,8 +368,8 @@ function applyFilters(): void {
       // A short hint when filters leave nothing, unless a whole group was switched off on
       // purpose ("All off"); the legend keeps saying "Showing 0 of …" with a Clear link.
       const deliberate = filters.categories.size === 0 || filters.severities.size === 0;
-      if (events.length === 0 && !deliberate) notice("No events match these filters.", 5000);
-      else if (status.textContent === "No events match these filters.") notice(null);
+      if (events.length === 0 && !deliberate) notice('No events match these filters.', 5000);
+      else if (status.textContent === 'No events match these filters.') notice(null);
     }
   }
 }
@@ -373,61 +379,68 @@ function applyFilters(): void {
  * small dots, and "About this place" for everything labelled. Its data (Natural Earth; facts
  * and text from Wikidata and Wikipedia) loads the first time it is opened.
  */
-let geoView = new URLSearchParams(window.location.search).get("view") === "geo";
+let geoView = new URLSearchParams(window.location.search).get('view') === 'geo';
 let geoData: GeographyData | null = null;
 /** Facts and text for places; the view works without them. */
 let placesData: PlacesData | null = null;
-const geoToggle = byId<HTMLButtonElement>("geo-toggle");
+const geoToggle = byId<HTMLButtonElement>('geo-toggle');
 
 /** Keeps the web address in step with the filters, the view and the Headlines panel. */
 function updateAddress(): void {
   const query = withPageState(toQuery(filters), { geo: geoView, list: headlines.isOpen });
-  window.history.replaceState(null, "", window.location.pathname + query);
+  window.history.replaceState(null, '', window.location.pathname + query);
 }
 
 async function loadGeography(): Promise<GeographyData> {
   const [countries, labels, lakes] = await Promise.all([
-    fetchJson("/geo/countries.json"),
-    fetchJson("/geo/labels.json"),
+    fetchJson('/geo/countries.json'),
+    fetchJson('/geo/labels.json'),
     // Lakes are extra: the map works without them.
-    fetchJson("/geo/lakes.json").catch((error: unknown) => {
-      console.warn("Lakes unavailable:", error);
+    fetchJson('/geo/lakes.json').catch((error: unknown) => {
+      console.warn('Lakes unavailable:', error);
       return [];
     }),
   ]);
-  const parts = labels as Partial<GeographyData["labels"]> | null;
-  if (!Array.isArray(countries) || !parts) throw new Error("geography files are malformed");
+  const parts = labels as Partial<GeographyData['labels']> | null;
+  if (!Array.isArray(countries) || !parts) throw new Error('geography files are malformed');
   return {
-    countries: countries as GeographyData["countries"],
-    labels: { seas: parts.seas ?? [], regions: parts.regions ?? [], peaks: parts.peaks ?? [], waters: parts.waters ?? [] },
-    lakes: Array.isArray(lakes) ? (lakes as GeographyData["lakes"]) : [],
+    countries: countries as GeographyData['countries'],
+    labels: {
+      seas: parts.seas ?? [],
+      regions: parts.regions ?? [],
+      peaks: parts.peaks ?? [],
+      waters: parts.waters ?? [],
+    },
+    lakes: Array.isArray(lakes) ? (lakes as GeographyData['lakes']) : [],
   };
 }
 
 async function setGeoView(on: boolean): Promise<void> {
   geoView = on;
-  geoToggle.setAttribute("aria-pressed", String(on));
-  document.body.classList.toggle("geo-view", on);
+  geoToggle.setAttribute('aria-pressed', String(on));
+  document.body.classList.toggle('geo-view', on);
   if (on && !geoData) {
     try {
-      notice("Loading the map…");
+      notice('Loading the map…');
       const [geography, places] = await Promise.all([
         loadGeography(),
-        fetchJson("/geo/places.json").catch((error: unknown) => {
-          console.warn("Place descriptions unavailable:", error);
+        fetchJson('/geo/places.json').catch((error: unknown) => {
+          console.warn('Place descriptions unavailable:', error);
           return null;
         }),
       ]);
       geoData = geography;
       const doc = places as Partial<PlacesData> | null;
-      placesData = doc?.places ? { generated: String(doc.generated ?? ""), places: doc.places } : null;
+      placesData = doc?.places
+        ? { generated: String(doc.generated ?? ''), places: doc.places }
+        : null;
       notice(null);
     } catch (error) {
-      console.warn("Geography unavailable:", error);
+      console.warn('Geography unavailable:', error);
       notice("The geography view couldn't be loaded. Please try again later.");
       geoView = false;
-      geoToggle.setAttribute("aria-pressed", "false");
-      document.body.classList.remove("geo-view");
+      geoToggle.setAttribute('aria-pressed', 'false');
+      document.body.classList.remove('geo-view');
       return;
     }
   }
@@ -444,7 +457,7 @@ function countryEventSummary(iso2: string): string | null {
     .reverse()
     .filter((s) => counts[s] > 0)
     .map((s) => `${counts[s]} ${SEVERITY_STYLES[s].label.toLowerCase()}`);
-  return `${total} event${total === 1 ? "" : "s"}: ${parts.join(", ")}`;
+  return `${total} event${total === 1 ? '' : 's'}: ${parts.join(', ')}`;
 }
 
 /** The lines under a country's name when hovering it in the geography view. */
@@ -452,20 +465,23 @@ function describeCountry(iso2: string): string[] {
   const country = geoData?.countries.find((c) => c.iso2 === iso2);
   const facts = country?.wikidata ? placesData?.places[country.wikidata] : undefined;
   const lines: string[] = [];
-  const where = [country?.region, country?.continent].filter(Boolean).join(" · ");
+  const where = [country?.region, country?.continent].filter(Boolean).join(' · ');
   if (where) lines.push(where);
   const basics = [
     facts?.capital ? `Capital ${facts.capital}` : null,
     facts?.population ? `${formatPopulation(facts.population)} people` : null,
   ].filter(Boolean);
-  if (basics.length) lines.push(basics.join(" · "));
-  lines.push(countryEventSummary(iso2) ?? "No events in the current filters");
-  lines.push(`Click for more about ${country?.name ?? "this country"}`);
+  if (basics.length) lines.push(basics.join(' · '));
+  lines.push(countryEventSummary(iso2) ?? 'No events in the current filters');
+  lines.push(`Click for more about ${country?.name ?? 'this country'}`);
   return lines;
 }
 
 /** Opens "About this place" for a label (or a country) and turns the globe to it. */
-function openPlace(label: MapLabel, extra: { where?: string | null; events?: { summary: string; onShow?: () => void } | null } = {}): void {
+function openPlace(
+  label: MapLabel,
+  extra: { where?: string | null; events?: { summary: string; onShow?: () => void } | null } = {},
+): void {
   closePanels();
   app?.select(null);
   const facts = label.wikidata ? placesData?.places[label.wikidata] : undefined;
@@ -476,7 +492,16 @@ function openPlace(label: MapLabel, extra: { where?: string | null; events?: { s
   );
   app?.setCardOpen(true);
   // Closer for small places, never further out than now.
-  const reach: Record<MapLabel["kind"], number> = { ocean: 2.4, country: 1.6, sea: 1.6, range: 1.4, desert: 1.6, peak: 1, river: 1.4, lake: 1 };
+  const reach: Record<MapLabel['kind'], number> = {
+    ocean: 2.4,
+    country: 1.6,
+    sea: 1.6,
+    range: 1.4,
+    desert: 1.6,
+    peak: 1,
+    river: 1.4,
+    lake: 1,
+  };
   app?.flyOver(label.lat, label.lng, Math.min(view.altitude, reach[label.kind]));
 }
 
@@ -487,15 +512,17 @@ function chooseCountry(iso2: string): void {
   const { from, to } = windowOf(filters, Date.now());
   const match = allEvents.find((e) => {
     const time = Date.parse(e.published);
-    return e.geo?.country_code === iso2 && e.geo.continent && e.geo.region && time >= from && time <= to;
+    return (
+      e.geo?.country_code === iso2 && e.geo.continent && e.geo.region && time >= from && time <= to
+    );
   });
   const summary = countryEventSummary(iso2);
   const severity = countrySeverity(events).get(iso2);
   setAccent(severity ? SEVERITY_STYLES[severity].color : null);
   openPlace(countryLabel(country), {
-    where: [country.region, country.continent].filter(Boolean).join(" · "),
+    where: [country.region, country.continent].filter(Boolean).join(' · '),
     events: {
-      summary: summary ?? "No events in the current filters and time window.",
+      summary: summary ?? 'No events in the current filters and time window.',
       onShow:
         summary && match?.geo?.continent && match.geo.region
           ? () => {
@@ -531,13 +558,15 @@ function openCluster(cluster: Cluster, focus: boolean): void {
     openEvent(event, true, () => {
       app?.select(cluster.id);
       setAccent(SEVERITY_STYLES[cluster.severity].color);
-      card.openList(cluster, true, (again) => openEvent(again, true, () => openCluster(cluster, true)));
+      card.openList(cluster, true, (again) =>
+        openEvent(again, true, () => openCluster(cluster, true)),
+      );
     }),
   );
 }
 
 function showList(message: string): void {
-  document.body.classList.add("no-globe");
+  document.body.classList.add('no-globe');
   status.textContent = message;
   status.hidden = false;
   renderEventList(list, events, { onOpen: (event) => card.open(event, true) });
@@ -545,17 +574,18 @@ function showList(message: string): void {
 
 /** The footer's version: build date and commit, linked to that commit on GitHub. */
 function showVersion(): void {
-  const link = byId<HTMLAnchorElement>("version");
+  const link = byId<HTMLAnchorElement>('version');
   link.textContent = `Version ${__BUILD_DATE__} · ${__BUILD_COMMIT__}`;
-  const sha = __BUILD_COMMIT__.replace("+", "");
-  if (/^[0-9a-f]{7}$/.test(sha)) link.href = `https://github.com/KriMaDev/world_news_globe/commit/${sha}`;
+  const sha = __BUILD_COMMIT__.replace('+', '');
+  if (/^[0-9a-f]{7}$/.test(sha))
+    link.href = `https://github.com/KriMaDev/world_news_globe/commit/${sha}`;
 }
 
 async function start(): Promise<void> {
   showVersion();
   startAnalytics();
-  renderLegend(byId("legend"));
-  setupMotionToggle(byId<HTMLButtonElement>("motion-toggle"), (on) => {
+  renderLegend(byId('legend'));
+  setupMotionToggle(byId<HTMLButtonElement>('motion-toggle'), (on) => {
     app?.setReducedMotion(on);
     // Turning reduced motion on also stops the rotation; turning it off leaves it to the
     // Rotate button.
@@ -563,20 +593,20 @@ async function start(): Promise<void> {
   });
 
   // Who reported what (country, ownership, credit lines on cards): extra, loaded alongside.
-  void fetchJson("/data/outlets.json")
+  void fetchJson('/data/outlets.json')
     .then((doc) => setOutletDirectory(parseOutletDirectory(doc)))
-    .catch((error: unknown) => console.warn("Outlet details unavailable:", error));
+    .catch((error: unknown) => console.warn('Outlet details unavailable:', error));
 
   // Each feed's last update and any failure (Headlines panel): extra as well.
-  void fetchJson("/data/feeds.json")
+  void fetchJson('/data/feeds.json')
     .then((doc) => headlines.setFeeds(parseFeeds(doc)))
-    .catch((error: unknown) => console.warn("Feed status unavailable:", error));
+    .catch((error: unknown) => console.warn('Feed status unavailable:', error));
 
   try {
     const loaded = await loadEvents();
     allEvents = loaded.events;
     dataTime = loaded.generated;
-    if (loaded.sample) byId("preview-note").hidden = false;
+    if (loaded.sample) byId('preview-note').hidden = false;
   } catch (error) {
     console.error(error);
     loadFailed = true;
@@ -585,11 +615,11 @@ async function start(): Promise<void> {
   if (startWithHeadlines) headlines.open(false);
 
   if (!hasWebGL()) {
-    showList("This browser cannot show the 3D globe, so the events are listed instead.");
+    showList('This browser cannot show the 3D globe, so the events are listed instead.');
     return;
   }
   try {
-    const { createGlobeApp } = await import("./globe/globe");
+    const { createGlobeApp } = await import('./globe/globe');
     app = await createGlobeApp(container, {
       events,
       reducedMotion: initialReducedMotion(),
@@ -608,22 +638,22 @@ async function start(): Promise<void> {
     });
     showRotation(!initialReducedMotion());
     rotateToggle.hidden = false;
-    rotateToggle.addEventListener("click", () =>
-      app?.setRotating(rotateToggle.getAttribute("aria-pressed") !== "true"),
+    rotateToggle.addEventListener('click', () =>
+      app?.setRotating(rotateToggle.getAttribute('aria-pressed') !== 'true'),
     );
     geoToggle.hidden = false;
-    geoToggle.addEventListener("click", () => void setGeoView(!geoView));
+    geoToggle.addEventListener('click', () => void setGeoView(!geoView));
     if (geoView) void setGeoView(true);
     window.setInterval(updateHud, 30_000);
     attachKeyboard(container, app);
     status.hidden = true;
-    container.classList.add("ready");
+    container.classList.add('ready');
     applyFilters();
     if (loadFailed) notice("Couldn't load the latest events. Please try again in a few minutes.");
-    else if (allEvents.length === 0) notice("No events in the last 7 days.");
+    else if (allEvents.length === 0) notice('No events in the last 7 days.');
   } catch (error) {
     console.error(error);
-    showList("The 3D globe could not start, so the events are listed instead.");
+    showList('The 3D globe could not start, so the events are listed instead.');
   }
 }
 

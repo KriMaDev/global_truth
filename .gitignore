@@ -26,8 +26,9 @@ __pycache__/
 *.pem
 *.key
 
-# Logs
+# Logs and test output
 *.log
+test-results/
 
 # Editor, tool and operating system files
 .claude/

@@ -12,7 +12,7 @@
  * tile has not loaded, so the globe beneath shows through.
  */
 
-import { DoubleSide, ShaderMaterial, Vector2, Vector3, Vector4, type Texture } from "three";
+import { DoubleSide, ShaderMaterial, Vector2, Vector3, Vector4, type Texture } from 'three';
 
 const vertexShader = /* glsl */ `
   varying vec3 vWorldNormal;
@@ -140,9 +140,13 @@ export function createDayNightMaterial(textures: SurfaceTextures): ShaderMateria
  * texel size (so it lights up exactly like the globe), with its own day and night images.
  * `reliefStrength` is lower, since NASA's sharp day tiles already carry relief shading.
  */
-export function createDetailMaterial(base: ShaderMaterial, day: Texture, night: Texture): ShaderMaterial {
+export function createDetailMaterial(
+  base: ShaderMaterial,
+  day: Texture,
+  night: Texture,
+): ShaderMaterial {
   return new ShaderMaterial({
-    defines: { DETAIL: "" },
+    defines: { DETAIL: '' },
     uniforms: {
       dayTexture: { value: day },
       nightTexture: { value: night },
@@ -166,5 +170,7 @@ export function setSunDirection(
   material: ShaderMaterial,
   direction: { x: number; y: number; z: number },
 ): void {
-  (material.uniforms.sunDirection.value as Vector3).set(direction.x, direction.y, direction.z).normalize();
+  (material.uniforms.sunDirection.value as Vector3)
+    .set(direction.x, direction.y, direction.z)
+    .normalize();
 }

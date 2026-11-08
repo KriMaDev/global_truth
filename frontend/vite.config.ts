@@ -1,8 +1,8 @@
-import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { defineConfig } from "vitest/config";
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { defineConfig } from 'vitest/config';
 
-const root = fileURLToPath(new URL(".", import.meta.url));
+const root = fileURLToPath(new URL('.', import.meta.url));
 
 /**
  * The version shown in the footer: the build date and the commit it was built from, with
@@ -12,13 +12,13 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 function version(): { date: string; commit: string } {
   const date = new Date().toISOString().slice(0, 10);
   const git = (...args: string[]): string =>
-    execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
   try {
-    const sha = process.env.GITHUB_SHA ?? git("rev-parse", "HEAD");
-    const dirty = process.env.GITHUB_SHA ? false : git("status", "--porcelain") !== "";
-    return { date, commit: sha.slice(0, 7) + (dirty ? "+" : "") };
+    const sha = process.env.GITHUB_SHA ?? git('rev-parse', 'HEAD');
+    const dirty = process.env.GITHUB_SHA ? false : git('status', '--porcelain') !== '';
+    return { date, commit: sha.slice(0, 7) + (dirty ? '+' : '') };
   } catch {
-    return { date, commit: "unknown" };
+    return { date, commit: 'unknown' };
   }
 }
 
@@ -32,9 +32,9 @@ export default defineConfig({
     __BUILD_COMMIT__: JSON.stringify(commit),
   },
   build: {
-    outDir: "dist",
+    outDir: 'dist',
     emptyOutDir: true,
-    target: "es2022",
+    target: 'es2022',
     // Never inline files as data: URLs: the Content-Security-Policy only allows our own files.
     assetsInlineLimit: 0,
     // three.js is one large library; it is loaded after the page shell, so its size
@@ -51,7 +51,7 @@ export default defineConfig({
   },
   test: {
     // The Worker's timer script (../worker) is tested here too.
-    include: ["src/**/*.test.ts", "../worker/**/*.test.js"],
-    environment: "node",
+    include: ['src/**/*.test.ts', '../worker/**/*.test.js'],
+    environment: 'node',
   },
 });

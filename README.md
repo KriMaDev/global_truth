@@ -5,6 +5,7 @@ An interactive 3D globe of current world events, shown as glowing lights coloure
 **Live:** https://globe.krimadev.com (updated every 30 minutes)
 
 ## Honesty principles
+
 - Every item links to and credits its original source. Headlines are never rewritten.
 - Duplicate stories are grouped, with all their sources shown.
 - Sources span regions and viewpoints. State-affiliated outlets are labelled. The full list is in [docs/sources.md](docs/sources.md).
@@ -14,6 +15,7 @@ An interactive 3D globe of current world events, shown as glowing lights coloure
 - Severity follows the published rules in [docs/severity.md](docs/severity.md), and every event says why it has its level.
 
 ## How it works
+
 A Python pipeline runs every 30 minutes on GitHub Actions, started on time by a Cloudflare Cron Trigger. It reads USGS earthquakes, GDACS disaster alerts and news from a public allowlist of outlets (via GDELT), places, categorizes, rates and groups them, and writes static JSON. The site is plain files on Cloudflare. There is no server to run or pay for. See [docs/architecture.md](docs/architecture.md).
 
 ## Install and run
@@ -45,15 +47,16 @@ Deploying is described in [docs/deploy.md](docs/deploy.md).
 
 ## Project layout
 
-| Part | Path |
-|---|---|
-| Web app | `frontend/` |
-| Data pipeline | `pipeline/` |
-| Docs (sources, severity, categories, deploy) | `docs/` |
-| CI and scheduled updates | `.github/workflows/` |
-| Timer that starts the updates | `worker/` |
+| Part                                         | Path                 |
+| -------------------------------------------- | -------------------- |
+| Web app                                      | `frontend/`          |
+| Data pipeline                                | `pipeline/`          |
+| Docs (sources, severity, categories, deploy) | `docs/`              |
+| CI and scheduled updates                     | `.github/workflows/` |
+| Timer that starts the updates                | `worker/`            |
 
 ## Roadmap
+
 1. ✅ Plan, stack and skeleton, placeholder live (7 Nov 2026)
 2. ✅ Globe with sample events and severity lights (on `main`, not deployed: the live site keeps the placeholder until real data)
 3. ✅ Live data pipeline: USGS, GDACS, GDELT news from 32 allowlisted outlets; places, categories, severity, grouping (live since 7 Nov 2026)
@@ -63,4 +66,5 @@ Deploying is described in [docs/deploy.md](docs/deploy.md).
 7. More sources, monitoring, public API, alerts, languages
 
 ## Licence
+
 Code: [MIT](LICENSE), © 2026 KriMa ([krimadev.com](https://krimadev.com)). News content belongs to its publishers. Data is credited to its sources as listed in [docs/sources.md](docs/sources.md).
