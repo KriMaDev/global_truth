@@ -35,3 +35,6 @@ __pycache__/
 desktop.ini
 Thumbs.db
 .DS_Store
+
+# Owner's private notes and drafts on this PC (e.g. permission emails), never published
+private/
