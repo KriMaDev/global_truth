@@ -24,6 +24,11 @@ export class PressTracker {
     this.starts.delete(id);
   }
 
+  /** Something else (a label) took this tap, so the globe must not act on it too. */
+  cancelTap(): void {
+    this.moved = true;
+  }
+
   /** Whether the latest press was a tap; still answers just after the finger lifts. */
   get wasTap(): boolean {
     return !this.moved;

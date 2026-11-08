@@ -37,6 +37,14 @@ describe('PressTracker', () => {
     expect(press.wasTap).toBe(true);
   });
 
+  it('stops being a tap once something else has taken it', () => {
+    const press = new PressTracker(8);
+    press.down(1, 100, 100);
+    press.up(1);
+    press.cancelTap();
+    expect(press.wasTap).toBe(false);
+  });
+
   it('ignores the same press being reported twice', () => {
     const press = new PressTracker(8);
     press.down(1, 100, 100);

@@ -362,12 +362,6 @@ button {
 
 /* ---------- Geography view: map labels ---------- */
 
-/* touch-action: a drag that starts on a label or badge turns the globe (passDragToGlobe). */
-.map-label,
-.cluster-badge {
-  touch-action: none;
-}
-
 .map-label {
   padding: 0;
   border: 0;
@@ -1738,13 +1732,6 @@ body.page {
     font-size: 0.875rem;
   }
 
-  /* A bigger touch area than the badge shows. */
-  .cluster-badge::after {
-    content: '';
-    position: absolute;
-    inset: -12px -10px;
-  }
-
   .bottom {
     padding: 0.75rem var(--gutter) max(0.5rem, env(safe-area-inset-bottom));
   }
@@ -1968,5 +1955,21 @@ body.page {
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+}
+
+/* Touch screens: labels and badges let every finger through, so the globe can be turned and
+   pinched from anywhere. A real tap is matched to them in globe.ts (labelUnder). */
+@media (any-pointer: coarse) {
+  .map-label,
+  .cluster-badge {
+    pointer-events: none;
+  }
+}
+
+/* No hover on touch screens: the box would stay on at the last finger position. */
+@media (hover: none) {
+  .float-tooltip-kap {
+    display: none !important;
   }
 }

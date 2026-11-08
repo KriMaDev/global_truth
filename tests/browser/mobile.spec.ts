@@ -69,7 +69,8 @@ async function view(page: Page): Promise<[number, number]> {
   ];
 }
 
-/** Centre of a map label that is on top at its spot, away from the screen's edges. */
+/** Centre of a showing map label with only the map under it (labels let fingers through on
+ * touch screens), away from the screen's edges. */
 function visibleLabel(page: Page) {
   return page.evaluate(() => {
     for (const label of document.querySelectorAll<HTMLElement>('.map-label')) {
@@ -78,7 +79,7 @@ function visibleLabel(page: Page) {
       const x = area.x + area.width / 2;
       const y = area.y + area.height / 2;
       if (area.width && x > 60 && x < 260 && y > 200 && y < 520) {
-        if (document.elementFromPoint(x, y) === label) return { x, y };
+        if (document.elementFromPoint(x, y)?.tagName === 'CANVAS') return { x, y };
       }
     }
     return null;
@@ -291,6 +292,59 @@ test('geography: slow gestures open nothing, and a pinch stays centred', async (
   const after = await view(page);
   expect(Math.abs(after[0] - before[0])).toBeLessThan(1);
   expect(Math.abs(after[1] - before[1])).toBeLessThan(1);
+});
+
+test('after a pinch with a finger on a label, one finger still turns the globe', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'The touch tool exists in Chromium and Edge only');
+  test.setTimeout(120_000); // Software graphics here run at a few frames a second.
+  await openGlobe(page, '/?view=geo');
+  await page.locator('#rotate-toggle').click();
+  for (let i = 0; i < 3; i += 1) {
+    await page.locator('#zoom-in').click();
+    await page.waitForTimeout(500);
+  }
+  await expect.poll(() => visibleLabel(page), { timeout: 15_000 }).not.toBeNull();
+  await page.waitForTimeout(1000);
+  const label = await visibleLabel(page);
+  if (!label) throw new Error('No label to press');
+
+  const client = await page.context().newCDPSession(page);
+  const touch = (
+    type: 'touchStart' | 'touchMove' | 'touchEnd',
+    touchPoints: { x: number; y: number; id?: number }[],
+  ) => client.send('Input.dispatchTouchEvent', { type, touchPoints });
+
+  const first = { x: 320, y: 240, id: 1 };
+  await touch('touchStart', [first]);
+  await page.waitForTimeout(40);
+  await touch('touchStart', [first, { ...label, id: 2 }]);
+  for (let i = 1; i <= 20; i += 1) {
+    await touch('touchMove', [
+      { ...first, y: first.y - i * 2 },
+      { x: label.x, y: label.y + i * 2, id: 2 },
+    ]);
+    await page.waitForTimeout(25);
+  }
+  await touch('touchEnd', []);
+  await page.waitForTimeout(1800);
+
+  const altitudeBefore = await altitude(page);
+  const before = await view(page);
+  const start = { x: 80, y: 300, id: 5 };
+  await touch('touchStart', [start]);
+  for (let i = 1; i <= 20; i += 1) {
+    await touch('touchMove', [{ x: start.x + i * 8, y: start.y + i * 3, id: 5 }]);
+    await page.waitForTimeout(25);
+  }
+  await touch('touchEnd', []);
+  await page.waitForTimeout(1800);
+
+  const after = await view(page);
+  expect(Math.abs(after[0] - before[0]) + Math.abs(after[1] - before[1])).toBeGreaterThan(3);
+  expect(await altitude(page)).toBeCloseTo(altitudeBefore, 1);
 });
 
 test.describe('a panel that scrolls', () => {

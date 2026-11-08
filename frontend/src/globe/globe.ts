@@ -193,11 +193,35 @@ function shield(element: HTMLElement): void {
 /** A finger or mouse that moves this far (CSS px) from a label is turning the globe. */
 const DRAG_PX = 8;
 
+/** Smallest area a tap can land in to choose a label or badge (CSS px). */
+const TOUCH_TARGET_PX = 44;
+
+/** The showing label or badge a tap at this point means, nearest first, or null. */
+function labelUnder(container: HTMLElement, x: number, y: number): HTMLElement | null {
+  let nearest: HTMLElement | null = null;
+  let nearestDistance = Infinity;
+  for (const element of container.querySelectorAll<HTMLElement>('.map-label, .cluster-badge')) {
+    if (element.matches('.is-hidden, .is-crowded')) continue;
+    const box = element.getBoundingClientRect();
+    if (!box.width) continue;
+    const dx = Math.abs(x - (box.x + box.width / 2));
+    const dy = Math.abs(y - (box.y + box.height / 2));
+    if (dx > Math.max(box.width, TOUCH_TARGET_PX) / 2) continue;
+    if (dy > Math.max(box.height, TOUCH_TARGET_PX) / 2) continue;
+    const distance = Math.hypot(dx, dy);
+    if (distance < nearestDistance) {
+      nearest = element;
+      nearestDistance = distance;
+    }
+  }
+  return nearest;
+}
+
 /**
- * Labels and badges sit above the globe and would otherwise stop it from being dragged, leaving
- * only the empty map to grab. A press that moves is handed to the globe, as if it had started on
- * the map (the globe's controls then capture the pointer, so no click reaches the label). A
- * press that doesn't move stays an ordinary click.
+ * For the mouse: labels and badges sit above the globe, so a press that moves is handed to it,
+ * as if it had started on the map. A press that doesn't move stays an ordinary click. Touch
+ * screens never come here: labels let fingers through (style.css), because a second finger
+ * handed over like this was never seen lifting, and the globe then counted two fingers for good.
  */
 function passDragToGlobe(element: HTMLElement, down: PointerEvent): void {
   const stop = (): void => {
@@ -367,6 +391,17 @@ export async function createGlobeApp(
   );
   for (const type of ['pointerup', 'pointercancel'] as const) {
     window.addEventListener(type, (event) => press.up(event.pointerId), true);
+  }
+  // On touch screens every finger goes straight to the globe, so a gesture can start anywhere.
+  // A real tap is then matched to the label or badge it landed on.
+  if (window.matchMedia('(any-pointer: coarse)').matches) {
+    renderer.domElement.addEventListener('pointerup', (event) => {
+      if (!press.wasTap) return;
+      const element = labelUnder(container, event.clientX, event.clientY);
+      if (!element) return;
+      press.cancelTap();
+      element.click();
+    });
   }
 
   const pillarCoords = (lat: number, lng: number) => globe.getCoords(lat, lng, LIGHT_ALTITUDE);
@@ -670,11 +705,9 @@ export async function createGlobeApp(
   const clampAltitude = (altitude: number): number =>
     Math.max(minAltitude, Math.min(MAX_ALTITUDE, altitude));
 
-  // A pinch zooms straight in. globe.gl's zoom towards the fingers fights its own rule that the
-  // camera always faces the centre, which made the view wander; the mouse wheel keeps it.
-  renderer.domElement.addEventListener('pointerdown', (event) => {
-    controls.zoomToCursor = event.pointerType !== 'touch';
-  });
+  // Zoom goes straight in and out. globe.gl's zoom towards the pointer fights its own rule that
+  // the camera always faces the centre: a pinch made the view wander, and the wheel got stuck.
+  controls.zoomToCursor = false;
   controls.addEventListener('start', () => detail.setGesturing(true));
   controls.addEventListener('end', () => detail.setGesturing(false));
 
