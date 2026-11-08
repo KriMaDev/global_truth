@@ -1,13 +1,17 @@
 name: Update data and deploy
 
-# Every 30 minutes: run the pipeline, build the site with the fresh data, deploy to
-# Cloudflare. Switched off until the repository variable LIVE is "true" (Settings ->
-# Secrets and variables -> Actions -> Variables), so nothing goes public by accident.
+# Run the pipeline, build the site with the fresh data, deploy to Cloudflare. Switched off
+# until the repository variable LIVE is "true" (Settings -> Secrets and variables -> Actions ->
+# Variables), so nothing goes public by accident.
+#
+# What starts it: Cloudflare's Cron Trigger at minutes 7 and 37 (worker/index.js sends a
+# workflow_dispatch), because GitHub's own scheduler often starts runs late or not at all.
+# GitHub's schedule below is only a backup in case the timer fails: it runs every 3 hours and
+# stops early when the data on the site is fresh anyway.
 
 on:
   schedule:
-    # Minutes 7 and 37, away from the top of the hour when GitHub's scheduler is busiest.
-    - cron: "7,37 * * * *"
+    - cron: "52 */3 * * *"
   workflow_dispatch:
 
 permissions:
@@ -19,8 +23,47 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  update:
+  # The backup schedule only runs the update when the live data is 40 minutes old or more
+  # (or can't be read). Runs started by the timer or by hand always go ahead.
+  check:
     if: vars.LIVE == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      run: ${{ steps.age.outputs.run }}
+    steps:
+      - name: How old is the live data?
+        id: age
+        env:
+          EVENT: ${{ github.event_name }}
+        shell: python
+        run: |
+          import json, os, urllib.request
+          from datetime import datetime, timezone
+
+          run = "true"
+          if os.environ["EVENT"] == "schedule":
+              try:
+                  request = urllib.request.Request(
+                      "https://globe.krimadev.com/data/feeds.json",
+                      headers={"User-Agent": "world-news-globe-update-check"},
+                  )
+                  with urllib.request.urlopen(request, timeout=20) as response:
+                      generated = json.load(response)["generated"]
+                  moment = datetime.fromisoformat(generated.replace("Z", "+00:00"))
+                  minutes = (datetime.now(timezone.utc) - moment).total_seconds() / 60
+                  print(f"Live data is {minutes:.0f} minutes old.")
+                  if minutes < 40:
+                      run = "false"
+                      print("Fresh enough: the timer is working, so this backup run stops.")
+              except Exception as error:
+                  print(f"Couldn't read the live data ({error}); updating.")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"run={run}\n")
+
+  update:
+    needs: check
+    if: needs.check.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

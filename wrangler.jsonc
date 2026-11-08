@@ -1,14 +1,21 @@
-// Cloudflare Workers static assets: the site is plain files, no server code.
-// Deployed the same way as krimadev.com (see docs/deploy.md).
+// Cloudflare Workers static assets, plus a small script (worker/index.js) whose only job is
+// the timer below. Deployed the same way as krimadev.com (see docs/deploy.md).
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "world-news-globe",
   "compatibility_date": "2026-10-01",
+  "main": "worker/index.js",
   "assets": {
-    // Output of `npm run build`.
+    // Output of `npm run build`. Files are served before the script runs.
     "directory": "./frontend/dist",
+    "binding": "ASSETS",
     "not_found_handling": "404-page"
   },
+  // Cron Trigger: at minutes 7 and 37 the script asks GitHub to start the data update
+  // (.github/workflows/update.yml). Needs the secret GITHUB_TOKEN (docs/deploy.md).
+  "triggers": { "crons": ["7,37 * * * *"] },
+  // Logs in the Cloudflare dashboard, to see that each timer run reached GitHub.
+  "observability": { "enabled": true },
   // A custom domain route: Cloudflare creates the DNS record and certificate itself.
   "routes": [{ "pattern": "globe.krimadev.com", "custom_domain": true }],
   // No second copy of the site on *.workers.dev.
