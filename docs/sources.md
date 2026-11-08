@@ -26,6 +26,19 @@ Every source is checked before it is added: it must be free, and its terms must 
 | Outlet RSS feeds (tags for categories) | Editorial tags or section feeds, to categorize items by the outlet's own label | Checked 2026-11-08: The Guardian's Open Platform terms forbid "text and data aggregation, analysis or mining"; NPR: personal, non-commercial only; CBC: an agreement needed beyond private use; BBC: no current terms found. Used only with written permission, outlet by outlet (permission email drafted 2026-11-08) | – | Not used; permission to be asked |
 | Outlet RSS feeds (with snippets) | Headlines and snippets | Most outlets' RSS terms say "personal, non-commercial use" or are unclear (BBC, The Guardian, Al Jazeera, DW checked 2026-11-07), and the EU press publishers' right can cover snippets. Added one outlet at a time once its terms or a written permission allow it | News report | Not used yet |
 
+### Permission contacts (checked 2026-11-08)
+
+Where to ask an outlet for permission (feed tags for categories, snippets). Only routes published on the outlet's own site; asked from hello@krimadev.com. Record each answer here.
+
+| Outlet | Route | Found on | Asked | Answer |
+|---|---|---|---|---|
+| BBC News | carriage.enquiries@bbc.co.uk ("Apply for a metadata licence"; the BBC says metadata from its feeds may not be used without one) | [Can I use BBC content?](https://www.bbc.co.uk/usingthebbc/terms/can-i-use-bbc-content) | – | – |
+| The Guardian | licensing@theguardian.com (Guardian Licensing) | [licensing.theguardian.com](https://licensing.theguardian.com/) | – | – |
+| NPR | permissions@npr.org, or the Copyright-Permissions form | [Rights and permissions](https://www.npr.org/about-npr/179881519/rights-and-permissions-information) | – | – |
+| CBC News | No email published: Help Centre, "Using or licensing CBC content" (Sales, Licensing and Partnership) | [CBC Help Centre](https://cbchelp.cbc.ca/hc/en-ca/sections/203864688-Using-or-licensing-CBC-content) | – | – |
+| DW | No email published: corporate contact page | [DW contact](https://corporate.dw.com/en/contact/s-30606) | – | – |
+| ABC News (Australia) | No suitable email published (LibrarySales is for archive footage): ABC contact form | [ABC contact](https://www.abc.net.au/contact/) | – | – |
+
 ### Outlet allowlist
 
 Only articles from these outlets appear. GDELT reads far more sites; the allowlist keeps to established newsrooms across regions and viewpoints, including state-affiliated outlets, which are labelled.
