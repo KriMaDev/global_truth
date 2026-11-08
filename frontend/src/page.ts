@@ -1,4 +1,4 @@
-/** The legal page: the site's fonts and styles, and the build version. */
+/** The document pages (About, Sources, Legal): the site's fonts and styles, and the build version. */
 
 import "@fontsource/michroma/400.css";
 import "@fontsource/hanken-grotesk/400.css";

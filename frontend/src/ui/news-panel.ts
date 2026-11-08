@@ -43,6 +43,9 @@ export interface NewsPanel {
 
 type SortOrder = "severity" | "newest";
 
+/** The latest events failed to load, but older day files did. */
+const PARTIAL_DATA = "The latest events couldn't be loaded, so these may be older.";
+
 const COMPARE: Record<SortOrder, (a: GlobeEvent, b: GlobeEvent) => number> = {
   severity: compareBySeverity,
   newest: compareByNewest,
@@ -131,7 +134,8 @@ export function createNewsPanel(
     updated.textContent = fresh.updated;
     details.textContent = fresh.details;
     details.hidden = fresh.details === "";
-    warnings.replaceChildren(...fresh.warnings.map((line) => el("p", "news-warning", line)));
+    const lines = view.failed && view.events.length > 0 ? [PARTIAL_DATA, ...fresh.warnings] : fresh.warnings;
+    warnings.replaceChildren(...lines.map((line) => el("p", "news-warning", line)));
     for (const time of body.querySelectorAll("time")) {
       time.textContent = relativeTime(time.dateTime, now);
     }

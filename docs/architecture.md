@@ -31,7 +31,7 @@ Cloudflare Workers static assets @ globe.krimadev.com
 | Data pipeline (Python 3.13) | `pipeline/globe_pipeline/`, tests in `pipeline/tests/` |
 | Data-building tools (gazetteer, M49 table) | `pipeline/tools/` |
 | Asset-building tools (Earth textures; Natural Earth lines, countries and labels) | `tools/build_textures.py`, `tools/build_geo.py` |
-| Legal & sources page (second page of the Vite build) | `frontend/legal/index.html`, `frontend/src/legal.ts` |
+| About, Sources and Legal pages (extra pages of the Vite build; Sources adds live feed status and outlet counts) | `frontend/about/`, `frontend/sources/`, `frontend/legal/`, `frontend/src/page.ts`, `frontend/src/sources.ts` |
 | Docs | `docs/` |
 | CI and scheduled updates | `.github/workflows/ci.yml`, `.github/workflows/update.yml` |
 | Hosting config | `wrangler.jsonc`, `frontend/public/_headers` |

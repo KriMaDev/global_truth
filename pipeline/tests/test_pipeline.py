@@ -215,19 +215,20 @@ def test_load_previous_skips_damaged_entries(tmp_path) -> None:
 
 
 @pytest.mark.parametrize("outlet", OUTLETS, ids=lambda o: o.name)
-def test_every_outlet_is_on_the_legal_page(outlet) -> None:
-    page = (REPO / "frontend" / "legal" / "index.html").read_text(encoding="utf-8")
+def test_every_outlet_is_on_the_sources_page(outlet) -> None:
+    page = (REPO / "frontend" / "sources" / "index.html").read_text(encoding="utf-8")
     label = {
-        "state": "State-affiliated",
+        "state": '<span class="badge-state">State-affiliated</span>',
         "public": "Public",
         "private": "Private",
         "intergovernmental": "Intergovernmental",
     }[outlet.ownership]
     row = (
         f'<tr id="outlet-{outlet_slug(outlet.name)}"><td>{outlet.name}</td>'
-        f"<td>{outlet.domains[0]}</td><td>{outlet.country}</td><td>{label}</td></tr>"
+        f"<td>{outlet.domains[0]}</td><td>{outlet.country}</td><td>{outlet.region}</td>"
+        f"<td>{label}</td><td data-count>–</td></tr>"
     )
-    assert row in page, f"{outlet.name} missing or mislabelled on the legal page"
+    assert row in page, f"{outlet.name} missing or mislabelled on the sources page"
 
 
 def test_outlet_slugs_are_unique() -> None:

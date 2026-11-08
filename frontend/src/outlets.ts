@@ -32,7 +32,7 @@ export interface OutletDirectory {
 }
 
 /** Where the outlet table is (each row has the id "outlet-<slug>"). */
-export const OUTLET_TABLE = "/legal/";
+export const OUTLET_TABLE = "/sources/";
 
 const OWNERSHIPS = ["state", "public", "private", "intergovernmental"];
 

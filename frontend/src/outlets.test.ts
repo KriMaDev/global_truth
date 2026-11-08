@@ -24,7 +24,7 @@ describe("outlet directory", () => {
   it("describes an outlet by country and ownership, linked to its row", () => {
     expect(sourceDetails({ name: "BBC News", url: "https://bbc.co.uk/x" }, dir)).toEqual({
       text: "United Kingdom · Public",
-      href: "/legal/#outlet-bbc-news",
+      href: "/sources/#outlet-bbc-news",
     });
     // State-affiliated has its own badge.
     expect(sourceDetails({ name: "Xinhua", url: "https://x" }, dir)?.text).toBe("China");

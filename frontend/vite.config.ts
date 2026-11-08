@@ -44,6 +44,8 @@ export default defineConfig({
       input: {
         main: `${root}index.html`,
         legal: `${root}legal/index.html`,
+        about: `${root}about/index.html`,
+        sources: `${root}sources/index.html`,
       },
     },
   },

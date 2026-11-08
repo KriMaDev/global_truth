@@ -1371,7 +1371,7 @@ a.card-source-meta:focus-visible {
   letter-spacing: 0.03em;
 }
 
-/* ---------- Document pages (legal) ---------- */
+/* ---------- Document pages (About, Sources, Legal) ---------- */
 
 body.page {
   overflow: auto;
@@ -1398,6 +1398,84 @@ body.page {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+.doc-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: 0 0 1rem;
+  font: 400 0.75rem/1.5 var(--ff-mono);
+  letter-spacing: 0.06em;
+}
+
+.doc-nav a[aria-current="page"] {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.doc section {
+  scroll-margin-top: 1rem;
+}
+
+.doc li + li,
+.doc ol li + li {
+  margin-top: 0.4rem;
+}
+
+.doc ol {
+  padding-left: 1.4rem;
+}
+
+.doc-level {
+  white-space: nowrap;
+}
+
+.doc-level .card-dot {
+  display: inline-block;
+  margin-right: 0.45rem;
+}
+
+.sev-critical {
+  --dot-color: var(--sev-critical);
+}
+
+.sev-high {
+  --dot-color: var(--sev-high);
+}
+
+.sev-moderate {
+  --dot-color: var(--sev-moderate);
+}
+
+.sev-low {
+  --dot-color: var(--sev-low);
+}
+
+.doc-failed {
+  color: var(--ember);
+  font-weight: 600;
+}
+
+.doc-table .badge-state {
+  white-space: nowrap;
+}
+
+#feed-warnings:not(:empty) {
+  margin-bottom: 0.75rem;
+}
+
+.doc-table tr {
+  scroll-margin-top: 1rem;
+}
+
+/* The outlet a card linked to. */
+.doc-table tr:target td {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.doc-updated a {
+  color: inherit;
 }
 
 .doc-back,
