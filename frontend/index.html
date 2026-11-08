@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>World News Globe</title>
+    <title>World News Globe: current world events on a 3D globe</title>
     <meta
       name="description"
       content="Current world events on an interactive 3D globe, coloured by severity, each linked to its original source."
@@ -11,6 +11,57 @@
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#05070a" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://globe.krimadev.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="World News Globe" />
+    <meta property="og:title" content="World News Globe" />
+    <meta property="og:description" content="Current world events on an interactive 3D globe, coloured by severity, each linked to its original source." />
+    <meta property="og:url" content="https://globe.krimadev.com/" />
+    <meta property="og:image" content="https://globe.krimadev.com/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "name": "World News Globe",
+            "url": "https://globe.krimadev.com/",
+            "description": "Current world events on an interactive 3D globe, coloured by severity, each linked to its original source.",
+            "publisher": {
+              "@type": "Organization",
+              "name": "KriMa Development",
+              "url": "https://krimadev.com"
+            }
+          },
+          {
+            "@type": "Dataset",
+            "name": "World News Globe events",
+            "description": "Current world events from USGS, GDACS and allowlisted news outlets via GDELT, with place, categories, and severity by published rules. Updated every 30 minutes; covers the last 72 hours.",
+            "url": "https://globe.krimadev.com/sources/",
+            "license": "https://globe.krimadev.com/sources/",
+            "creator": {
+              "@type": "Organization",
+              "name": "KriMa Development",
+              "url": "https://krimadev.com"
+            },
+            "isBasedOn": [
+              "https://earthquake.usgs.gov/earthquakes/feed/",
+              "https://www.gdacs.org/",
+              "https://www.gdeltproject.org/"
+            ],
+            "spatialCoverage": "Earth",
+            "distribution": {
+              "@type": "DataDownload",
+              "encodingFormat": "application/json",
+              "contentUrl": "https://globe.krimadev.com/data/events.json"
+            }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <header class="topbar">
@@ -30,6 +81,15 @@
         >
           <span class="view-option" data-view="news">News</span
           ><span class="view-option" data-view="geo">Geography</span>
+        </button>
+        <button
+          id="news-toggle"
+          class="motion-toggle glass"
+          type="button"
+          aria-expanded="false"
+          aria-controls="news-panel"
+        >
+          Headlines
         </button>
         <button
           id="filter-toggle"
@@ -61,6 +121,12 @@
         severe first: each one is shown on the globe, and Enter opens it.
       </p>
       <p id="status" class="status" role="status">Loading the globe…</p>
+      <noscript>
+        <p class="status notice">
+          The 3D globe needs JavaScript.
+          <a href="/news/">Read the current events as plain text</a>.
+        </p>
+      </noscript>
       <nav id="event-list" class="event-list" aria-label="Events, most severe first"></nav>
       <aside
         id="event-card"
@@ -91,6 +157,25 @@
         <div class="chips" role="group" aria-label="Severity" data-filter="severities"></div>
         <button type="button" class="card-back filter-clear" data-filter="clear">Clear filters</button>
       </section>
+      <section id="news-panel" class="news-panel glass" aria-labelledby="news-title" hidden>
+        <div class="filter-head">
+          <h2 id="news-title" class="label" tabindex="-1" data-news="title">Headlines</h2>
+          <button type="button" class="card-close" data-news="close" aria-label="Close headlines">
+            ×
+          </button>
+        </div>
+        <p class="news-count" data-news="count" aria-live="polite"></p>
+        <p class="news-updated" data-news="updated"></p>
+        <p class="news-updated" data-news="details" hidden></p>
+        <div data-news="warnings"></div>
+        <div class="chips news-sort" role="group" aria-label="Sort the headlines">
+          <button type="button" class="chip" data-news="sort-severity">Most severe first</button>
+          <button type="button" class="chip" data-news="sort-newest">Newest first</button>
+        </div>
+        <div class="news-body" data-news="body">
+          <p class="news-empty">Loading the headlines…</p>
+        </div>
+      </section>
     </main>
 
     <footer class="bottom">
@@ -104,7 +189,10 @@
         </div>
         <p class="credits">
           Created by <a class="maker" href="https://krimadev.com">KriMa Development</a> ·
-          <a href="/legal/">Legal &amp; sources</a> ·
+          <a href="/about/">About</a> ·
+          <a href="/sources/">Sources</a> ·
+          <a href="/legal/">Legal</a> ·
+          <a href="/news/">Text version</a> ·
           <a href="https://github.com/KriMaDev/global_truth">Source code</a> ·
           <a id="version" href="https://github.com/KriMaDev/global_truth">Version</a>
         </p>

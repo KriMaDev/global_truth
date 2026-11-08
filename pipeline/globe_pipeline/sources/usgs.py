@@ -15,6 +15,9 @@ from . import REMOTE
 ID = "usgs"
 NAME = "USGS Earthquake Hazards Program"
 HOMEPAGE = "https://earthquake.usgs.gov/earthquakes/feed/"
+#: The source name on events, and the credit the provider asks for (docs/sources.md).
+SOURCE = "USGS"
+CREDIT = "U.S. Geological Survey"
 FEEDS = (
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson",
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_week.geojson",
@@ -61,7 +64,7 @@ def parse(collections: list[dict[str, Any]], gazetteer: Gazetteer, now: datetime
                 hazard="EQ",
                 published=published,
                 first_seen=now,
-                sources=[Source("USGS", props["url"])],
+                sources=[Source(SOURCE, props["url"])],
                 geo=gazetteer.reverse(float(lat), float(lng)) or REMOTE,
                 location_method="source",
             )

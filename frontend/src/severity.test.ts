@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import severityDocs from "../../docs/severity.md?raw";
 import { PULSE_AMOUNT, pulseScale, SEVERITY_STYLES } from "./severity";
 import { SEVERITIES } from "./types";
-import { pulseLabel } from "./ui/legend";
 
 describe("severity styles", () => {
   it("has a style for every level, and only those", () => {
@@ -23,12 +22,11 @@ describe("severity styles", () => {
   });
 
   it("pulses faster with severity, matching the docs: none, slow, medium, fast", () => {
-    expect(SEVERITIES.map((level) => pulseLabel(SEVERITY_STYLES[level].pulseSeconds))).toEqual([
-      "steady",
-      "slow pulse",
-      "pulse",
-      "fast pulse",
-    ]);
+    const [low, ...others] = SEVERITIES.map((level) => SEVERITY_STYLES[level].pulseSeconds);
+    expect(low).toBeNull();
+    const speeds = others as number[];
+    expect([...speeds].sort((a, b) => b - a)).toEqual(speeds);
+    expect(new Set(speeds).size).toBe(3);
   });
 
   it("draws rings for high and critical only", () => {

@@ -98,8 +98,15 @@ export function toQuery(state: FilterState): string {
   return query ? `?${query}` : "";
 }
 
-/** A list from the address; "none" means none chosen, and a list with no valid value at all
- * (a broken link) falls back to everything rather than an empty globe. */
+/** Adds the page's own switches to a filter query ("?cat=war" → "?cat=war&view=geo&list=1"). */
+export function withPageState(query: string, page: { geo: boolean; list: boolean }): string {
+  const extras = [page.geo ? "view=geo" : "", page.list ? "list=1" : ""].filter(Boolean);
+  if (extras.length === 0) return query;
+  return `${query ? `${query}&` : "?"}${extras.join("&")}`;
+}
+
+/** A list from the address; "none" means none chosen, and a missing list or one with no valid
+ * value at all (a broken link) gives everything rather than an empty globe. */
 function listFrom<T extends string>(value: string | null, allowed: readonly T[]): Set<T> {
   if (value === null) return new Set(allowed);
   if (value === "none") return new Set();

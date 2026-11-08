@@ -13,16 +13,23 @@ Only these outlets appear on the globe. Every outlet is listed publicly in docs/
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Any
 from urllib.parse import urlsplit
 
 #: At most this many news events per outlet per UTC day (the most severe, most
 #: widely reported and newest are kept), so no single outlet dominates the globe.
 MAX_EVENTS_PER_OUTLET = 15
+#: Sport-only events have their own, smaller allowance per outlet per UTC day, counted
+#: apart from the news, so sport never pushes news off the globe.
+MAX_SPORT_EVENTS_PER_OUTLET = 5
 
-#: URL paths that are not news reports (sport, audio, video, culture, live pages).
+#: URL paths of outlets' sport sections: kept, and categorized as Sport only.
+SPORT_PATHS = ("/sport", "/football")
+
+#: URL paths that are not news reports (audio, video, culture, live pages).
 COMMON_EXCLUDED_PATHS = (
-    "/sport",
     "/sounds/",
     "/podcast",
     "/video",
@@ -37,7 +44,6 @@ COMMON_EXCLUDED_PATHS = (
     "/lifestyle",
     "/travel",
     "/food",
-    "/football",
     "/opinion",
     "/commentisfree",
     "/lifeandstyle",
@@ -50,6 +56,8 @@ COMMON_EXCLUDED_PATHS = (
     "/games",
     "/crosswords",
     "/shopping",
+    "/promoted",
+    "/sponsored",
     "/recipes",
     "/horoscope",
     "/puzzles",
@@ -235,6 +243,42 @@ OUTLETS: tuple[Outlet, ...] = (
 )
 
 
+#: How ownership is written for visitors (cards, the outlet table).
+OWNERSHIP_LABELS = {
+    "state": "State-affiliated",
+    "public": "Public",
+    "private": "Private",
+    "intergovernmental": "Intergovernmental",
+}
+
+
+def outlet_slug(name: str) -> str:
+    """The outlet's anchor on the outlet table, e.g. "BBC News" -> "bbc-news"."""
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+def outlets_document(source_names: Iterable[list[str]]) -> list[dict[str, Any]]:
+    """Every outlet for data/outlets.json, with how many published events it reports
+    (`source_names`: the source names of each event)."""
+    counts: dict[str, int] = {}
+    for names in source_names:
+        for name in set(names):
+            counts[name] = counts.get(name, 0) + 1
+    return [
+        {
+            "name": outlet.name,
+            "slug": outlet_slug(outlet.name),
+            "domain": outlet.domains[0],
+            "country": outlet.country,
+            "region": outlet.region,
+            "ownership": outlet.ownership,
+            "ownership_label": OWNERSHIP_LABELS[outlet.ownership],
+            "events": counts.get(outlet.name, 0),
+        }
+        for outlet in OUTLETS
+    ]
+
+
 def _host_matches(host: str, domain: str) -> bool:
     return host == domain or host.endswith("." + domain)
 
@@ -253,6 +297,12 @@ def outlet_for_url(url: str) -> Outlet | None:
             return None
         return outlet
     return None
+
+
+def is_sport_page(url: str) -> bool:
+    """Whether `url` is in an outlet's sport section (see SPORT_PATHS)."""
+    path = urlsplit(url).path.lower()
+    return any(sport in path for sport in SPORT_PATHS)
 
 
 # " | Name", " - Name", " : Name", or a dash with no space before it ("...says-Xinhua").

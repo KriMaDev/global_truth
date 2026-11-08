@@ -8,10 +8,11 @@ from pathlib import Path
 
 import pytest
 
+from globe_pipeline import cluster as cluster_module
 from globe_pipeline import run as run_module
 from globe_pipeline.cluster import cluster, headline_words, similarity
 from globe_pipeline.models import Event, Geo, Source
-from globe_pipeline.outlets import OUTLETS
+from globe_pipeline.outlets import OUTLETS, outlet_slug
 from globe_pipeline.output import load_previous, within_window, write
 from globe_pipeline.severity import Severity
 
@@ -110,6 +111,29 @@ def test_outlet_balance_is_per_day(now) -> None:
     assert sorted(e.id[0] for e in kept) == ["t", "t", "y", "y"]
 
 
+def test_category_basis_survives_json_and_grouping(now) -> None:
+    a = replace(news("a", "Sample story one", "dw", now), category_basis={"war": "headline"})
+    again = Event.from_json(json.loads(json.dumps(a.to_json())))
+    assert again.category_basis == {"war": "headline"}
+    b = replace(
+        news("b", "Sample story two", "bbc", now),
+        categories=["war", "economic"],
+        category_basis={"war": "topics", "economic": "section:business"},
+    )
+    merged = cluster_module.merge(a, b)
+    assert merged.category_basis == {"war": "headline", "economic": "section:business"}
+
+
+def test_sport_has_its_own_allowance(now) -> None:
+    stories = [news(f"n{i}", f"News story {i} unique words", "bbc", now, i) for i in range(3)]
+    sport = [
+        replace(news(f"s{i}", f"Sport story {i} other words", "bbc", now, i), categories=["sport"])
+        for i in range(4)
+    ]
+    kept = run_module.balance_outlets(stories + sport, limit=2, sport_limit=1)
+    assert sorted(e.id[0] for e in kept) == ["n", "n", "s"]
+
+
 def test_day_files_and_index(tmp_path, now) -> None:
     events = [
         news("a", "Story published today", "dw", now, 60),
@@ -191,19 +215,50 @@ def test_load_previous_skips_damaged_entries(tmp_path) -> None:
 
 
 @pytest.mark.parametrize("outlet", OUTLETS, ids=lambda o: o.name)
-def test_every_outlet_is_on_the_legal_page(outlet) -> None:
-    page = (REPO / "frontend" / "legal" / "index.html").read_text(encoding="utf-8")
+def test_every_outlet_is_on_the_sources_page(outlet) -> None:
+    page = (REPO / "frontend" / "sources" / "index.html").read_text(encoding="utf-8")
     label = {
-        "state": "State-affiliated",
+        "state": '<span class="badge-state">State-affiliated</span>',
         "public": "Public",
         "private": "Private",
         "intergovernmental": "Intergovernmental",
     }[outlet.ownership]
     row = (
-        f"<tr><td>{outlet.name}</td><td>{outlet.domains[0]}</td>"
-        f"<td>{outlet.country}</td><td>{label}</td></tr>"
+        f'<tr id="outlet-{outlet_slug(outlet.name)}"><td>{outlet.name}</td>'
+        f"<td>{outlet.domains[0]}</td><td>{outlet.country}</td><td>{outlet.region}</td>"
+        f"<td>{label}</td><td data-count>–</td></tr>"
     )
-    assert row in page, f"{outlet.name} missing or mislabelled on the legal page"
+    assert row in page, f"{outlet.name} missing or mislabelled on the sources page"
+
+
+def test_outlet_slugs_are_unique() -> None:
+    slugs = [outlet_slug(o.name) for o in OUTLETS]
+    assert len(set(slugs)) == len(slugs)
+    assert outlet_slug("ABC News (Australia)") == "abc-news-australia"
+
+
+def test_outlets_json_lists_every_outlet_with_counts(tmp_path, now) -> None:
+    events = [
+        news("a", "Sample story one", "BBC News", now),
+        replace(
+            news("b", "Sample story two", "DW", now),
+            sources=[
+                Source("DW", "https://dw.example/b"),
+                Source("BBC News", "https://bbc.example/b"),
+            ],
+        ),
+    ]
+    providers = [{"name": "USGS", "credit": "U.S. Geological Survey", "homepage": "https://x"}]
+    write(tmp_path, events, [], now, None, providers)
+    doc = json.loads((tmp_path / "outlets.json").read_text(encoding="utf-8"))
+    by_name = {o["name"]: o for o in doc["outlets"]}
+    assert len(by_name) == len(OUTLETS)
+    assert by_name["BBC News"]["events"] == 2
+    assert by_name["DW"]["events"] == 1
+    assert by_name["BBC News"]["slug"] == "bbc-news"
+    assert by_name["BBC News"]["ownership_label"] == "Public"
+    assert by_name["Xinhua"]["ownership_label"] == "State-affiliated"
+    assert doc["providers"] == providers
 
 
 @pytest.mark.parametrize("outlet", OUTLETS, ids=lambda o: o.name)

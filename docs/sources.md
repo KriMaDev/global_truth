@@ -1,6 +1,6 @@
 # Sources
 
-Every source is checked before it is added: it must be free, and its terms must allow what we show. Each row records when that check was made. The public [Legal & sources page](https://globe.krimadev.com/legal/) (`frontend/legal/index.html`) lists them for visitors, and tests keep the outlet tables here and on that page in step with `pipeline/globe_pipeline/outlets.py`.
+Every source is checked before it is added: it must be free, and its terms must allow what we show. Each row records when that check was made. The public [Sources page](https://globe.krimadev.com/sources/) (`frontend/sources/index.html`) lists them for visitors, and tests keep the outlet tables here and on that page in step with `pipeline/globe_pipeline/outlets.py`.
 
 **Labels shown in the app**
 - **Data feed:** structured data from a scientific or official body (USGS, GDACS).
@@ -23,7 +23,21 @@ Every source is checked before it is added: it must be free, and its terms must 
 |---|---|---|---|---|
 | [GDELT Project](https://www.gdeltproject.org/) | Global Knowledge Graph, 15-minute files: article headline, link, outlet, places mentioned (with coordinates) and themes. Only the allowlisted outlets below | Unlimited, unrestricted use; must credit and link the GDELT Project ([about](https://www.gdeltproject.org/about.html), 2026-11-07) | News report, machine-coded location | Live (M3), every 30 min |
 | [ReliefWeb API v2](https://apidoc.reliefweb.int/) (UN OCHA) | Humanitarian reports | Free; needs a pre-approved `appname` (enforced since 2025-11-01); content stays owned by the original publishers (2026-11-07) | News report | Planned (M7), needs app name |
+| Outlet RSS feeds (tags for categories) | Editorial tags or section feeds, to categorize items by the outlet's own label | Checked 2026-11-08: The Guardian's Open Platform terms forbid "text and data aggregation, analysis or mining"; NPR: personal, non-commercial only; CBC: an agreement needed beyond private use; BBC: no current terms found. Used only with written permission, outlet by outlet (permission email drafted 2026-11-08) | – | Not used; permission to be asked |
 | Outlet RSS feeds (with snippets) | Headlines and snippets | Most outlets' RSS terms say "personal, non-commercial use" or are unclear (BBC, The Guardian, Al Jazeera, DW checked 2026-11-07), and the EU press publishers' right can cover snippets. Added one outlet at a time once its terms or a written permission allow it | News report | Not used yet |
+
+### Permission contacts (checked 2026-11-08)
+
+Where to ask an outlet for permission (feed tags for categories, snippets). Only routes published on the outlet's own site; asked from hello@krimadev.com. Record each answer here.
+
+| Outlet | Route | Found on | Asked | Answer |
+|---|---|---|---|---|
+| BBC News | carriage.enquiries@bbc.co.uk ("Apply for a metadata licence"; the BBC says metadata from its feeds may not be used without one) | [Can I use BBC content?](https://www.bbc.co.uk/usingthebbc/terms/can-i-use-bbc-content) | – | – |
+| The Guardian | licensing@theguardian.com (Guardian Licensing) | [licensing.theguardian.com](https://licensing.theguardian.com/) | – | – |
+| NPR | permissions@npr.org, or the Copyright-Permissions form | [Rights and permissions](https://www.npr.org/about-npr/179881519/rights-and-permissions-information) | – | – |
+| CBC News | No email published: Help Centre, "Using or licensing CBC content" (Sales, Licensing and Partnership) | [CBC Help Centre](https://cbchelp.cbc.ca/hc/en-ca/sections/203864688-Using-or-licensing-CBC-content) | – | – |
+| DW | No email published: corporate contact page | [DW contact](https://corporate.dw.com/en/contact/s-30606) | – | – |
+| ABC News (Australia) | No suitable email published (LibrarySales is for archive footage): ABC contact form | [ABC contact](https://www.abc.net.au/contact/) | – | – |
 
 ### Outlet allowlist
 
@@ -35,7 +49,7 @@ Only articles from these outlets appear. GDELT reads far more sites; the allowli
 - **Private:** privately owned (companies, trusts, non-profits).
 - **Intergovernmental:** the news service of an intergovernmental organisation.
 
-**Balance:** at most 15 news events led by any one outlet per UTC day (the most severe, most widely reported and newest are kept). Without it, one prolific outlet can cover a country in lights.
+**Balance:** at most 15 news events led by any one outlet per UTC day (the most severe, most widely reported and newest are kept). Without it, one prolific outlet can cover a country in lights. Sport-only events have their own allowance of 5 per outlet per day, so they never push news out.
 
 | Outlet | Domain | Country | Ownership |
 |---|---|---|---|
@@ -72,7 +86,9 @@ Only articles from these outlets appear. GDELT reads far more sites; the allowli
 | ABC News (Australia) | abc.net.au | Australia | Public |
 | UN News | news.un.org | International | Intergovernmental |
 
-**What is left out:** sport, culture, lifestyle, shopping, opinion, podcasts, video and live pages (by URL path), and articles in none of the five categories. For the English edition only: DW, France 24, RFI, Meduza, Anadolu Agency and NHK World. The Hindu's city pages are left out.
+**Sport:** articles from outlets' sport sections (`/sport`, `/football`) are kept as **Sport** (see `docs/categories.md`), at most 5 Sport-only events per outlet per UTC day, counted apart from the 15 news events.
+
+**What is left out:** culture, lifestyle, shopping, opinion, podcasts, video and live pages (by URL path), and articles in none of the eleven categories. For the English edition only: DW, France 24, RFI, Meduza, Anadolu Agency and NHK World. The Hindu's city pages are left out.
 
 ## Reference data
 
@@ -80,8 +96,8 @@ Only articles from these outlets appear. GDELT reads far more sites; the allowli
 |---|---|---|
 | [GeoNames](https://www.geonames.org/) (`cities15000`, `countryInfo`, `admin1CodesASCII`) | Places, provinces/states, countries | CC BY 4.0, credit "GeoNames" |
 | [UN M49](https://unstats.un.org/unsd/methodology/m49/overview/) | Regions (e.g. Western Europe) | UN Statistics Division, free to use with credit; saved in `pipeline/globe_pipeline/data/m49.csv` by `pipeline/tools/fetch_m49.py` |
-| [Natural Earth](https://www.naturalearthdata.com/) (50m coastlines, land borders and countries (islands under about 250 km² left out of the country shapes), 50m marine and geography regions, 10m elevation points) | Coastlines and borders, country shapes and names, seas, mountain ranges, deserts and peaks; made by `tools/build_geo.py` into `frontend/public/geo/` | Public domain (credit appreciated, given on the Legal & sources page) |
-| [Wikidata](https://www.wikidata.org/) (SPARQL query service) | Facts on "About this place" cards in the geography view: countries (official name, capital, population with year, area, official languages, currency, highest point), seas (area, greatest depth, bordering countries), ranges and deserts (highest point, length, area, countries), peaks (range, prominence, countries). Matched by the Wikidata IDs Natural Earth gives each feature. Fetched by hand with `tools/build_places.py` into `frontend/public/geo/places.json` | Structured data CC0 ([data access](https://www.wikidata.org/wiki/Wikidata:Data_access), 2026-11-07); a few batched queries with a User-Agent naming the project and `hello@krimadev.com`, as the [User-Agent policy](https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy) asks |
+| [Natural Earth](https://www.naturalearthdata.com/) (50m coastlines, land borders and countries (islands under about 250 km² left out of the country shapes), 50m marine and geography regions, 10m elevation points, 50m rivers and lakes (added 8 Nov 2026)) | Coastlines and borders, country shapes and names, seas, mountain ranges, deserts, peaks, rivers and lakes; made by `tools/build_geo.py` into `frontend/public/geo/` | Public domain (credit appreciated, given on the Sources page) |
+| [Wikidata](https://www.wikidata.org/) (SPARQL query service) | Facts on "About this place" cards in the geography view: countries (official name, capital, population with year, area, official languages, currency, highest point), seas (area, greatest depth, bordering countries), ranges and deserts (highest point, length, area, countries), peaks (range, prominence, countries), lakes (area, greatest depth, countries). Matched by the Wikidata IDs Natural Earth gives each feature (rivers have none, so their cards show only the name for now). Fetched by hand with `tools/build_places.py` into `frontend/public/geo/places.json` | Structured data CC0 ([data access](https://www.wikidata.org/wiki/Wikidata:Data_access), 2026-11-07); a few batched queries with a User-Agent naming the project and `hello@krimadev.com`, as the [User-Agent policy](https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy) asks |
 | [Wikipedia](https://en.wikipedia.org/) (English, REST summary endpoint) | The introduction of each place's article, shown word for word on its card | Text CC BY-SA 4.0 ([reusing Wikipedia content](https://en.wikipedia.org/wiki/Wikipedia:Reusing_Wikipedia_content), 2026-11-07): each card names the article, links to the exact revision and to the licence, and gives the fetch date. Not shortened or changed, so no change notice is needed. One request a second, cached |
 | [NASA Blue Marble Next Generation](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/) (topography and bathymetry, July 2004) | Earth day texture | Public domain; credit "NASA Earth Observatory" (shown on the page) |
 | [NASA GIBS](https://earthdata.nasa.gov/gibs) (WMTS, EPSG:4326, 500 m tile matrix): `BlueMarble_ShadedRelief_Bathymetry` (day), `VIIRS_Black_Marble` (night, 2016) | Sharp close-up imagery in the detail patch (`frontend/src/globe/detail.ts`), loaded by visitors' browsers straight from gibs.earthdata.nasa.gov when zooming in (owner's decision, 7 Nov 2026; stated in the Legal page's privacy section; allowed by the CSP) | Free, no key, cross-origin allowed; NASA [open data policy](https://www.earthdata.nasa.gov/engage/open-data-services-software-policies); GIBS asks for the acknowledgement "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), part of NASA's Earth Science Data and Information System (ESDIS)", given on the Legal page ([GIBS API docs](https://nasa-gibs.github.io/gibs-api-docs/), 2026-11-07). Tiles load only for the view, once the camera pauses |

@@ -1,8 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { defaultFilters, fromQuery, isDefault, matches, toQuery, windowOf } from "./filters";
-import type { GlobeEvent } from "./types";
+import { defaultFilters, fromQuery, isDefault, matches, toQuery, windowOf, withPageState } from "./filters";
+import { CATEGORIES, type GlobeEvent } from "./types";
 
 const NOW = Date.parse("2026-11-08T12:00:00Z");
+
+describe("withPageState", () => {
+  it.each([
+    ["", false, false, ""],
+    ["?cat=war", false, false, "?cat=war"],
+    ["", true, false, "?view=geo"],
+    ["", false, true, "?list=1"],
+    ["?cat=war", true, true, "?cat=war&view=geo&list=1"],
+  ])("%j geo=%s list=%s gives %j", (query, geo, list, expected) => {
+    expect(withPageState(query, { geo, list })).toBe(expected);
+  });
+
+  it("leaves the filters readable", () => {
+    const state = fromQuery(withPageState("?range=24h", { geo: true, list: true }));
+    expect(state.range).toBe("24h");
+  });
+});
 
 function event(overrides: Partial<GlobeEvent> = {}): GlobeEvent {
   return {
@@ -99,6 +116,25 @@ describe("the web address", () => {
     expect(again.range).toBe("24h");
     expect(again.end).toBe(state.end);
     expect(again.place).toEqual(["Asia", "Southern Asia", "IN"]);
+  });
+
+  it("starts with every category on, Sport included", () => {
+    const state = defaultFilters();
+    expect(state.categories.size).toBe(CATEGORIES.length);
+    expect(state.categories.has("sport")).toBe(true);
+    expect(isDefault(state)).toBe(true);
+    // Links without "cat", and broken ones, get the default.
+    expect(fromQuery("?range=24h").categories.has("sport")).toBe(true);
+    expect(fromQuery("?cat=gossip").categories.has("sport")).toBe(true);
+  });
+
+  it("keeps Sport off when a visitor turned it off", () => {
+    const state = defaultFilters();
+    state.categories.delete("sport");
+    expect(isDefault(state)).toBe(false);
+    const query = toQuery(state);
+    expect(query).toContain("cat=");
+    expect(fromQuery(query).categories.has("sport")).toBe(false);
   });
 
   it("ignores unknown values", () => {

@@ -1,0 +1,7 @@
+# World News Globe welcomes search engines and AI assistants.
+# How to cite it: https://globe.krimadev.com/llms.txt
+
+User-agent: *
+Allow: /
+
+Sitemap: https://globe.krimadev.com/sitemap.xml

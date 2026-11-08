@@ -9,7 +9,8 @@ GitHub Actions (.github/workflows/update.yml, once LIVE is on; its own schedule 
        sources: USGS · GDACS · GDELT GKG (allowlisted outlets)
        → place (GeoNames + UN M49) → categorize → severity → group duplicates
        → merge with the last published data, keep 7 days
-       → events.json (last 72 h), days/YYYY-MM-DD.json + days/index.json (7 days), feeds.json
+       → events.json (last 72 h), days/YYYY-MM-DD.json + days/index.json (7 days), feeds.json,
+         outlets.json (outlets' country and ownership, events per outlet; data providers' credits)
   └─ npm run build (frontend + data) → wrangler deploy
 Cloudflare Workers static assets @ globe.krimadev.com
   └─ browser: Vite + TypeScript + globe.gl (three.js) reads /data/events.json,
@@ -17,7 +18,7 @@ Cloudflare Workers static assets @ globe.krimadev.com
 ```
 
 - **Cost and speed.** Static files cost nothing to host and are cached at Cloudflare's edge.
-- **Public data.** `/data/events.json`, `/data/days/` and `/data/feeds.json` are public URLs, which also serve as an open JSON API.
+- **Public data.** `/data/events.json`, `/data/days/`, `/data/feeds.json` and `/data/outlets.json` are public URLs, which also serve as an open JSON API.
 - **Failures stay contained.** Each source is fetched on its own. If one fails, its last good events are kept, and `feeds.json` gives it status `error` with the time of its last success.
 - **State between runs.** Each run reads the previous `days/index.json`, the day files it lists, `events.json` and `feeds.json` from the live site. That keeps events for 7 days, keeps the time each story was first seen, and keeps GDELT's cursor (the last 15-minute file read). With nothing published yet, it starts fresh with the last 6 hours.
 - **Fallback.** If redeploying every 30 minutes ever causes trouble, `data/` moves to a free R2 bucket.
@@ -30,7 +31,8 @@ Cloudflare Workers static assets @ globe.krimadev.com
 | Data pipeline (Python 3.13) | `pipeline/globe_pipeline/`, tests in `pipeline/tests/` |
 | Data-building tools (gazetteer, M49 table) | `pipeline/tools/` |
 | Asset-building tools (Earth textures; Natural Earth lines, countries and labels) | `tools/build_textures.py`, `tools/build_geo.py` |
-| Legal & sources page (second page of the Vite build) | `frontend/legal/index.html`, `frontend/src/legal.ts` |
+| About, Sources and Legal pages (extra pages of the Vite build; Sources adds live feed status and outlet counts) | `frontend/about/`, `frontend/sources/`, `frontend/legal/`, `frontend/src/page.ts`, `frontend/src/sources.ts` |
+| Plain pages for search engines and AI assistants: `/news/` and `sitemap.xml`, written at every run (git-ignored); `robots.txt`, `llms.txt`; tags and JSON-LD in each page's head | `pipeline/globe_pipeline/pages.py`, `frontend/public/` |
 | Docs | `docs/` |
 | CI and scheduled updates | `.github/workflows/ci.yml`, `.github/workflows/update.yml` |
 | Hosting config | `wrangler.jsonc`, `frontend/public/_headers` |
@@ -55,7 +57,7 @@ Cloudflare Workers static assets @ globe.krimadev.com
   - The city is the most populous place within 30 km, else the nearest place within 75 km.
   - Within 250 km, the event is at region level ("Valparaiso, Chile").
   - Further away it is "remote" (sea, desert, ice), and the source's own place text is shown.
-  - The coordinates decide the country, not a source's country code.
+  - The coordinates decide the country, not a source's country code (GDELT tags Gaza with Israel's code). Exception: when GDELT names a whole country, its country code decides, since its point for a country is only a centroid (Israel's lies next to Gaza; fixed 8 Nov 2026).
 - **News** is placed only where its headline names a place:
   1. A place the headline names itself: the most specific one (city, then region, then country).
   2. Else a country the headline names as part of a place (GDELT records adjectives too: "Russian" names Russia), at country level.
@@ -77,9 +79,11 @@ Cloudflare Workers static assets @ globe.krimadev.com
 | Pillars of light, drawn instanced (about 12 draw calls in all), with invisible hit columns; small dots in the geography view | `frontend/src/globe/markers.ts` |
 | Groups: pillars closer than 4°, 2° or 1° (by zoom; none when zoomed right in) merge into one, led by the most severe event, with a count badge; clicking opens a list | `frontend/src/clusters.ts` |
 | Filters (category, severity, place, time window), kept in the web address (`cat`, `sev`, `place`, `range`, `end`, `view`) | `frontend/src/filters.ts`, `frontend/src/ui/filter-panel.ts` |
+| Headlines panel (the globe's events as a list, feed status, "out of date" after 2 h; `list=1` in the web address) | `frontend/src/ui/news-panel.ts`, `frontend/src/feeds.ts` |
 | Place drill-down (continent → region → country → province/state → city), built from the events' `geo` | `frontend/src/places.ts`, `frontend/src/ui/place-picker.ts` |
 | Timeline: 6 h, 24 h, 3 days, 7 days, and an "ending at" slider; loads day files on demand | `frontend/src/ui/timeline.ts`, `frontend/src/main.ts` |
 | Coastlines and borders (Natural Earth 50m), brighter on the night side | `frontend/src/globe/lines.ts`, `frontend/public/geo/lines.bin` |
+| Geography view: rivers and lake shores (lines above the country colours), lakes painted as water, river and lake labels (rivers ranked by length) | `frontend/public/geo/water.bin`, `lakes.json`, `labels.json` (`waters`); `globe/lines.ts`, `globe/globe.ts`, `geography.ts` |
 | Geography view: countries coloured by severity (rule in `docs/severity.md`), labels for countries, oceans, seas, ranges, deserts and peaks by zoom, decluttered on screen | `frontend/src/geography.ts`, `frontend/src/globe/globe.ts`, `frontend/public/geo/countries.json`, `labels.json` |
 | "About this place": every country, ocean, sea, range, desert and peak label (and country shape) opens a card with Wikidata facts and the Wikipedia introduction, credited per card; countries add their current events and "Show only these events" | `frontend/src/ui/place-card.ts`, `frontend/src/geography.ts` (`factRows`), `frontend/public/geo/places.json` made by `tools/build_places.py` |
 | Rotation: a Rotate play/pause button; touching the globe pauses it, it resumes 10 s later unless a card is open. Zoom limits: altitude 0.5 (0.9 with 2K images) to 4 | `frontend/src/globe/globe.ts` |

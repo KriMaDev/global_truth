@@ -4,9 +4,11 @@
  * Rule (docs/severity.md, "Groups"): seen from far away, events within 4° of a group's lead
  * join it; closer in, 2°, then 1°; zoomed right in, no grouping. The lead is the most severe
  * event (then the newest), the group stands at the lead's place and takes its severity. A
- * group of one is just that event.
+ * group of one is just that event. Natural disasters (drawn as symbols) and other events
+ * (pillars of light) are grouped separately, so a group is always one or the other.
  */
 
+import { isDisaster } from "./globe/hazard-icons";
 import { SEVERITIES, type GlobeEvent, type Severity } from "./types";
 
 export interface Cluster {
@@ -52,6 +54,14 @@ export function leadOrder(a: GlobeEvent, b: GlobeEvent): number {
 
 /** Groups events within `degrees` of a more important event (0: no grouping). */
 export function clusterEvents(events: GlobeEvent[], degrees: number): Cluster[] {
+  if (degrees <= 0) return groupNearby(events, degrees);
+  const disasters = groupNearby(events.filter(isDisaster), degrees);
+  const others = groupNearby(events.filter((event) => !isDisaster(event)), degrees);
+  return [...disasters, ...others].sort((a, b) => leadOrder(a.lead, b.lead));
+}
+
+/** Groups events of one kind (see clusterEvents). */
+function groupNearby(events: GlobeEvent[], degrees: number): Cluster[] {
   const sorted = [...events].sort(leadOrder);
   const single = (event: GlobeEvent): Cluster => ({
     id: event.id,

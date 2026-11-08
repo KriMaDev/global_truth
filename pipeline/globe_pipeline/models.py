@@ -59,6 +59,9 @@ class Event:
     location_method: str
     snippet: str = ""
     hazard: str | None = None
+    #: Where each category came from ("headline", "section:business", "topics",
+    #: "sport-section"; see categorize.category_basis). Empty for data feeds.
+    category_basis: dict[str, str] = field(default_factory=dict)
     extra: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -78,6 +81,7 @@ class Event:
             "severity": self.severity.label,
             "severity_reason": self.severity_reason,
             "categories": self.categories,
+            "category_basis": self.category_basis,
             "kind": self.kind,
             "feed": self.feed,
             "hazard": self.hazard,
@@ -102,6 +106,7 @@ class Event:
             severity=Severity.from_label(data["severity"]),
             severity_reason=data.get("severity_reason", ""),
             categories=list(data["categories"]),
+            category_basis=dict(data.get("category_basis") or {}),
             kind=data["kind"],
             feed=data["feed"],
             hazard=data.get("hazard"),

@@ -13,6 +13,11 @@ export const CATEGORIES = [
   "economic",
   "technology",
   "health",
+  "climate",
+  "crime",
+  "humanitarian",
+  "science",
+  "sport",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
@@ -23,6 +28,11 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   economic: "Economic",
   technology: "Technology advancements",
   health: "Health & outbreaks",
+  climate: "Climate & environment",
+  crime: "Crime & justice",
+  humanitarian: "Humanitarian & migration",
+  science: "Science & space",
+  sport: "Sport",
 };
 
 /** Natural disaster types by hazard code: GDACS's codes, plus ours for news headlines
@@ -89,6 +99,9 @@ export interface GlobeEvent {
   lng: number;
   severity: Severity;
   categories: Category[];
+  /** Where each category came from: "headline", "section:<name>", "topics" or
+   * "sport-section" (docs/categories.md). Absent for data feeds. */
+  category_basis?: Partial<Record<Category, string>>;
   kind: EventKind;
   /** ISO 8601 time the source published it (for news: when GDELT first saw it). */
   published: string;

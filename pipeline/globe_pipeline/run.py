@@ -20,8 +20,9 @@ from pathlib import Path
 from .cluster import cluster
 from .geocode import Gazetteer
 from .models import Event, iso
-from .outlets import MAX_EVENTS_PER_OUTLET
+from .outlets import MAX_EVENTS_PER_OUTLET, MAX_SPORT_EVENTS_PER_OUTLET
 from .output import FeedStatus, Previous, day_of, load_previous, within_window, write
+from .pages import write_pages
 from .sources import gdacs, gdelt, usgs
 
 LOG = logging.getLogger("globe_pipeline")
@@ -57,21 +58,34 @@ def _run_feed(
     return events
 
 
-def balance_outlets(events: list[Event], limit: int = MAX_EVENTS_PER_OUTLET) -> list[Event]:
+def balance_outlets(
+    events: list[Event],
+    limit: int = MAX_EVENTS_PER_OUTLET,
+    sport_limit: int = MAX_SPORT_EVENTS_PER_OUTLET,
+) -> list[Event]:
     """Keeps at most `limit` news events led by each outlet per UTC day: the most severe,
-    then the most widely reported, then the newest. Data-feed events are never dropped."""
+    then the most widely reported, then the newest. Sport-only events are counted apart,
+    with their own `sport_limit`, so they never push news out. Data-feed events are never
+    dropped."""
     kept: list[Event] = [e for e in events if e.kind != "news"]
-    by_outlet: dict[tuple[str, str], list[Event]] = {}
+    by_outlet: dict[tuple[str, str, bool], list[Event]] = {}
     for event in events:
         if event.kind == "news":
-            by_outlet.setdefault((event.sources[0].name, day_of(event)), []).append(event)
-    for group in by_outlet.values():
+            sport_only = event.categories == ["sport"]
+            key = (event.sources[0].name, day_of(event), sport_only)
+            by_outlet.setdefault(key, []).append(event)
+    for (_, _, sport_only), group in by_outlet.items():
         group.sort(key=lambda e: (-int(e.severity), -e.coverage, -e.published.timestamp()))
-        kept.extend(group[:limit])
+        kept.extend(group[: sport_limit if sport_only else limit])
     return kept
 
 
-def run(out: Path, previous_location: str | None, now: datetime | None = None) -> list[Event]:
+def run(
+    out: Path,
+    previous_location: str | None,
+    now: datetime | None = None,
+    site: Path | None = None,
+) -> list[Event]:
     """One full run. Returns the events written."""
     now = now or datetime.now(UTC)
     gazetteer = Gazetteer.load()
@@ -108,7 +122,12 @@ def run(out: Path, previous_location: str | None, now: datetime | None = None) -
 
     events = balance_outlets(cluster(within_window(quakes + alerts + news, now)))
     news_status.count = sum(1 for e in events if e.kind == "news")
-    write(out, events, statuses, now, cursor)
+    providers = [
+        {"name": m.SOURCE, "credit": m.CREDIT, "homepage": m.HOMEPAGE} for m in (usgs, gdacs)
+    ]
+    write(out, events, statuses, now, cursor, providers)
+    if site is not None:
+        write_pages(site, events, statuses, now)
     LOG.info(
         "wrote %d events (%s)",
         len(events),
@@ -127,9 +146,12 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_PREVIOUS,
         help="URL prefix or folder of the last published data ('' for a fresh start)",
     )
+    parser.add_argument(
+        "--site", type=Path, help="folder for news/ and sitemap.xml (default: the parent of --out)"
+    )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    run(args.out, args.previous or None)
+    run(args.out, args.previous or None, site=args.site or args.out.parent)
     return 0
 
 

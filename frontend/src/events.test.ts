@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import sampleEvents from "./data/sample-events.json";
-import { compareBySeverity, isGlobeEvent, parseEvents } from "./events";
+import { compareByNewest, compareBySeverity, isGlobeEvent, parseEvents } from "./events";
 import { CATEGORIES, SEVERITIES, hazardLabel, type GlobeEvent } from "./types";
 
 const valid: GlobeEvent = {
@@ -17,6 +17,20 @@ const valid: GlobeEvent = {
   sources: [{ name: "Example News", url: "https://example.com/story" }],
 };
 
+describe("compareByNewest", () => {
+  it("puts the newest first, whatever its severity", () => {
+    const older: GlobeEvent = { ...valid, id: "old", severity: "critical", published: "2026-11-06T10:00:00Z" };
+    const newer: GlobeEvent = { ...valid, id: "new", severity: "low" };
+    expect([older, newer].sort(compareByNewest).map((e) => e.id)).toEqual(["new", "old"]);
+  });
+
+  it("puts the more severe first at the same time", () => {
+    const low: GlobeEvent = { ...valid, id: "low", severity: "low" };
+    const high: GlobeEvent = { ...valid, id: "high", severity: "high" };
+    expect([low, high].sort(compareByNewest).map((e) => e.id)).toEqual(["high", "low"]);
+  });
+});
+
 describe("isGlobeEvent", () => {
   it("accepts a complete event", () => {
     expect(isGlobeEvent(valid)).toBe(true);
@@ -26,7 +40,9 @@ describe("isGlobeEvent", () => {
     ["latitude out of range", { lat: 91 }],
     ["longitude out of range", { lng: -181 }],
     ["unknown severity", { severity: "extreme" }],
-    ["unknown category", { categories: ["sport"] }],
+    ["unknown category", { categories: ["gossip"] }],
+    ["a category basis for an unknown category", { category_basis: { gossip: "headline" } }],
+    ["a category basis that is not text", { category_basis: { war: 3 } }],
     ["unknown kind", { kind: "opinion" }],
     ["unreadable time", { published: "yesterday" }],
     ["empty title", { title: "  " }],
@@ -54,6 +70,7 @@ describe("isGlobeEvent", () => {
         precision: "city",
       },
       location_method: "machine-coded",
+      category_basis: { politics: "section:politics" },
       sources: [{ name: "Example News", url: "https://example.com/a", state_affiliated: true }],
     };
     expect(isGlobeEvent(full)).toBe(true);

@@ -4,7 +4,9 @@ Published (docs/architecture.md):
 - events.json: the last 72 hours (the page's first load stays small);
 - days/YYYY-MM-DD.json: every event of one UTC day, for the 7-day timeline;
 - days/index.json: the days available, with counts;
-- feeds.json: each source's health, and GDELT's cursor.
+- feeds.json: each source's health, and GDELT's cursor;
+- outlets.json: every allowlisted outlet (country, region, ownership, events in the 7 days)
+  and the data-feed providers with their credit lines, for the source lines on cards.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from typing import Any
 
 from .http import FetchError, get
 from .models import Event, iso, parse_iso
+from .outlets import outlets_document
 from .severity import Severity
 
 #: How long events are kept (the timeline's reach).
@@ -138,8 +141,10 @@ def write(
     feeds: list[FeedStatus],
     now: datetime,
     gdelt_cursor: datetime | None,
+    providers: list[dict[str, str]] | None = None,
 ) -> None:
-    """Writes events.json, the day files and their index, and feeds.json to `out`."""
+    """Writes events.json, the day files and their index, feeds.json and outlets.json to
+    `out`. `providers`: the data feeds' source names, credit lines and homepages."""
     out.mkdir(parents=True, exist_ok=True)
     generated = iso(now)
 
@@ -188,5 +193,15 @@ def write(
             "generated": generated,
             "feeds": [feed.to_json() for feed in feeds],
             "gdelt_cursor": iso(gdelt_cursor) if gdelt_cursor else None,
+        },
+    )
+
+    _write_json(
+        out / "outlets.json",
+        {
+            "generated": generated,
+            "window_hours": int(WINDOW.total_seconds() // 3600),
+            "outlets": outlets_document([s.name for s in e.sources] for e in events),
+            "providers": providers or [],
         },
     )

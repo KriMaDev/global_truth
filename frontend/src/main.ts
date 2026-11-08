@@ -13,6 +13,7 @@ import "@fontsource/hanken-grotesk/600.css";
 import "@fontsource/jetbrains-mono/400.css";
 import "@fontsource/jetbrains-mono/500.css";
 import "./style.css";
+import { startAnalytics } from "./analytics";
 import { compareBySeverity, parseEvents } from "./events";
 import type { Cluster } from "./clusters";
 import {
@@ -22,13 +23,16 @@ import {
   matchesExceptTime,
   toQuery,
   windowOf,
+  withPageState,
   type FilterState,
 } from "./filters";
+import { parseFeeds } from "./feeds";
 import { CATEGORIES, SEVERITIES } from "./types";
 import { createFilterPanel, type Counts } from "./ui/filter-panel";
+import { createNewsPanel } from "./ui/news-panel";
 import { createTimeline } from "./ui/timeline";
 import { createPlacePicker } from "./ui/place-picker";
-import { placeAltitude, placeCenter } from "./places";
+import { placeAltitude, placeCenter, placeNames } from "./places";
 import {
   countryCounts,
   countryLabel,
@@ -45,6 +49,7 @@ import { SEVERITY_STYLES } from "./severity";
 import type { GlobeEvent } from "./types";
 import { createEventCard } from "./ui/event-card";
 import { renderEventList } from "./ui/event-list";
+import { parseOutletDirectory, setOutletDirectory } from "./outlets";
 import { renderLegend, renderSummary } from "./ui/legend";
 import { initialReducedMotion, setupMotionToggle } from "./ui/motion";
 
@@ -98,7 +103,10 @@ async function loadEvents(): Promise<Loaded> {
 let allEvents: GlobeEvent[] = [];
 let events: GlobeEvent[] = [];
 let filters: FilterState = fromQuery(window.location.search);
+/** Read now: the address is rewritten as soon as the filters are applied. */
+const startWithHeadlines = new URLSearchParams(window.location.search).get("list") === "1";
 let dataTime: string | null = null;
+let loadFailed = false;
 const container = byId<HTMLDivElement>("globe");
 const status = byId<HTMLParagraphElement>("status");
 const list = byId<HTMLElement>("event-list");
@@ -160,6 +168,14 @@ function showRotation(on: boolean): void {
   rotateToggle.title = on ? "Stop the globe turning" : "Let the globe turn by itself";
 }
 
+function clearFilters(): void {
+  filters = defaultFilters();
+  applyFilters();
+}
+
+/** On wide screens Filters and Headlines sit side by side; otherwise one replaces the other. */
+const roomForBothPanels = window.matchMedia("(min-width: 1240px)");
+
 const panel = createFilterPanel(
   byId("filter-panel"),
   byId<HTMLButtonElement>("filter-toggle"),
@@ -167,12 +183,40 @@ const panel = createFilterPanel(
     filters = { ...filters, ...change };
     applyFilters();
   },
+  clearFilters,
   () => {
-    filters = defaultFilters();
-    applyFilters();
+    card.close();
+    if (!roomForBothPanels.matches) headlines.close();
   },
-  () => card.close(),
 );
+
+const headlines = createNewsPanel(byId("news-panel"), byId<HTMLButtonElement>("news-toggle"), {
+  onPick: (event) => {
+    // A back button normally means the globe is already there; from the list it is not.
+    app?.flyTo(event);
+    openEvent(
+      event,
+      true,
+      () => {
+        card.close();
+        headlines.open(true, event.id);
+      },
+      "← Back to the headlines",
+    );
+  },
+  onClear: clearFilters,
+  onOpen: () => {
+    card.close();
+    if (!roomForBothPanels.matches) panel.close();
+  },
+  onToggle: updateAddress,
+});
+
+/** A card takes the place of the panels. */
+function closePanels(): void {
+  panel.close();
+  headlines.close();
+}
 
 /** How many kinds of filter are on (categories, severities, time, place). */
 function activeFilters(state: FilterState): number {
@@ -301,11 +345,15 @@ function applyFilters(): void {
     filters.place,
     inWindow.filter((e) => matchesExceptTime(e, { ...filters, place: [] })),
   );
-  renderSummary(events.length, allEvents.length, !isDefault(filters), () => {
-    filters = defaultFilters();
-    applyFilters();
+  renderSummary(events.length, allEvents.length, !isDefault(filters), clearFilters);
+  headlines.render({
+    events,
+    place: placeNames(allEvents, filters.place),
+    dataTime,
+    canClear: !isDefault(filters),
+    failed: loadFailed,
   });
-  window.history.replaceState(null, "", window.location.pathname + withView(toQuery(filters)));
+  updateAddress();
   if (app) {
     app.setEvents(events);
     if (geoView && geoData) app.setGeography(geoData, countrySeverity(events));
@@ -331,22 +379,28 @@ let geoData: GeographyData | null = null;
 let placesData: PlacesData | null = null;
 const geoToggle = byId<HTMLButtonElement>("geo-toggle");
 
-/** Adds the view to a filter query ("?cat=war" → "?cat=war&view=geo"). */
-function withView(query: string): string {
-  if (!geoView) return query;
-  return query ? `${query}&view=geo` : "?view=geo";
+/** Keeps the web address in step with the filters, the view and the Headlines panel. */
+function updateAddress(): void {
+  const query = withPageState(toQuery(filters), { geo: geoView, list: headlines.isOpen });
+  window.history.replaceState(null, "", window.location.pathname + query);
 }
 
 async function loadGeography(): Promise<GeographyData> {
-  const [countries, labels] = await Promise.all([
+  const [countries, labels, lakes] = await Promise.all([
     fetchJson("/geo/countries.json"),
     fetchJson("/geo/labels.json"),
+    // Lakes are extra: the map works without them.
+    fetchJson("/geo/lakes.json").catch((error: unknown) => {
+      console.warn("Lakes unavailable:", error);
+      return [];
+    }),
   ]);
   const parts = labels as Partial<GeographyData["labels"]> | null;
   if (!Array.isArray(countries) || !parts) throw new Error("geography files are malformed");
   return {
     countries: countries as GeographyData["countries"],
-    labels: { seas: parts.seas ?? [], regions: parts.regions ?? [], peaks: parts.peaks ?? [] },
+    labels: { seas: parts.seas ?? [], regions: parts.regions ?? [], peaks: parts.peaks ?? [], waters: parts.waters ?? [] },
+    lakes: Array.isArray(lakes) ? (lakes as GeographyData["lakes"]) : [],
   };
 }
 
@@ -412,7 +466,7 @@ function describeCountry(iso2: string): string[] {
 
 /** Opens "About this place" for a label (or a country) and turns the globe to it. */
 function openPlace(label: MapLabel, extra: { where?: string | null; events?: { summary: string; onShow?: () => void } | null } = {}): void {
-  panel.close();
+  closePanels();
   app?.select(null);
   const facts = label.wikidata ? placesData?.places[label.wikidata] : undefined;
   card.openPanel(
@@ -422,7 +476,7 @@ function openPlace(label: MapLabel, extra: { where?: string | null; events?: { s
   );
   app?.setCardOpen(true);
   // Closer for small places, never further out than now.
-  const reach: Record<MapLabel["kind"], number> = { ocean: 2.4, country: 1.6, sea: 1.6, range: 1.4, desert: 1.6, peak: 1 };
+  const reach: Record<MapLabel["kind"], number> = { ocean: 2.4, country: 1.6, sea: 1.6, range: 1.4, desert: 1.6, peak: 1, river: 1.4, lake: 1 };
   app?.flyOver(label.lat, label.lng, Math.min(view.altitude, reach[label.kind]));
 }
 
@@ -453,13 +507,13 @@ function chooseCountry(iso2: string): void {
   });
 }
 
-function openEvent(event: GlobeEvent, focus: boolean, back?: () => void): void {
-  panel.close();
+function openEvent(event: GlobeEvent, focus: boolean, back?: () => void, backLabel?: string): void {
+  closePanels();
   app?.select(event.id);
   if (!back) app?.flyTo(event);
   setAccent(SEVERITY_STYLES[event.severity].color);
   app?.setCardOpen(true);
-  card.open(event, focus, back);
+  card.open(event, focus, back, backLabel);
 }
 
 /** A pillar was chosen: one event opens its card, a group opens its list. */
@@ -468,7 +522,7 @@ function openCluster(cluster: Cluster, focus: boolean): void {
     openEvent(cluster.lead, focus);
     return;
   }
-  panel.close();
+  closePanels();
   app?.select(cluster.id);
   app?.flyTo(cluster);
   setAccent(SEVERITY_STYLES[cluster.severity].color);
@@ -499,6 +553,7 @@ function showVersion(): void {
 
 async function start(): Promise<void> {
   showVersion();
+  startAnalytics();
   renderLegend(byId("legend"));
   setupMotionToggle(byId<HTMLButtonElement>("motion-toggle"), (on) => {
     app?.setReducedMotion(on);
@@ -507,7 +562,16 @@ async function start(): Promise<void> {
     if (on) app?.setRotating(false);
   });
 
-  let loadFailed = false;
+  // Who reported what (country, ownership, credit lines on cards): extra, loaded alongside.
+  void fetchJson("/data/outlets.json")
+    .then((doc) => setOutletDirectory(parseOutletDirectory(doc)))
+    .catch((error: unknown) => console.warn("Outlet details unavailable:", error));
+
+  // Each feed's last update and any failure (Headlines panel): extra as well.
+  void fetchJson("/data/feeds.json")
+    .then((doc) => headlines.setFeeds(parseFeeds(doc)))
+    .catch((error: unknown) => console.warn("Feed status unavailable:", error));
+
   try {
     const loaded = await loadEvents();
     allEvents = loaded.events;
@@ -518,6 +582,7 @@ async function start(): Promise<void> {
     loadFailed = true;
   }
   applyFilters();
+  if (startWithHeadlines) headlines.open(false);
 
   if (!hasWebGL()) {
     showList("This browser cannot show the 3D globe, so the events are listed instead.");

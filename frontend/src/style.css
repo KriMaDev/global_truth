@@ -134,6 +134,28 @@ button {
   border-bottom-width: 2px;
 }
 
+/* Panels that scroll (event card, filters) draw their corner brackets as backgrounds instead,
+   which stay at the panel's corners while the text scrolls; the ::before/::after brackets would
+   scroll away with it. Defined on the panel itself so --accent is the open event's colour. */
+.event-card,
+.filter-panel,
+.news-panel {
+  --corner: linear-gradient(var(--accent), var(--accent));
+  --scroll-panel-bg:
+    var(--corner) left top / 10px 2px no-repeat border-box,
+    var(--corner) left top / 2px 10px no-repeat border-box,
+    var(--corner) right bottom / 10px 2px no-repeat border-box,
+    var(--corner) right bottom / 2px 10px no-repeat border-box,
+    var(--panel-solid);
+}
+
+.event-card::before,
+.event-card::after,
+.filter-panel::before,
+.filter-panel::after {
+  content: none;
+}
+
 /* A label: monospaced, uppercase, wide-spaced. */
 .label,
 .legend-title,
@@ -449,6 +471,17 @@ button {
   text-transform: none;
 }
 
+/* Rivers and lakes: water blue, in the italic of map hydrography, smaller than seas. */
+.map-label.kind-river,
+.map-label.kind-lake {
+  color: rgb(143 208 255 / 90%);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  text-transform: none;
+}
+
 /* visibility, not opacity: hidden labels are then not painted at all (hundreds of them). */
 .map-label.is-hidden,
 .map-label.is-crowded {
@@ -458,10 +491,10 @@ button {
 
 .legend-geo-note {
   display: none;
-  margin: 0.4rem 0 0;
+  margin: 0 0 0.55rem;
   color: var(--muted);
-  font: 400 0.7rem/1.4 var(--ff-mono);
-  letter-spacing: 0.04em;
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .geo-view .legend-geo-note {
@@ -533,7 +566,7 @@ body:not(.no-globe) .event-list-button:focus {
   overflow-y: auto;
   padding: 1.1rem 1.3rem 1.3rem;
   animation: card-in 0.35s var(--ease-out);
-  background: var(--panel-solid);
+  background: var(--scroll-panel-bg);
 }
 
 @keyframes card-in {
@@ -645,6 +678,27 @@ body:not(.no-globe) .event-list-button:focus {
   background: rgb(255 255 255 / 3%);
 }
 
+/* The place card's credits are one running sentence with links, not separate notes. */
+.card-notes.place-credits {
+  display: block;
+}
+
+/* Under a source's name: its country and ownership, or a data provider's credit line. */
+.card-source-meta {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--muted);
+  font: 400 0.68rem/1.4 var(--ff-mono);
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+a.card-source-meta:hover,
+a.card-source-meta:focus-visible {
+  color: var(--fg);
+  text-decoration: underline;
+}
+
 .badge-state {
   display: inline-block;
   padding: 0.05rem 0.4rem;
@@ -695,29 +749,52 @@ body:not(.no-globe) .event-list-button:focus {
   pointer-events: auto;
 }
 
+/* Every row (severity and markers) shares the same three columns: sample, name, meaning. */
 .legend {
-  padding: 0.75rem 0.95rem 0.8rem;
+  width: 21.25rem;
+  max-width: 100%;
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
+  padding: 0.8rem 0.95rem 0.85rem;
   font-size: 0.85rem;
 }
 
 .legend-title {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.25rem;
   color: var(--muted);
+}
+
+.legend-section {
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
+}
+
+.legend-note {
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .legend-list {
   display: grid;
-  gap: 0.3rem;
-  margin: 0 0 0.55rem;
+  gap: 0.15rem;
+  margin: 0 0 0.45rem;
   padding: 0;
   list-style: none;
 }
 
 .legend-list li {
   display: grid;
-  grid-template-columns: 22px 5.5rem auto;
+  grid-template-columns: 22px 6.6rem 1fr;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
+  min-height: 28px;
+}
+
+.legend-name {
+  font-weight: 600;
 }
 
 /* A small pillar of light, like those on the globe: taller and wider with severity. */
@@ -757,10 +834,75 @@ body:not(.no-globe) .event-list-button:focus {
   animation: pillar-pulse var(--pulse) ease-in-out infinite;
 }
 
+/* Samples of the markers. Grey and independent of --accent: colour only means severity. */
+.legend-symbol {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  justify-self: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+  color: var(--fg);
+  background: radial-gradient(circle at 50% 35%, #161c24, #05080c 75%);
+}
+
+.legend-count {
+  justify-self: center;
+  min-width: 20px;
+  padding: 0.05rem 0.25rem;
+  border: 1px solid var(--muted);
+  border-radius: 2px;
+  background: rgb(5 7 10 / 82%);
+  font: 500 0.66rem/1.3 var(--ff-mono);
+  text-align: center;
+}
+
+.hazard-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.legend-symbols {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+}
+
+.legend-symbols summary {
+  width: max-content;
+  color: var(--muted);
+  font: 400 0.7rem/1.6 var(--ff-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.legend-symbols summary:hover,
+.legend-symbols summary:focus-visible {
+  color: var(--fg);
+}
+
+.legend-symbols ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.5rem;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legend-symbols li {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  line-height: 1.2;
+}
+
 .legend-how {
   color: var(--muted);
-  font: 400 0.7rem/1.2 var(--ff-mono);
-  letter-spacing: 0.04em;
+  font: 400 0.68rem/1.25 var(--ff-mono);
 }
 
 .legend-link {
@@ -881,7 +1023,7 @@ body:not(.no-globe) .event-list-button:focus {
   max-height: calc(100dvh - 6.5rem);
   overflow-y: auto;
   padding: 0.9rem 1.1rem 1.1rem;
-  background: var(--panel-solid);
+  background: var(--scroll-panel-bg);
   animation: card-in 0.3s var(--ease-out);
 }
 
@@ -1048,6 +1190,96 @@ body:not(.no-globe) .event-list-button:focus {
   cursor: pointer;
 }
 
+/* ---------- Headlines panel ---------- */
+
+/* The header stays put and only the list scrolls, so the panel itself keeps its corner
+   brackets. Solid enough to read over the globe, so no costly blur behind a long list. */
+.news-panel {
+  position: fixed;
+  top: 5.2rem;
+  right: var(--gutter);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: min(26rem, calc(100vw - 2 * var(--gutter)));
+  /* Stops above the Rotate button and the credits. */
+  max-height: calc(100dvh - 11rem);
+  padding: 0.9rem 1.1rem 0;
+  background: var(--panel-solid);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  animation: card-in 0.3s var(--ease-out);
+}
+
+.news-panel[hidden] {
+  display: none;
+}
+
+.news-panel h2:focus {
+  outline: none;
+}
+
+/* With room for both, Filters stay open beside the list, clear of the legend. */
+@media (min-width: 1240px) {
+  .filter-panel:not([hidden]) ~ .news-panel {
+    right: calc(var(--gutter) + 26rem + 0.75rem);
+  }
+}
+
+.news-count {
+  margin: 0.25rem 0 0.2rem;
+  font-weight: 600;
+}
+
+.news-updated {
+  margin: 0;
+  color: var(--muted);
+  font: 400 0.7rem/1.5 var(--ff-mono);
+  letter-spacing: 0.02em;
+}
+
+.news-warning {
+  margin: 0.5rem 0 0;
+  padding: 0.4rem 0.6rem;
+  border-left: 2px solid var(--ember);
+  background: rgb(255 255 255 / 3%);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.news-sort {
+  margin: 0.7rem 0;
+}
+
+.news-sort .chip {
+  font-size: 0.78rem;
+}
+
+.news-body {
+  flex: 1;
+  min-height: 0;
+  /* Room for the focus outline of the rows. */
+  margin: 0 -0.4rem;
+  padding: 0.25rem 0.4rem 1.1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Rows out of sight aren't laid out, so a week of events stays quick. */
+.news-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 5.5rem;
+}
+
+.news-empty {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+}
+
+.news-empty p {
+  margin: 0 0 0.6rem;
+}
+
 /* ---------- Groups: count badges and the list card ---------- */
 
 .cluster-badge {
@@ -1139,7 +1371,7 @@ body:not(.no-globe) .event-list-button:focus {
   letter-spacing: 0.03em;
 }
 
-/* ---------- Document pages (legal) ---------- */
+/* ---------- Document pages (About, Sources, Legal) ---------- */
 
 body.page {
   overflow: auto;
@@ -1166,6 +1398,84 @@ body.page {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+.doc-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: 0 0 1rem;
+  font: 400 0.75rem/1.5 var(--ff-mono);
+  letter-spacing: 0.06em;
+}
+
+.doc-nav a[aria-current="page"] {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.doc section {
+  scroll-margin-top: 1rem;
+}
+
+.doc li + li,
+.doc ol li + li {
+  margin-top: 0.4rem;
+}
+
+.doc ol {
+  padding-left: 1.4rem;
+}
+
+.doc-level {
+  white-space: nowrap;
+}
+
+.doc-level .card-dot {
+  display: inline-block;
+  margin-right: 0.45rem;
+}
+
+.sev-critical {
+  --dot-color: var(--sev-critical);
+}
+
+.sev-high {
+  --dot-color: var(--sev-high);
+}
+
+.sev-moderate {
+  --dot-color: var(--sev-moderate);
+}
+
+.sev-low {
+  --dot-color: var(--sev-low);
+}
+
+.doc-failed {
+  color: var(--ember);
+  font-weight: 600;
+}
+
+.doc-table .badge-state {
+  white-space: nowrap;
+}
+
+#feed-warnings:not(:empty) {
+  margin-bottom: 0.75rem;
+}
+
+.doc-table tr {
+  scroll-margin-top: 1rem;
+}
+
+/* The outlet a card linked to. */
+.doc-table tr:target td {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.doc-updated a {
+  color: inherit;
 }
 
 .doc-back,
@@ -1235,17 +1545,23 @@ body.page {
     font-size: 0.6rem;
   }
 
-  /* The title on one line, the three switches in one row below it. */
+  /* The title on one line, the switches below it (Reduce motion wraps to a second row on
+     most phones; what sits under the top bar starts at 7.75rem to clear it). */
   .topbar {
     flex-direction: column;
     gap: 0.6rem;
   }
 
   .topbar-actions {
-    flex-wrap: nowrap;
     justify-content: flex-start;
     gap: 0.4rem;
     width: 100%;
+  }
+
+  .status.notice,
+  .no-globe .status,
+  body:not(.no-globe) .event-list-button:focus {
+    top: 7.75rem;
   }
 
   .motion-toggle {
@@ -1271,18 +1587,23 @@ body.page {
     padding-bottom: max(var(--gutter), env(safe-area-inset-bottom));
   }
 
-  /* One compact row: the dots still differ in size and pulse; the words stay for screen
-     readers. */
+  /* Compact rows: the samples still differ in size and pulse. The explanations stay for
+     screen readers; "How severity is decided" links to the full version. */
   .legend {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.35rem 0.8rem;
+    width: auto;
     padding: 0.55rem 0.75rem;
   }
 
   .legend-title {
     margin: 0;
+  }
+
+  .legend-section {
+    display: none;
   }
 
   .legend-list {
@@ -1295,15 +1616,22 @@ body.page {
   .legend-list li {
     display: flex;
     gap: 0.35rem;
+    min-height: 0;
   }
 
-  .legend-how {
+  .legend-how,
+  .legend-note {
     position: absolute;
     width: 1px;
     height: 1px;
+    margin: 0;
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  .legend-symbols {
+    margin: 0;
   }
 
   .bottom-right {
@@ -1332,7 +1660,60 @@ body.page {
     right: var(--gutter);
     bottom: calc(var(--bottom-h, 0px) - 0.75rem);
     width: auto;
-    max-height: calc(100dvh - var(--bottom-h, 0px) - 6rem);
-    background: var(--panel-solid);
+    max-height: calc(100dvh - var(--bottom-h, 0px) - 8rem);
+    background: var(--scroll-panel-bg);
+  }
+
+  .news-panel {
+    top: auto;
+    left: var(--gutter);
+    right: var(--gutter);
+    bottom: calc(var(--bottom-h, 0px) - 0.75rem);
+    width: auto;
+    max-height: calc(100dvh - var(--bottom-h, 0px) - 8rem);
+  }
+}
+
+/* On short screens the header would leave no room for the list, so the whole panel scrolls
+   (with its corners drawn as backgrounds, as on the other scrolling panels). */
+@media (max-height: 520px), (max-width: 640px) and (max-height: 700px) {
+  .news-panel {
+    overflow-y: auto;
+    background: var(--scroll-panel-bg);
+  }
+
+  .news-panel::before,
+  .news-panel::after {
+    content: none;
+  }
+
+  .news-panel .filter-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .news-body {
+    flex: none;
+    overflow: visible;
+  }
+}
+
+@media (max-height: 520px) and (min-width: 641px) {
+  .news-panel {
+    max-height: calc(100dvh - 6.5rem);
+  }
+}
+
+/* Short wide screens (a phone held sideways): the rows stay, the sentences go. */
+@media (max-height: 640px) and (min-width: 641px) {
+  .legend-note {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

@@ -19,12 +19,12 @@ import zipfile
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from ..categorize import categorize_news, hazard_of
+from ..categorize import category_basis, hazard_of
 from ..geocode import Gazetteer, place_name
 from ..http import FetchError, get
 from ..models import Event, Geo, Source
 from ..normalize import clean_text
-from ..outlets import clean_headline, outlet_for_url
+from ..outlets import clean_headline, is_sport_page, outlet_for_url
 from ..severity import news_severity
 
 ID = "gdelt"
@@ -139,14 +139,20 @@ def main_place(mentions: list[Mention], headline: str) -> tuple[Mention, bool] |
 
 
 def geo_for(mention: Mention, gazetteer: Gazetteer, country_only: bool) -> Geo:
-    """The place hierarchy for a GDELT place mention. The coordinates decide the country
-    (via the gazetteer), not GDELT's own country code."""
+    """The place hierarchy for a GDELT place mention.
+
+    For a town or region, the coordinates decide the country (via the gazetteer), not
+    GDELT's own country code (GDELT tags Gaza with Israel's code). For a whole country,
+    GDELT's country code decides: its point for a country is only a representative centroid,
+    and Israel's lies so close to Gaza that the nearest town is in the Palestinian
+    Territory (seen 8 Nov 2026)."""
     found = gazetteer.reverse(mention.lat, mention.lng)
-    iso2 = (
-        found.country_code
-        if found and found.country_code
-        else gazetteer.iso_from_fips(mention.fips)
-    )
+    from_coordinates = found.country_code if found and found.country_code else None
+    from_code = gazetteer.iso_from_fips(mention.fips)
+    if mention.type in COUNTRY_TYPES:
+        iso2 = from_code or from_coordinates
+    else:
+        iso2 = from_coordinates or from_code
     if country_only or mention.type in COUNTRY_TYPES:
         return gazetteer.geo_for_country(iso2, "country")
     first = _name_parts(mention)[0] if _name_parts(mention) else None
@@ -174,7 +180,8 @@ def parse_rows(text: str, gazetteer: Gazetteer, now: datetime) -> tuple[list[Eve
         if len(title) < MIN_TITLE_LENGTH:
             continue
         themes = [t for t in f[COL_THEMES].split(";") if t]
-        categories = categorize_news(title, themes)
+        basis = category_basis(title, themes, url, sport_page=is_sport_page(url))
+        categories = list(basis)
         if not categories:
             continue
         chosen = main_place(parse_mentions(f[COL_LOCATIONS]), title)
@@ -195,6 +202,7 @@ def parse_rows(text: str, gazetteer: Gazetteer, now: datetime) -> tuple[list[Eve
             severity=severity,
             severity_reason=reason,
             categories=categories,
+            category_basis=basis,
             kind="news",
             feed=ID,
             hazard=hazard_of(title) if "natural-disasters" in categories else None,

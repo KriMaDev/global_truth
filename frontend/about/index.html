@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>About · World News Globe</title>
+    <meta
+      name="description"
+      content="What World News Globe is, the honesty rules it follows, and how events get their place, category and severity."
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#05070a" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://globe.krimadev.com/about/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="World News Globe" />
+    <meta property="og:title" content="About World News Globe" />
+    <meta property="og:description" content="What World News Globe is, the honesty rules it follows, and how events get their place, category and severity." />
+    <meta property="og:url" content="https://globe.krimadev.com/about/" />
+    <meta property="og:image" content="https://globe.krimadev.com/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "AboutPage",
+        "name": "About World News Globe",
+        "description": "What World News Globe is, the honesty rules it follows, and how events get their place, category and severity.",
+        "url": "https://globe.krimadev.com/about/",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "World News Globe",
+          "url": "https://globe.krimadev.com/"
+        }
+      }
+    </script>
+  </head>
+  <body class="page">
+    <main class="doc">
+      <nav class="doc-nav" aria-label="Pages">
+        <a href="/">← Back to the globe</a>
+        <a href="/about/" aria-current="page">About</a>
+        <a href="/sources/">Sources</a>
+        <a href="/legal/">Legal</a>
+      </nav>
+      <h1>About World News Globe</h1>
+      <p class="doc-updated">Last updated: 8 November 2026</p>
+
+      <nav class="doc-toc glass" aria-label="On this page">
+        <a href="#what">What this is</a>
+        <a href="#principles">Honesty rules</a>
+        <a href="#how">How it works</a>
+        <a href="#severity">Severity</a>
+        <a href="#categories">Categories</a>
+        <a href="#places">Places and grouping</a>
+        <a href="#limits">Known limits</a>
+        <a href="#contact">Contact</a>
+      </nav>
+
+      <section id="what">
+        <h2>What this is</h2>
+        <p>
+          A map of current world events, built automatically from public data feeds and news
+          headlines, so anyone can see what is being reported, where, and by whom.
+        </p>
+        <p>
+          It is <strong>not a news outlet</strong>. It writes no articles and publishes no opinions.
+          Every item points to the organisation that reported it, and the original is one click
+          away. There are no accounts, no ads and no cookies, and the code is
+          <a href="https://github.com/KriMaDev/global_truth">open source</a>.
+        </p>
+      </section>
+
+      <section id="principles">
+        <h2>Honesty rules</h2>
+        <ul>
+          <li><strong>Always the source.</strong> Every item names who reported it and links to the original.</li>
+          <li>
+            <strong>Headlines are never rewritten.</strong> You read them as the outlet published them.
+            Only the outlet's own name is removed from the end of a page title (e.g. " | The Guardian").
+          </li>
+          <li><strong>Duplicates are grouped.</strong> When several outlets report one story, it is one event listing all of them.</li>
+          <li>
+            <strong>Many regions and viewpoints.</strong> Outlets from every region are included, also
+            state-affiliated ones, which carry a visible label. All of them are listed on the
+            <a href="/sources/">Sources</a> page.
+          </li>
+          <li><strong>Data and news are told apart.</strong> Every item says whether it is a "Data feed" (measured or issued by a scientific or official body) or a "News report".</li>
+          <li><strong>No article text is copied.</strong> News items show only the headline, the outlet, the time and a link.</li>
+          <li><strong>You can see how fresh it is.</strong> The site shows when each feed last updated, and says so when the data may be out of date or a feed has failed.</li>
+          <li><strong>Rules, not guesses.</strong> Severity and categories come from published rules, and each card says why an event got its level.</li>
+        </ul>
+      </section>
+
+      <section id="how">
+        <h2>How it works</h2>
+        <ol>
+          <li>
+            <strong>Collect.</strong> Every 30 minutes an automatic run fetches earthquakes from USGS,
+            disaster alerts from GDACS, and, through the GDELT Project, what the
+            <a href="/sources/#outlets">listed outlets</a> have published.
+          </li>
+          <li><strong>Apply the rules.</strong> Each item gets a place, categories and a severity, and reports of the same story are grouped.</li>
+          <li>
+            <strong>Publish.</strong> The result is saved as plain files and shown on the globe. The
+            last 72 hours load first, and the timeline reaches back 7 days.
+          </li>
+        </ol>
+      </section>
+
+      <section id="severity">
+        <h2>How severity is decided</h2>
+        <p>
+          Every event has one of four levels. They differ in colour, height and pulse, so colour is
+          never the only signal, and the colours are chosen to stay distinct with colour blindness.
+        </p>
+        <table class="doc-table">
+          <thead>
+            <tr><th>Level</th><th>On the globe</th><th>News headline</th><th>Earthquake (USGS)</th><th>GDACS alert</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="doc-level"><span class="card-dot sev-critical" aria-hidden="true"></span>Critical</td>
+              <td>Tallest, fast pulse, rings</td>
+              <td>100 or more deaths</td>
+              <td>Red impact alert, or magnitude 7.0 and above</td>
+              <td>Red</td>
+            </tr>
+            <tr>
+              <td class="doc-level"><span class="card-dot sev-high" aria-hidden="true"></span>High</td>
+              <td>Tall, pulse, rings</td>
+              <td>10 or more deaths</td>
+              <td>Orange impact alert, or magnitude 6.0–6.9</td>
+              <td>Orange</td>
+            </tr>
+            <tr>
+              <td class="doc-level"><span class="card-dot sev-moderate" aria-hidden="true"></span>Moderate</td>
+              <td>Short, slow pulse</td>
+              <td>1 or more deaths, or a listed danger</td>
+              <td>Yellow impact alert, or magnitude 5.0–5.9</td>
+              <td>–</td>
+            </tr>
+            <tr>
+              <td class="doc-level"><span class="card-dot sev-low" aria-hidden="true"></span>Low</td>
+              <td>Shortest, steady</td>
+              <td>Anything else</td>
+              <td>Green impact alert, or magnitude under 5.0</td>
+              <td>Green</td>
+            </tr>
+          </tbody>
+        </table>
+        <ul>
+          <li>
+            <strong>Earthquakes.</strong> USGS's impact alert (PAGER, its estimate of the effect on
+            people) decides when there is one. Otherwise the magnitude does.
+          </li>
+          <li>
+            <strong>News.</strong> Only the headline is read, because it is what you see and the rule
+            can be checked against it. Listed dangers include air strikes, shelling, invasions, coups,
+            explosions, hostages, massacres, evacuations, martial law, curfews, states of emergency,
+            outbreaks, epidemics, pandemics, famine and tsunami warnings.
+          </li>
+          <li>
+            <strong>Several reports of one story.</strong> The event takes the highest level any of its
+            sources gives.
+          </li>
+          <li>
+            <strong>What never raises severity:</strong> how many outlets cover a story. Prominence is
+            not severity.
+          </li>
+        </ul>
+        <p>
+          On the globe, news is a pillar of light and a natural disaster is a symbol showing its type.
+          Events close together merge into a group with a number, which takes the level of its most
+          severe event. The full rules:
+          <a href="https://github.com/KriMaDev/global_truth/blob/main/docs/severity.md">severity rules on GitHub</a>.
+        </p>
+      </section>
+
+      <section id="categories">
+        <h2>How categories are decided</h2>
+        <p>
+          There are eleven categories: War, Politics, Natural disasters, Economic, Technology
+          advancements, Health &amp; outbreaks, Climate &amp; environment, Crime &amp; justice,
+          Humanitarian &amp; migration, Science &amp; space, and Sport. An item can have more than one.
+        </p>
+        <ol>
+          <li>Data feeds (earthquakes, disaster alerts) are Natural disasters.</li>
+          <li>Articles from an outlet's sport section are Sport, and only Sport.</li>
+          <li>For other news, the outlet's own section (when its web address shows one) and listed words in the headline decide together.</li>
+          <li>If those give nothing, the topics GDELT detected in the article decide.</li>
+          <li>An item in none of the eleven categories is not shown.</li>
+        </ol>
+        <p>
+          Each card says where its category came from. The categories follow what people around the
+          world look for in the news, and are reviewed once a year against Google's Year in Search.
+          The full word lists:
+          <a href="https://github.com/KriMaDev/global_truth/blob/main/docs/categories.md">categories on GitHub</a>.
+        </p>
+      </section>
+
+      <section id="places">
+        <h2>Places and grouping</h2>
+        <ul>
+          <li>
+            <strong>Data feeds</strong> give their own coordinates.
+          </li>
+          <li>
+            <strong>News</strong> is placed by software: GDELT reads each article and records the places
+            it mentions. An item is shown only if its headline names a place, and it stands there.
+            When the headline names only a country, the card says "country level".
+          </li>
+          <li>
+            <strong>The same story</strong> means the same country, within 24 hours, with headlines
+            sharing most of their meaningful words. Earthquakes from USGS and GDACS are merged when
+            they are within 30 minutes and 150 km of each other. News and data feeds are never merged.
+          </li>
+          <li>
+            <strong>Balance.</strong> Each outlet can have at most 15 news events a day, and 5 sport
+            events counted apart, so no single outlet can fill the globe. The
+            <a href="/sources/">Sources</a> page has the details.
+          </li>
+        </ul>
+      </section>
+
+      <section id="limits">
+        <h2>Known limits</h2>
+        <ul>
+          <li>
+            <strong>Most news is rated low.</strong> A headline with no death count or listed danger is
+            low, however important the story is. This keeps the rule checkable instead of guessing
+            what matters.
+          </li>
+          <li><strong>Places can be wrong</strong>, because they are worked out by software. Machine-coded places say so on their card.</li>
+          <li><strong>Headlines can disagree</strong> on numbers. When they do, the highest level wins.</li>
+          <li><strong>Coverage is not complete.</strong> Only the listed outlets appear, and only their English-language editions where an outlet publishes in several languages.</li>
+          <li>
+            <strong>Do not use this site for safety decisions.</strong> Disaster alerts are automated
+            estimates. Follow your national and local authorities.
+          </li>
+        </ul>
+      </section>
+
+      <section id="contact">
+        <h2>Contact and corrections</h2>
+        <p>
+          Made by <a href="https://krimadev.com">KriMa Development</a>. If something is wrong, write
+          through <a href="https://krimadev.com/contact/">krimadev.com/contact</a>. Publisher details,
+          privacy and licences are on the <a href="/legal/">Legal</a> page.
+        </p>
+        <p class="doc-updated"><a id="version" href="https://github.com/KriMaDev/global_truth">Version</a></p>
+      </section>
+    </main>
+    <script type="module" src="/src/page.ts"></script>
+  </body>
+</html>

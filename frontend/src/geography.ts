@@ -1,8 +1,9 @@
 /**
- * The geography view's data and rules: country shapes coloured by severity, and labels for
- * countries, oceans and seas, mountain ranges, deserts and peaks that appear by importance as
- * you zoom, and the facts and text for "About this place". Data: /geo/countries.json and
- * /geo/labels.json (Natural Earth, public domain, made by tools/build_geo.py) and
+ * The geography view's data and rules: country shapes coloured by severity, lakes, and labels
+ * for countries, oceans and seas, mountain ranges, deserts, peaks, rivers and lakes that appear
+ * by importance as you zoom, and the facts and text for "About this place". Data:
+ * /geo/countries.json, /geo/labels.json and /geo/lakes.json (Natural Earth, public domain, made
+ * by tools/build_geo.py) and
  * /geo/places.json (Wikidata CC0 and Wikipedia CC BY-SA 4.0, made by tools/build_places.py).
  */
 
@@ -34,14 +35,25 @@ export interface GeoLabels {
   seas: (PlaceLabel & { kind: string })[];
   regions: (PlaceLabel & { kind: "range" | "desert" })[];
   peaks: (PlaceLabel & { elevation: number })[];
+  /** Rivers (ranked by length) and lakes. */
+  waters: (PlaceLabel & { kind: "river" | "lake" })[];
+}
+
+/** A lake's shape, painted as water over the country colours. */
+export interface LakeShape {
+  name: string;
+  wikidata?: string | null;
+  /** Polygons, each a list of rings, each a list of [lng, lat]. */
+  polygons: number[][][][];
 }
 
 export interface GeographyData {
   countries: CountryShape[];
   labels: GeoLabels;
+  lakes: LakeShape[];
 }
 
-export type LabelKind = "country" | "ocean" | "sea" | "range" | "desert" | "peak";
+export type LabelKind = "country" | "ocean" | "sea" | "range" | "desert" | "peak" | "river" | "lake";
 
 export interface MapLabel {
   id: string;
@@ -102,6 +114,8 @@ const LIMITS = {
   sea: [0, 1, 3, 4, 9],
   region: [1, 2, 3, 4, 9],
   peak: [1, 2, 4, 5, 7],
+  /** Rivers and lakes: none from far away, then the largest (rank 3) first. */
+  water: [0, 3, 4, 5, 7],
 } as const;
 
 const formatter = new Intl.NumberFormat("en-GB");
@@ -114,10 +128,19 @@ function titleCase(text: string): string {
     : text;
 }
 
-const KIND_ORDER: Record<LabelKind, number> = { ocean: 0, country: 1, sea: 2, range: 3, desert: 3, peak: 4 };
+const KIND_ORDER: Record<LabelKind, number> = {
+  ocean: 0,
+  country: 1,
+  sea: 2,
+  range: 3,
+  desert: 3,
+  lake: 3,
+  river: 3,
+  peak: 4,
+};
 
-/** Which label wins where two would overlap: oceans, then countries, seas, ranges and
- * deserts, then peaks; within a kind, the more important (lower rank) first. */
+/** Which label wins where two would overlap: oceans, then countries, seas, ranges, deserts,
+ * lakes and rivers, then peaks; within a kind, the more important (lower rank) first. */
 export function labelPriority(label: MapLabel): number {
   return KIND_ORDER[label.kind] * 100 + label.rank;
 }
@@ -176,6 +199,10 @@ export function labelsFor(altitude: number, data: GeographyData): MapLabel[] {
       lat: region.at[1],
     });
   }
+  for (const water of data.labels.waters) {
+    if (water.rank > LIMITS.water[level]) continue;
+    labels.push(waterLabel(water));
+  }
   for (const peak of data.labels.peaks) {
     if (peak.rank > LIMITS.peak[level]) continue;
     labels.push({
@@ -192,6 +219,31 @@ export function labelsFor(altitude: number, data: GeographyData): MapLabel[] {
     });
   }
   return labels;
+}
+
+/** A river's or lake's label (also what its card is built from). */
+export function waterLabel(water: GeoLabels["waters"][number]): MapLabel {
+  return {
+    id: `${water.kind}:${water.name}`,
+    kind: water.kind,
+    type: water.kind === "river" ? "River" : "Lake",
+    name: water.name,
+    text: water.name,
+    rank: water.rank,
+    wikidata: water.wikidata ?? null,
+    lng: water.at[0],
+    lat: water.at[1],
+  };
+}
+
+/** The label of a lake's shape (clicked or hovered), matched by Wikidata ID or name. */
+export function lakeLabel(lake: LakeShape, data: GeographyData): MapLabel {
+  const water = data.labels.waters.find(
+    (w) => w.kind === "lake" && ((lake.wikidata && w.wikidata === lake.wikidata) || w.name === lake.name),
+  );
+  if (water) return waterLabel(water);
+  const [lng, lat] = lake.polygons[0]?.[0]?.[0] ?? [0, 0];
+  return { id: `lake:${lake.name}`, kind: "lake", type: "Lake", name: lake.name, text: lake.name, rank: 9, wikidata: lake.wikidata ?? null, lng, lat };
 }
 
 /** The lead text of a place's English Wikipedia article, word for word (CC BY-SA 4.0). */
@@ -263,6 +315,13 @@ export function factRows(label: Pick<MapLabel, "kind" | "elevation">, facts: Pla
     add("Area", area);
     add("Greatest depth", f.max_depth_m ? metres(f.max_depth_m) : undefined);
     add("Bordering countries", list(f.countries));
+  } else if (label.kind === "lake") {
+    add("Area", area);
+    add("Greatest depth", f.max_depth_m ? metres(f.max_depth_m) : undefined);
+    add("Countries", list(f.countries));
+  } else if (label.kind === "river") {
+    add("Length", f.length_m ? `${formatter.format(Math.round(f.length_m / 1000))} km` : undefined);
+    add("Countries", list(f.countries));
   } else if (label.kind === "peak") {
     add("Elevation", label.elevation ? metres(label.elevation) : undefined);
     add("Prominence", f.prominence_m ? metres(f.prominence_m) : undefined);

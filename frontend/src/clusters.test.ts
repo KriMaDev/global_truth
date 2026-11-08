@@ -66,6 +66,19 @@ describe("clusterEvents", () => {
     expect(a).toEqual(b);
   });
 
+  it("never groups a natural disaster with other news", () => {
+    const quake = { ...event("quake", 17.4, 78.5, "high"), categories: ["natural-disasters" as const], hazard: "EQ" };
+    const flood = { ...event("flood", 17.9, 79.6), categories: ["natural-disasters" as const], hazard: "FL" };
+    const clusters = clusterEvents([hyderabad, warangal, quake, flood], 4);
+    expect(clusters).toHaveLength(2);
+    const disasters = clusters.find((c) => c.lead.id === "quake");
+    expect(disasters?.events.map((e) => e.id).sort()).toEqual(["flood", "quake"]);
+    const news = clusters.find((c) => c !== disasters);
+    expect(news?.events.every((e) => !e.categories.includes("natural-disasters"))).toBe(true);
+    // Still most severe first overall.
+    expect(clusters[0].lead.id).toBe("quake");
+  });
+
   it("finds the group an event belongs to", () => {
     const clusters = clusterEvents([hyderabad, warangal, tokyo], 2);
     expect(clusterOf(clusters, "hyd")?.id).toBe("group:war");

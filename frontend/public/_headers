@@ -2,10 +2,11 @@
 # style-src: besides our own stylesheet, only the four small <style> blocks that globe.gl 2.46.2
 # and its tooltip add at start-up are allowed, by their exact SHA-256 (one is an empty block).
 # If globe.gl is updated, the browser check reports any new hash to add here.
+# script-src and connect-src: Cloudflare Web Analytics (src/analytics.ts).
 # img-src: sharp Earth tiles from NASA GIBS when zooming in (src/globe/detail.ts; owner's
 # decision, 7 Nov 2026, stated in the privacy section of /legal/).
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-9xjtvxMT1ApHlgn9ohbh2FNfvK5Tqtzy94BjfXBeMSY=' 'sha256-yfc2FhpkFR0EAy3T+zDsaAFGXSP9B3ELNvaJKDzNhkk=' 'sha256-GRFgt45UbKYCV14/Fqy6H9EB3zlAwSnH4xbsYt03Q6M='; img-src 'self' data: blob: https://gibs.earthdata.nasa.gov; connect-src 'self'; worker-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-9xjtvxMT1ApHlgn9ohbh2FNfvK5Tqtzy94BjfXBeMSY=' 'sha256-yfc2FhpkFR0EAy3T+zDsaAFGXSP9B3ELNvaJKDzNhkk=' 'sha256-GRFgt45UbKYCV14/Fqy6H9EB3zlAwSnH4xbsYt03Q6M='; img-src 'self' data: blob: https://gibs.earthdata.nasa.gov; connect-src 'self' https://cloudflareinsights.com; worker-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()

@@ -7,6 +7,7 @@ import {
   labelLevel,
   labelPriority,
   labelsFor,
+  lakeLabel,
   type GeographyData,
 } from "./geography";
 import type { GlobeEvent, Severity } from "./types";
@@ -65,7 +66,13 @@ const data: GeographyData = {
       { name: "Mount Everest", elevation: 8848, rank: 1, at: [86.9, 27.98] },
       { name: "Small Hill", elevation: 1200, rank: 9, at: [0, 0] },
     ],
+    waters: [
+      { name: "Danube", kind: "river", rank: 3, at: [20, 45] },
+      { name: "Lake Baikal", kind: "lake", rank: 3, wikidata: "Q5513", at: [108, 53.5] },
+      { name: "Small Creek", kind: "river", rank: 7, at: [1, 1] },
+    ],
   },
+  lakes: [{ name: "Lake Baikal", wikidata: "Q5513", polygons: [[[[104, 51], [110, 56], [109, 55], [104, 51]]]] }],
 };
 
 describe("labelsFor", () => {
@@ -83,6 +90,20 @@ describe("labelsFor", () => {
     expect(close).toContain("Luxembourg");
     expect(close).toContain("Gulf of Aden");
     expect(close).not.toContain("Small Hill 1,200 m");
+  });
+
+  it("shows no rivers or lakes from far away, the largest first when zooming in", () => {
+    expect(labelsFor(2.4, data).some((l) => l.kind === "river" || l.kind === "lake")).toBe(false);
+    const middle = labelsFor(1.5, data).map((l) => l.text);
+    expect(middle).toContain("Danube");
+    expect(middle).toContain("Lake Baikal");
+    expect(middle).not.toContain("Small Creek");
+    expect(labelsFor(0.3, data).map((l) => l.text)).toContain("Small Creek");
+  });
+
+  it("finds a lake shape's label (for its card)", () => {
+    const label = lakeLabel(data.lakes[0], data);
+    expect(label).toMatchObject({ kind: "lake", type: "Lake", name: "Lake Baikal", wikidata: "Q5513", lat: 53.5 });
   });
 
   it("has five zoom levels", () => {

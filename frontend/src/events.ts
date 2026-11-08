@@ -48,10 +48,21 @@ function isGeo(value: unknown): boolean {
   );
 }
 
+/** Where each category came from: known categories, short texts. */
+function isCategoryBasis(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    Object.entries(value).every(
+      ([category, basis]) => (CATEGORIES as readonly string[]).includes(category) && isText(basis, 60),
+    )
+  );
+}
+
 /** Optional fields: absent, or well formed. */
 function hasValidExtras(value: Record<string, unknown>): boolean {
-  const { severity_reason, feed, hazard, first_seen, coverage, geo, location_method } = value;
+  const { severity_reason, feed, hazard, first_seen, coverage, geo, location_method, category_basis } = value;
   return (
+    (category_basis === undefined || isCategoryBasis(category_basis)) &&
     (severity_reason === undefined || isText(severity_reason, 200)) &&
     (feed === undefined || isText(feed, 20)) &&
     (hazard === undefined || isNullableText(hazard)) &&
@@ -101,4 +112,10 @@ export function parseEvents(input: unknown): GlobeEvent[] {
 export function compareBySeverity(a: GlobeEvent, b: GlobeEvent): number {
   const bySeverity = SEVERITIES.indexOf(b.severity) - SEVERITIES.indexOf(a.severity);
   return bySeverity !== 0 ? bySeverity : Date.parse(b.published) - Date.parse(a.published);
+}
+
+/** Newest first, then most severe first. */
+export function compareByNewest(a: GlobeEvent, b: GlobeEvent): number {
+  const byTime = Date.parse(b.published) - Date.parse(a.published);
+  return byTime !== 0 ? byTime : SEVERITIES.indexOf(b.severity) - SEVERITIES.indexOf(a.severity);
 }

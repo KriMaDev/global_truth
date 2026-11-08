@@ -1,0 +1,131 @@
+/* The plain /news/ page, written by the pipeline (pipeline/globe_pipeline/pages.py). Severity
+   colours as in docs/severity.md (pipeline/tests/test_severity.py checks them). */
+:root {
+  --sev-low: #56b4e9;
+  --sev-moderate: #f0e442;
+  --sev-high: #e69f00;
+  --sev-critical: #d55e00;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #05070a;
+  color: #ebe8e1;
+  font: 1rem/1.55 system-ui, sans-serif;
+}
+
+main {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 1.5rem 16px 4rem;
+}
+
+a {
+  color: #d6dae0;
+  text-underline-offset: 3px;
+}
+
+h1 {
+  margin: 1rem 0 0.25rem;
+  font-size: 1.6rem;
+  line-height: 1.25;
+}
+
+h2 {
+  margin: 2.5rem 0 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid rgb(235 232 225 / 20%);
+  font-size: 1.25rem;
+}
+
+h3 {
+  margin: 1.5rem 0 0.4rem;
+  font-size: 1.05rem;
+}
+
+h4 {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pages,
+.contents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  font-size: 0.9rem;
+}
+
+.contents {
+  margin-top: 1rem;
+}
+
+.lead {
+  margin-top: 0;
+  color: #a6a8a3;
+}
+
+.see {
+  margin-left: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+.event {
+  margin: 0 0 0.9rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--level);
+}
+
+.sev-low {
+  --level: var(--sev-low);
+}
+
+.sev-moderate {
+  --level: var(--sev-moderate);
+}
+
+.sev-high {
+  --level: var(--sev-high);
+}
+
+.sev-critical {
+  --level: var(--sev-critical);
+}
+
+.meta {
+  margin: 0;
+  color: #a6a8a3;
+  font-size: 0.85rem;
+}
+
+.meta strong {
+  color: #ebe8e1;
+  font-weight: 600;
+}
+
+.state {
+  padding: 0 0.3rem;
+  border: 1px solid #f2b24c;
+  border-radius: 2px;
+  color: #f2b24c;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.warning {
+  padding: 0.4rem 0.6rem;
+  border-left: 2px solid #f2b24c;
+  background: rgb(255 255 255 / 3%);
+}

@@ -4,17 +4,22 @@ Downloads once into .cache/naturalearth/ and writes, to frontend/public/geo/ (co
 - lines.bin: coastlines and country borders (50m), simplified, in a compact binary form;
 - countries.json: country shapes (50m), simplified, with ISO code, name, continent, region,
   label point and label rank (for the geography view and the place drill-down);
-- labels.json: oceans and seas, mountain ranges and deserts, and major peaks, each with a
-  label point and an importance rank.
+- labels.json: oceans and seas, mountain ranges and deserts, major peaks, and rivers and
+  lakes, each with a label point and an importance rank;
+- water.bin: rivers and lake shores (50m), simplified, in the same binary form as lines.bin;
+- lakes.json: lake shapes (50m), simplified, for painting water over the country colours in the
+  geography view.
 
 Usage (from the repository root): pipeline/.venv/Scripts/python tools/build_geo.py
 
 lines.bin layout (little-endian): b"WNGL", uint32 coastline count, uint32 border count, then
 for every line: uint16 point count, then that many (int16 longitude*100, int16 latitude*100).
+water.bin is the same with river count and lake-shore count.
 """
 
 from __future__ import annotations
 
+import itertools
 import json
 import struct
 import urllib.request
@@ -33,6 +38,13 @@ SHAPE_TOLERANCE = 0.04
 # country shapes: too small to see coloured, and they cost the most to draw. Each country
 # always keeps its largest shape, so small island nations stay.
 MIN_ISLAND_AREA = 0.02
+#: Rivers and lake shores are finer than coastlines (rivers are thin, lakes small).
+WATER_TOLERANCE = 0.02
+#: Lakes smaller than this (square degrees, about 60 km²) are left out of the lake shapes.
+MIN_LAKE_AREA = 0.005
+#: River label ranks by total drawn length in degrees (3: the 21 longest, e.g. Lena, Yangtze,
+#: Mississippi, Danube, Amazon; 4: about 25 more; 5: about 75 more; 6: about 85 more).
+RIVER_RANKS = ((3, 25.0), (4, 15.0), (5, 8.0), (6, 4.0))
 
 
 def load(name: str) -> dict:
@@ -93,8 +105,12 @@ def lines_of(collection: dict) -> list[list[list[float]]]:
     return lines
 
 
-def write_lines(coast: list, borders: list) -> int:
-    simplified = [[simplify(line, LINE_TOLERANCE) for line in group] for group in (coast, borders)]
+def write_lines(
+    first: list, second: list, name: str = "lines.bin", tolerance: float = LINE_TOLERANCE
+) -> int:
+    """Two groups of lines in the WNGL form (coastlines and borders, or rivers and lake
+    shores)."""
+    simplified = [[simplify(line, tolerance) for line in group] for group in (first, second)]
     simplified = [[line for line in group if len(line) >= 2] for group in simplified]
     data = bytearray(b"WNGL")
     data += struct.pack("<II", len(simplified[0]), len(simplified[1]))
@@ -103,7 +119,7 @@ def write_lines(coast: list, borders: list) -> int:
             data += struct.pack("<H", len(line))
             for lng, lat in line:
                 data += struct.pack("<hh", round(lng * 100), round(lat * 100))
-    (OUT / "lines.bin").write_bytes(bytes(data))
+    (OUT / name).write_bytes(bytes(data))
     return len(data)
 
 
@@ -257,7 +273,110 @@ def build_labels() -> dict:
         and f["properties"].get("scalerank", 9) <= MAX_PEAK_RANK
     ]
     peaks.sort(key=lambda p: -p["elevation"])
-    return {"seas": unique(seas), "regions": unique(regions), "peaks": unique(peaks)}
+    return {
+        "seas": unique(seas),
+        "regions": unique(regions),
+        "peaks": unique(peaks),
+        "waters": build_waters(),
+    }
+
+
+def river_name(properties: dict) -> str:
+    """Rivers by their English name ("Yangtze", not "Chang Jiang")."""
+    return (properties.get("name_en") or properties.get("name") or "").strip()
+
+
+def line_length(line: list[list[float]]) -> float:
+    return sum(
+        ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) ** 0.5 for a, b in itertools.pairwise(line)
+    )
+
+
+def halfway(line: list[list[float]]) -> list[float]:
+    """The point half way along a line (where a river's name goes)."""
+    target = line_length(line) / 2
+    walked = 0.0
+    for a, b in itertools.pairwise(line):
+        step = ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) ** 0.5
+        if walked + step >= target and step > 0:
+            t = (target - walked) / step
+            return [round(a[0] + t * (b[0] - a[0]), 2), round(a[1] + t * (b[1] - a[1]), 2)]
+        walked += step
+    return [round(line[-1][0], 2), round(line[-1][1], 2)]
+
+
+def river_features() -> list[dict]:
+    """Natural Earth's rivers (its "lake centerlines" through lakes are left out: the lakes are
+    drawn themselves)."""
+    return [
+        f
+        for f in load("ne_50m_rivers_lake_centerlines")["features"]
+        if f["properties"].get("featurecla") == "River"
+    ]
+
+
+def lake_features() -> list[dict]:
+    return load("ne_50m_lakes")["features"]
+
+
+def build_waters() -> list[dict]:
+    """River and lake labels, ranked like the other labels (3 for the most important, up to
+    7). Lakes: Natural Earth's min_label. Rivers: by their drawn length, since Natural Earth
+    gives every piece of a river system (delta branches too) the system's min_label. A river
+    comes in many pieces: one label per name, half way along its longest piece."""
+    rivers: dict[str, dict] = {}
+    total: dict[str, float] = {}
+    for f in river_features():
+        name = river_name(f["properties"])
+        if not name:
+            continue
+        for line in lines_of({"features": [f]}):
+            length = line_length(line)
+            total[name] = total.get(name, 0.0) + length
+            best = rivers.get(name)
+            if best is None or length > best["length"]:
+                rivers[name] = {
+                    "name": name,
+                    "kind": "river",
+                    "wikidata": None,
+                    "at": halfway(line),
+                    "length": length,
+                }
+    for name, river in rivers.items():
+        river["rank"] = next((rank for rank, degrees in RIVER_RANKS if total[name] >= degrees), 7)
+    lakes = [
+        {
+            "name": f["properties"]["name"].strip(),
+            "kind": "lake",
+            "rank": f["properties"].get("min_label", 7),
+            "wikidata": f["properties"].get("wikidataid") or None,
+            "at": label_point(f["geometry"]),
+        }
+        for f in lake_features()
+        if f["properties"].get("name")
+    ]
+    waters = [{k: v for k, v in r.items() if k != "length"} for r in rivers.values()] + lakes
+    return unique(waters)
+
+
+def build_lakes() -> list[dict]:
+    """Lake shapes for the geography view (painted as water over the country colours)."""
+    lakes = []
+    for f in lake_features():
+        polygons = []
+        for polygon in polygons_of(f["geometry"]):
+            outer = simplify(polygon[0], WATER_TOLERANCE)
+            if len(outer) >= 4 and ring_area(outer) >= MIN_LAKE_AREA:
+                polygons.append([rounded(outer)])
+        if polygons:
+            lakes.append(
+                {
+                    "name": (f["properties"].get("name") or "").strip(),
+                    "wikidata": f["properties"].get("wikidataid") or None,
+                    "polygons": polygons,
+                }
+            )
+    return lakes
 
 
 def unique(labels: list[dict]) -> list[dict]:
@@ -277,7 +396,18 @@ def main() -> None:
         lines_of(load("ne_50m_admin_0_boundary_lines_land")),
     )
     print(f"wrote geo/lines.bin ({size // 1024} KB)")
-    for name, data in (("countries", build_countries()), ("labels", build_labels())):
+    shores = [
+        ring for f in lake_features() for poly in polygons_of(f["geometry"]) for ring in poly[:1]
+    ]
+    size = write_lines(
+        lines_of({"features": river_features()}), shores, "water.bin", WATER_TOLERANCE
+    )
+    print(f"wrote geo/water.bin ({size // 1024} KB)")
+    for name, data in (
+        ("countries", build_countries()),
+        ("labels", build_labels()),
+        ("lakes", build_lakes()),
+    ):
         path = OUT / f"{name}.json"
         path.write_text(
             json.dumps(data, ensure_ascii=False, separators=(",", ":")),

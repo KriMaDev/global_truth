@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Sources · World News Globe</title>
+    <meta
+      name="description"
+      content="Every data feed and news outlet behind World News Globe: live feed status, ownership, country, terms and credits."
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#05070a" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://globe.krimadev.com/sources/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="World News Globe" />
+    <meta property="og:title" content="Sources of World News Globe" />
+    <meta property="og:description" content="Every data feed and news outlet behind World News Globe: live feed status, ownership, country, terms and credits." />
+    <meta property="og:url" content="https://globe.krimadev.com/sources/" />
+    <meta property="og:image" content="https://globe.krimadev.com/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Sources of World News Globe",
+        "description": "Every data feed and news outlet behind World News Globe: live feed status, ownership, country, terms and credits.",
+        "url": "https://globe.krimadev.com/sources/",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "World News Globe",
+          "url": "https://globe.krimadev.com/"
+        }
+      }
+    </script>
+  </head>
+  <body class="page">
+    <main class="doc">
+      <nav class="doc-nav" aria-label="Pages">
+        <a href="/">← Back to the globe</a>
+        <a href="/about/">About</a>
+        <a href="/sources/" aria-current="page">Sources</a>
+        <a href="/legal/">Legal</a>
+      </nav>
+      <h1>Sources</h1>
+      <p class="doc-updated">Last updated: 8 November 2026</p>
+
+      <nav class="doc-toc glass" aria-label="On this page">
+        <a href="#status">Feed status now</a>
+        <a href="#feeds">Feeds</a>
+        <a href="#outlets">News outlets</a>
+        <a href="#left-out">What is left out</a>
+        <a href="#reference">Reference data</a>
+      </nav>
+
+      <section id="status">
+        <h2>Feed status now</h2>
+        <p id="feed-summary" class="doc-updated" role="status">Loading the feed status…</p>
+        <div id="feed-warnings"></div>
+        <table class="doc-table" id="feed-table" hidden>
+          <thead>
+            <tr><th>Feed</th><th>Type</th><th>Status</th><th>Last good update</th><th>Items now</th></tr>
+          </thead>
+          <tbody id="feed-rows"></tbody>
+        </table>
+      </section>
+
+      <section id="feeds">
+        <h2>Feeds</h2>
+        <p>
+          A <strong>Data feed</strong> is measured or issued by a scientific or official body. A
+          <strong>News report</strong> is an article by a news outlet. Every item on the globe says
+          which it is.
+        </p>
+        <table class="doc-table">
+          <thead>
+            <tr><th>Source</th><th>Type</th><th>Used for</th><th>Terms and credit</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="https://earthquake.usgs.gov/earthquakes/feed/">USGS Earthquake Hazards Program</a></td>
+              <td>Data feed</td>
+              <td>Earthquakes (magnitude 4.5 and above, and significant ones)</td>
+              <td>Public domain. Credit: U.S. Geological Survey.</td>
+            </tr>
+            <tr>
+              <td><a href="https://www.gdacs.org/">GDACS</a> (European Commission JRC, UN OCHA)</td>
+              <td>Data feed</td>
+              <td>Disaster alerts: earthquakes, cyclones, floods, volcanoes, droughts, wildfires</td>
+              <td>
+                CC BY 4.0 under the
+                <a href="https://commission.europa.eu/legal-notice_en">European Commission's reuse policy</a>.
+                Our change: severity is derived from the GDACS alert level (Green low, Orange high,
+                Red critical). GDACS alerts are indicative and do not replace official alerts
+                (<a href="https://www.gdacs.org/About/termofuse.aspx">GDACS terms</a>).
+              </td>
+            </tr>
+            <tr>
+              <td><a href="https://www.gdeltproject.org/">The GDELT Project</a></td>
+              <td>News report</td>
+              <td>Which articles the outlets below published, their headlines, places mentioned and topics</td>
+              <td>Free for any use with credit and a link to the GDELT Project.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="outlets">
+        <h2>News outlets</h2>
+        <p>Only articles from these outlets appear. They were chosen to cover every region and a range of viewpoints.</p>
+        <ul>
+          <li>
+            <span class="badge-state">State-affiliated</span> means funded and editorially controlled
+            by a government, without legal editorial independence. The label is shown on every item
+            from that outlet.
+          </li>
+          <li><strong>Public</strong> means publicly funded, with editorial independence guaranteed by law or charter.</li>
+          <li><strong>Private</strong> covers companies, trusts and non-profits.</li>
+          <li><strong>Intergovernmental</strong> is an international organisation's news service.</li>
+          <li>
+            <strong>Balance:</strong> to keep any one outlet from dominating, at most 15 news events
+            from each are kept per day (the most severe, most widely reported and newest), and at most
+            5 sport events, counted apart.
+          </li>
+        </ul>
+        <table class="doc-table">
+          <thead>
+            <tr><th>Outlet</th><th>Website</th><th>Country</th><th>Region</th><th>Ownership</th><th>Events, 7 days</th></tr>
+          </thead>
+          <tbody>
+            <tr id="outlet-bbc-news"><td>BBC News</td><td>bbc.co.uk</td><td>United Kingdom</td><td>Europe</td><td>Public</td><td data-count>–</td></tr>
+            <tr id="outlet-the-guardian"><td>The Guardian</td><td>theguardian.com</td><td>United Kingdom</td><td>Europe</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-dw"><td>DW</td><td>dw.com</td><td>Germany</td><td>Europe</td><td>Public</td><td data-count>–</td></tr>
+            <tr id="outlet-france-24"><td>France 24</td><td>france24.com</td><td>France</td><td>Europe</td><td>Public</td><td data-count>–</td></tr>
+            <tr id="outlet-rfi"><td>RFI</td><td>rfi.fr</td><td>France</td><td>Europe</td><td>Public</td><td data-count>–</td></tr>
+            <tr id="outlet-euronews"><td>Euronews</td><td>euronews.com</td><td>France</td><td>Europe</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-kyiv-independent"><td>Kyiv Independent</td><td>kyivindependent.com</td><td>Ukraine</td><td>Europe</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-meduza"><td>Meduza</td><td>meduza.io</td><td>Latvia (Russian exile media)</td><td>Europe</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-tass"><td>TASS</td><td>tass.com</td><td>Russia</td><td>Europe</td><td><span class="badge-state">State-affiliated</span></td><td data-count>–</td></tr>
+            <tr id="outlet-ap-news"><td>AP News</td><td>apnews.com</td><td>United States</td><td>Americas</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-npr"><td>NPR</td><td>npr.org</td><td>United States</td><td>Americas</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-voa"><td>VOA</td><td>voanews.com</td><td>United States</td><td>Americas</td><td>Public</td><td data-count>–</td></tr>
+            <tr id="outlet-rfe-rl"><td>RFE/RL</td><td>rferl.org</td><td>United States (Prague newsroom)</td><td>Europe</td><td>Public</td><td data-count>–</td></tr>
+            <tr id="outlet-cbc-news"><td>CBC News</td><td>cbc.ca</td><td>Canada</td><td>Americas</td><td>Public</td><td data-count>–</td></tr>
+            <tr id="outlet-mercopress"><td>MercoPress</td><td>mercopress.com</td><td>Uruguay</td><td>Americas</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-buenos-aires-times"><td>Buenos Aires Times</td><td>batimes.com.ar</td><td>Argentina</td><td>Americas</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-al-jazeera"><td>Al Jazeera</td><td>aljazeera.com</td><td>Qatar</td><td>Middle East</td><td><span class="badge-state">State-affiliated</span></td><td data-count>–</td></tr>
+            <tr id="outlet-anadolu-agency"><td>Anadolu Agency</td><td>aa.com.tr</td><td>Türkiye</td><td>Middle East</td><td><span class="badge-state">State-affiliated</span></td><td data-count>–</td></tr>
+            <tr id="outlet-daily-maverick"><td>Daily Maverick</td><td>dailymaverick.co.za</td><td>South Africa</td><td>Africa</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-premium-times"><td>Premium Times</td><td>premiumtimesng.com</td><td>Nigeria</td><td>Africa</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-africanews"><td>Africanews</td><td>africanews.com</td><td>France (pan-African)</td><td>Africa</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-the-eastafrican"><td>The EastAfrican</td><td>theeastafrican.co.ke</td><td>Kenya</td><td>Africa</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-nhk-world"><td>NHK World</td><td>nhk.or.jp</td><td>Japan</td><td>Asia</td><td>Public</td><td data-count>–</td></tr>
+            <tr id="outlet-the-japan-times"><td>The Japan Times</td><td>japantimes.co.jp</td><td>Japan</td><td>Asia</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-the-hindu"><td>The Hindu</td><td>thehindu.com</td><td>India</td><td>Asia</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-dawn"><td>Dawn</td><td>dawn.com</td><td>Pakistan</td><td>Asia</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-south-china-morning-post"><td>South China Morning Post</td><td>scmp.com</td><td>Hong Kong</td><td>Asia</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-xinhua"><td>Xinhua</td><td>xinhuanet.com</td><td>China</td><td>Asia</td><td><span class="badge-state">State-affiliated</span></td><td data-count>–</td></tr>
+            <tr id="outlet-cgtn"><td>CGTN</td><td>cgtn.com</td><td>China</td><td>Asia</td><td><span class="badge-state">State-affiliated</span></td><td data-count>–</td></tr>
+            <tr id="outlet-the-straits-times"><td>The Straits Times</td><td>straitstimes.com</td><td>Singapore</td><td>Asia</td><td>Private</td><td data-count>–</td></tr>
+            <tr id="outlet-abc-news-australia"><td>ABC News (Australia)</td><td>abc.net.au</td><td>Australia</td><td>Oceania</td><td>Public</td><td data-count>–</td></tr>
+            <tr id="outlet-un-news"><td>UN News</td><td>news.un.org</td><td>International</td><td>International</td><td>Intergovernmental</td><td data-count>–</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="left-out">
+        <h2>What is left out</h2>
+        <ul>
+          <li>Culture, lifestyle, travel, food, shopping and opinion pages, podcasts, video and live pages, and paid "promoted" or "sponsored" pages.</li>
+          <li>Articles in none of the eleven <a href="/about/#categories">categories</a>, and news whose headline names no place.</li>
+          <li>Outlets' other-language editions: only the English edition is used for DW, France 24, RFI, Meduza, Anadolu Agency and NHK World. The Hindu's city pages are left out too.</li>
+          <li>GDACS's Green alerts for wildfires and droughts, of which there are dozens at any time.</li>
+          <li>Article text: no snippets are shown for news, and nothing beyond the headline is stored.</li>
+        </ul>
+      </section>
+
+      <section id="reference">
+        <h2>Reference data</h2>
+        <table class="doc-table">
+          <thead>
+            <tr><th>Source</th><th>Used for</th><th>Terms and credit</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="https://www.geonames.org/">GeoNames</a></td>
+              <td>Places, provinces and countries</td>
+              <td><a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Credit: GeoNames.</td>
+            </tr>
+            <tr>
+              <td><a href="https://unstats.un.org/unsd/methodology/m49/overview/">UN M49</a></td>
+              <td>World regions</td>
+              <td>United Nations Statistics Division.</td>
+            </tr>
+            <tr>
+              <td><a href="https://www.naturalearthdata.com/">Natural Earth</a></td>
+              <td>Coastlines, borders, countries, seas, mountains, rivers, lakes</td>
+              <td>Public domain.</td>
+            </tr>
+            <tr>
+              <td><a href="https://www.wikidata.org/">Wikidata</a></td>
+              <td>Facts on the "About this place" cards (capital, population, area, depth, heights…)</td>
+              <td><a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a> (public domain). Each card links to its Wikidata item.</td>
+            </tr>
+            <tr>
+              <td><a href="https://en.wikipedia.org/">Wikipedia</a> (English)</td>
+              <td>The introduction of each place's article on its "About this place" card</td>
+              <td>
+                Text by Wikipedia's contributors under
+                <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>, shown
+                word for word. Each card names the article and links to the revision it was taken
+                from, with the date it was fetched.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Earth imagery, fonts and software are credited on the <a href="/legal/#credits">Legal</a> page.</p>
+        <p class="doc-updated"><a id="version" href="https://github.com/KriMaDev/global_truth">Version</a></p>
+      </section>
+    </main>
+    <script type="module" src="/src/sources.ts"></script>
+  </body>
+</html>
