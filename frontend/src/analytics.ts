@@ -3,7 +3,7 @@
  * browser, and the visit counted only on the real site. The token is public (it is in every
  * page), from Cloudflare → Web Analytics → the site → "Manage site". Empty = no beacon.
  */
-const WEB_ANALYTICS = { token: "", hostname: "globe.krimadev.com" };
+const WEB_ANALYTICS = { token: "9ba97f0570c04dddb320826a27b1daf7", hostname: "globe.krimadev.com" };
 
 /** Loads the beacon a second after the page, so it never competes with the page's own files. */
 export function startAnalytics(): void {
