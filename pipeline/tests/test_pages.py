@@ -91,6 +91,8 @@ def test_says_so_when_empty_or_a_feed_failed(now) -> None:
     page = render_news([], [failed], now)
     assert "No events in this time window." in page
     assert "GDACS failed in this update" in page
+    partial = FeedStatus("gdelt", "GDELT", "news", "https://example.com", status="partial")
+    assert "GDELT was read only in part" in render_news([], [partial], now)
 
 
 def test_runs_no_script_and_has_the_tags_crawlers_read(now) -> None:

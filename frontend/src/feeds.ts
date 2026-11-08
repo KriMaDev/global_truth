@@ -50,6 +50,12 @@ export function relativeTime(time: string, now: number): string {
   return `${Math.floor(hours / 24)} days ago`;
 }
 
+/** A feed's status in words, for the Sources page. */
+export function statusLabel(status: string): string {
+  if (status === "ok") return "OK";
+  return status === "partial" ? "Partly read" : "Failed";
+}
+
 function feedName(feed: FeedStatus): string {
   return FEED_NAMES[feed.id] ?? feed.name;
 }
@@ -72,6 +78,10 @@ export function describeFreshness(dataTime: string | null, report: FeedsReport |
     warnings.push(`Data may be out of date: the last update was ${relativeTime(generated, now)}.`);
   }
   for (const feed of feeds.filter((f) => f.status !== "ok")) {
+    if (feed.status === "partial") {
+      warnings.push(`${feedName(feed)} was read only in part in the last update. The missing part is tried again next time.`);
+      continue;
+    }
     const since = feed.last_success ? ` Its latest good data is from ${relativeTime(feed.last_success, now)}.` : "";
     warnings.push(`${feedName(feed)} failed in the last update.${since}`);
   }

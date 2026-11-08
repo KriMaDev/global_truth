@@ -206,6 +206,58 @@ def test_failing_source_keeps_its_last_events(tmp_path, monkeypatch, gazetteer, 
     assert written["gdelt_cursor"] == "2026-11-07T11:30:00Z"
 
 
+def _run_with_news(tmp_path, monkeypatch, gazetteer, now, found, stats):
+    """A run whose GDELT fetch returns `found`, after a run that published one story."""
+    previous_dir = tmp_path / "previous"
+    previous_dir.mkdir()
+    kept = news("old1", "Earlier story about the port", "dw", now, 30)
+    (previous_dir / "events.json").write_text(
+        json.dumps({"events": [kept.to_json()]}), encoding="utf-8"
+    )
+    (previous_dir / "feeds.json").write_text(
+        json.dumps(
+            {
+                "feeds": [{"id": "gdelt", "last_success": "2026-11-07T11:30:00Z"}],
+                "gdelt_cursor": "2026-11-07T11:30:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(run_module.Gazetteer, "load", classmethod(lambda cls, path=None: gazetteer))
+    monkeypatch.setattr(run_module.usgs, "fetch", lambda g, n: [])
+    monkeypatch.setattr(run_module.gdacs, "fetch", lambda g, n: [])
+    cursor = now - timedelta(minutes=30)
+    monkeypatch.setattr(run_module.gdelt, "fetch", lambda g, n, c: (found(kept), cursor, stats))
+    out = tmp_path / "out"
+    events = run_module.run(out, str(previous_dir), now)
+    feeds = json.loads((out / "feeds.json").read_text(encoding="utf-8"))
+    return events, {f["id"]: f for f in feeds["feeds"]}["gdelt"]
+
+
+def test_some_files_missing_is_reported_as_partial(tmp_path, monkeypatch, gazetteer, now) -> None:
+    stats = {"files": 1, "missing_files": 2, "unplaced": 0}
+    _, gdelt_feed = _run_with_news(tmp_path, monkeypatch, gazetteer, now, lambda kept: [], stats)
+    assert gdelt_feed["status"] == "partial"
+    assert gdelt_feed["note"] == "2 of 3 files could not be read"
+    assert gdelt_feed["last_success"] != "2026-11-07T11:30:00Z"
+
+
+def test_no_file_read_keeps_the_last_success(tmp_path, monkeypatch, gazetteer, now) -> None:
+    stats = {"files": 0, "missing_files": 2, "unplaced": 0}
+    _, gdelt_feed = _run_with_news(tmp_path, monkeypatch, gazetteer, now, lambda kept: [], stats)
+    assert gdelt_feed["status"] == "partial"
+    assert gdelt_feed["last_success"] == "2026-11-07T11:30:00Z"
+
+
+def test_reading_a_file_again_adds_no_duplicates(tmp_path, monkeypatch, gazetteer, now) -> None:
+    stats = {"files": 1, "missing_files": 0, "unplaced": 0}
+    events, gdelt_feed = _run_with_news(
+        tmp_path, monkeypatch, gazetteer, now, lambda kept: [kept], stats
+    )
+    assert [e.id for e in events] == ["old1"]
+    assert gdelt_feed["status"] == "ok"
+
+
 def test_load_previous_skips_damaged_entries(tmp_path) -> None:
     (tmp_path / "events.json").write_text(
         json.dumps({"events": [{"id": "broken"}]}), encoding="utf-8"

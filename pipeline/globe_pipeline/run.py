@@ -5,7 +5,8 @@ Usage:
     python -m globe_pipeline.run --out OUT --previous https://globe.krimadev.com/data
 
 A failing source never stops the run: its last good events are kept and feeds.json marks it
-with status "error" and the time of its last success.
+with status "error" and the time of its last success. A source read only in part (some GDELT
+files failed) is marked "partial".
 """
 
 from __future__ import annotations
@@ -56,6 +57,18 @@ def _run_feed(
     status.last_success = iso(now)
     status.count = len(events)
     return events
+
+
+def _mark_partial(status: FeedStatus, last_success: str | None) -> None:
+    """Says so when a run that "worked" could not read every file. If it read none at all,
+    nothing was updated, so the time of the last success stays as it was."""
+    read, missing = status.stats.get("files", 0), status.stats.get("missing_files", 0)
+    if status.status != "ok" or not missing:
+        return
+    status.status = "partial"
+    status.note = f"{missing} of {read + missing} files could not be read"
+    if not read:
+        status.last_success = last_success
 
 
 def balance_outlets(
@@ -117,7 +130,9 @@ def run(
         known = {source.url for event in previous_news for source in event.sources}
         return previous_news + [e for e in found if e.sources[0].url not in known]
 
+    last_news_success = news_status.last_success
     news = _run_feed(news_status, fetch_news, previous_news, now)
+    _mark_partial(news_status, last_news_success)
     statuses.append(news_status)
 
     events = balance_outlets(cluster(within_window(quakes + alerts + news, now)))

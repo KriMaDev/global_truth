@@ -5,7 +5,7 @@
  */
 
 import "./page";
-import { describeFreshness, parseFeeds, relativeTime, type FeedsReport } from "./feeds";
+import { describeFreshness, parseFeeds, relativeTime, statusLabel, type FeedsReport } from "./feeds";
 import { parseOutletDirectory } from "./outlets";
 import { KIND_LABELS, type EventKind, type FeedStatus } from "./types";
 import { el, timeFormat } from "./ui/dom";
@@ -41,7 +41,7 @@ function feedRow(feed: FeedStatus, now: number): HTMLTableRowElement {
   row.append(
     nameCell(feed),
     el("td", "", KIND_LABELS[feed.kind as EventKind] ?? feed.kind),
-    el("td", feed.status === "ok" ? "" : "doc-failed", feed.status === "ok" ? "OK" : "Failed"),
+    el("td", feed.status === "ok" ? "" : "doc-failed", statusLabel(feed.status)),
     when,
     el("td", "", feed.count === undefined ? "–" : String(feed.count)),
   );

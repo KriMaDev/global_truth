@@ -38,6 +38,9 @@ BACKFILL = timedelta(hours=6)
 #: Never read more files than this in one run.
 MAX_FILES = 24
 PAUSE_SECONDS = 2.0
+#: A file that could not be read is tried again on later runs for this long. After that it is
+#: given up on, so a file GDELT never publishes can't make every run re-read the same hours.
+RETRY_FOR = timedelta(hours=2)
 MIN_TITLE_LENGTH = 20
 
 _TITLE = re.compile(r"<PAGE_TITLE>(.*?)</PAGE_TITLE>", re.S)
@@ -235,6 +238,14 @@ def stamps_to_fetch(cursor: datetime | None, latest: datetime) -> list[datetime]
     return stamps[-MAX_FILES:]
 
 
+def next_cursor(failed: list[datetime], latest: datetime, now: datetime) -> datetime:
+    """Where the next run should pick up: just before the oldest file still worth retrying,
+    or at `latest` if there is none. Files read after a gap are read again next time; run.py
+    drops the articles it already has, by web address."""
+    retry = [moment for moment in failed if now - moment < RETRY_FOR]
+    return min(retry) - STEP if retry else latest
+
+
 def read_file(moment: datetime) -> str:
     """Downloads and unzips one GKG file."""
     data = get(FILE_URL.format(stamp=stamp(moment)), timeout=90)
@@ -249,6 +260,7 @@ def fetch(
     latest = latest_stamp()
     events: list[Event] = []
     stats = {"files": 0, "missing_files": 0, "unplaced": 0}
+    failed: list[datetime] = []
     for index, moment in enumerate(stamps_to_fetch(cursor, latest)):
         if index:
             time.sleep(PAUSE_SECONDS)
@@ -256,9 +268,10 @@ def fetch(
             text = read_file(moment)
         except FetchError:
             stats["missing_files"] += 1
+            failed.append(moment)
             continue
         found, unplaced = parse_rows(text, gazetteer, now)
         events.extend(found)
         stats["files"] += 1
         stats["unplaced"] += unplaced
-    return events, latest, stats
+    return events, next_cursor(failed, latest, now), stats

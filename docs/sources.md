@@ -37,7 +37,7 @@ Where to ask an outlet for permission (feed tags for categories, snippets). Only
 | NPR | permissions@npr.org, or the Copyright-Permissions form | [Rights and permissions](https://www.npr.org/about-npr/179881519/rights-and-permissions-information) | – | – |
 | CBC News | No email published: Help Centre, "Using or licensing CBC content" (Sales, Licensing and Partnership) | [CBC Help Centre](https://cbchelp.cbc.ca/hc/en-ca/sections/203864688-Using-or-licensing-CBC-content) | – | – |
 | DW | No email published: corporate contact page | [DW contact](https://corporate.dw.com/en/contact/s-30606) | – | – |
-| ABC News (Australia) | No suitable email published (LibrarySales is for archive footage): ABC contact form | [ABC contact](https://www.abc.net.au/contact/) | – | – |
+| ABC News (Australia) | No suitable email published (LibrarySales is for archive footage): ABC contact form | [Contact the ABC](https://help.abc.net.au/hc/en-us/articles/360001150496-Contact-the-ABC) | – | – |
 
 ### Outlet allowlist
 
@@ -115,5 +115,5 @@ Only articles from these outlets appear. GDELT reads far more sites; the allowli
 
 ## How we fetch
 - Every 30 minutes, with a generic User-Agent `WorldNewsGlobe/0.1 (+https://globe.krimadev.com)`, timeouts, and a few retries with backoff.
-- GDELT: only the 15-minute files published since the last run (6 hours back on a fresh start, at most 24 files), with a pause between downloads.
+- GDELT: only the 15-minute files published since the last run (6 hours back on a fresh start, at most 24 files), with a pause between downloads. A file that can't be read is tried again on later runs for 2 hours, then given up on; meanwhile the feed's status reads "Partly read".
 - We store only the headline, the outlet or provider, the time, the link, and for data feeds a short factual line built from the feed's own fields (e.g. "Magnitude 5.0, depth 77 km."). Never article text.

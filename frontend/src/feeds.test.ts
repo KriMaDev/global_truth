@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeFreshness, parseFeeds, relativeTime } from "./feeds";
+import { describeFreshness, parseFeeds, relativeTime, statusLabel } from "./feeds";
 
 const NOW = Date.parse("2026-11-08T12:00:00Z");
 
@@ -36,6 +36,16 @@ describe("parseFeeds", () => {
 });
 
 describe("describeFreshness", () => {
+  it("says plainly when a feed was read only in part", () => {
+    const partial = feed("gdelt", "partial");
+    expect(describeFreshness("2026-11-08T11:48:00Z", { generated: null, feeds: [partial] }, NOW).warnings).toEqual([
+      "GDELT was read only in part in the last update. The missing part is tried again next time.",
+    ]);
+    expect(statusLabel("partial")).toBe("Partly read");
+    expect(statusLabel("ok")).toBe("OK");
+    expect(statusLabel("error")).toBe("Failed");
+  });
+
   it("says when each feed updated, with no warnings on fresh data", () => {
     const result = describeFreshness(
       "2026-11-08T11:48:00Z",

@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 
+from globe_pipeline.http import FetchError
 from globe_pipeline.outlets import OUTLETS, clean_headline, is_sport_page, outlet_for_url
 from globe_pipeline.sources import gdacs, gdelt, usgs
 
@@ -190,6 +191,49 @@ def test_gdelt_stamps_to_fetch(now) -> None:
     stamps = gdelt.stamps_to_fetch(gdelt.parse_stamp("20261107113000"), latest)
     assert [gdelt.stamp(s) for s in stamps] == ["20261107114500", "20261107120000"]
     assert len(gdelt.stamps_to_fetch(None, latest)) == gdelt.MAX_FILES
+
+
+def _gdelt_run(monkeypatch, gazetteer, now, cursor, latest, failing):
+    """One gdelt.fetch where the files stamped in `failing` can't be downloaded."""
+
+    def read_file(moment):
+        if gdelt.stamp(moment) in failing:
+            raise FetchError("not there")
+        return ""
+
+    monkeypatch.setattr(gdelt, "PAUSE_SECONDS", 0)
+    monkeypatch.setattr(gdelt, "latest_stamp", lambda: gdelt.parse_stamp(latest))
+    monkeypatch.setattr(gdelt, "read_file", read_file)
+    return gdelt.fetch(gazetteer, now, gdelt.parse_stamp(cursor))
+
+
+def test_gdelt_comes_back_for_a_file_it_could_not_read(monkeypatch, gazetteer) -> None:
+    now = gdelt.parse_stamp("20261107121000")
+    _, cursor, stats = _gdelt_run(
+        monkeypatch, gazetteer, now, "20261107113000", "20261107120000", {"20261107114500"}
+    )
+    assert gdelt.stamp(cursor) == "20261107113000"
+    assert stats["files"] == 1
+    assert stats["missing_files"] == 1
+    # The next run starts with the file that failed.
+    assert gdelt.stamp(gdelt.stamps_to_fetch(cursor, now)[0]) == "20261107114500"
+
+
+def test_gdelt_moves_on_when_every_file_was_read(monkeypatch, gazetteer) -> None:
+    now = gdelt.parse_stamp("20261107121000")
+    _, cursor, _ = _gdelt_run(
+        monkeypatch, gazetteer, now, "20261107113000", "20261107120000", set()
+    )
+    assert gdelt.stamp(cursor) == "20261107120000"
+
+
+def test_gdelt_gives_up_on_a_file_after_two_hours(monkeypatch, gazetteer) -> None:
+    now = gdelt.parse_stamp("20261107121000")
+    _, cursor, stats = _gdelt_run(
+        monkeypatch, gazetteer, now, "20261107093000", "20261107103000", {"20261107094500"}
+    )
+    assert gdelt.stamp(cursor) == "20261107103000"
+    assert stats["missing_files"] == 1
 
 
 def test_outlet_matching_and_paths() -> None:

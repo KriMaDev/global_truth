@@ -143,8 +143,13 @@ def _sections(events: list[Event]) -> tuple[str, str]:
 
 def _feed_warnings(feeds: list[FeedStatus]) -> str:
     return "".join(
-        f'<p class="warning">{escape(feed.name)} failed in this update, so its latest good '
-        "data is shown.</p>"
+        f'<p class="warning">{escape(feed.name)} '
+        + (
+            "was read only in part in this update; the missing part is tried again next time."
+            if feed.status == "partial"
+            else "failed in this update, so its latest good data is shown."
+        )
+        + "</p>"
         for feed in feeds
         if feed.status != "ok"
     )
