@@ -53,6 +53,7 @@ import { parseOutletDirectory, setOutletDirectory } from './outlets';
 import { renderLegend, renderSummary } from './ui/legend';
 import { setupInfoPanel } from './ui/info-panel';
 import { followDeviceMotion, initialReducedMotion } from './ui/motion';
+import { setupFloatingPanelTitle } from './ui/panel-title';
 
 function byId<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -619,6 +620,7 @@ async function start(): Promise<void> {
   startAnalytics();
   renderLegend(byId('legend'));
   if (footer) setupInfoPanel(footer, byId<HTMLButtonElement>('info-toggle'));
+  setupFloatingPanelTitle(byId('news-toggle'), [byId('news-panel'), byId('filter-panel')]);
   stopPageZoomOnIPhones();
   followDeviceMotion((on) => {
     app?.setReducedMotion(on);

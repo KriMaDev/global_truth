@@ -180,6 +180,37 @@ function shield(element: HTMLElement): void {
   for (const type of ['pointerdown', 'pointerup'] as const) {
     element.addEventListener(type, (event) => event.stopPropagation());
   }
+  element.addEventListener('pointerdown', (down) => passDragToGlobe(element, down));
+}
+
+/** A finger or mouse that moves this far (CSS px) from a label is turning the globe. */
+const DRAG_PX = 8;
+
+/**
+ * Labels and badges sit above the globe and would otherwise stop it from being dragged, leaving
+ * only the empty map to grab. A press that moves is handed to the globe, as if it had started on
+ * the map (the globe's controls then capture the pointer, so no click reaches the label). A
+ * press that doesn't move stays an ordinary click.
+ */
+function passDragToGlobe(element: HTMLElement, down: PointerEvent): void {
+  const stop = (): void => {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onEnd);
+    window.removeEventListener('pointercancel', onEnd);
+  };
+  const onEnd = (event: PointerEvent): void => {
+    if (event.pointerId === down.pointerId) stop();
+  };
+  const onMove = (move: PointerEvent): void => {
+    if (move.pointerId !== down.pointerId) return;
+    if (Math.hypot(move.clientX - down.clientX, move.clientY - down.clientY) < DRAG_PX) return;
+    stop();
+    const canvas = element.closest('.globe')?.querySelector('canvas');
+    canvas?.dispatchEvent(new PointerEvent('pointerdown', down));
+  };
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onEnd);
+  window.addEventListener('pointercancel', onEnd);
 }
 
 /** What the one HTML layer holds: group count badges and, in the geography view, map labels. */

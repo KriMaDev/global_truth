@@ -362,6 +362,12 @@ button {
 
 /* ---------- Geography view: map labels ---------- */
 
+/* touch-action: a drag that starts on a label or badge turns the globe (passDragToGlobe). */
+.map-label,
+.cluster-badge {
+  touch-action: none;
+}
+
 .map-label {
   padding: 0;
   border: 0;
@@ -744,6 +750,20 @@ html.app body {
 .zoom-button:hover {
   color: var(--accent);
   border-color: var(--accent-soft);
+}
+
+/* A panel's name, in the gap above it, once its own heading has scrolled away. */
+.panel-float-title {
+  position: fixed;
+  left: var(--gutter);
+  z-index: 21;
+  margin: 0;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--panel-solid);
+  color: var(--fg);
+  font-size: 0.875rem;
 }
 
 .gesture-hint {
@@ -1924,12 +1944,6 @@ body.page {
   .news-panel::before,
   .news-panel::after {
     content: none;
-  }
-
-  .news-panel .filter-head {
-    position: sticky;
-    top: 0;
-    z-index: 1;
   }
 
   .news-body {

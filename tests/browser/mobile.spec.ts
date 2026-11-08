@@ -44,18 +44,45 @@ const eventsDocument = {
   generated: now,
   window_hours: 72,
   counts: {},
-  events: [syntheticEvent('a', 10, 10), syntheticEvent('b', 40, -60)],
+  events: Array.from({ length: 30 }, (_, i) => syntheticEvent(`e${i}`, -60 + i * 4, -170 + i * 11)),
 };
 
-async function openGlobe(page: Page): Promise<void> {
+async function openGlobe(page: Page, path = '/'): Promise<void> {
   await page.route('**/data/events.json', (route) => route.fulfill({ json: eventsDocument }));
   await page.route('**/data/days/**', (route) => route.fulfill({ json: eventsDocument }));
   await page.route('**/data/feeds.json', (route) =>
     route.fulfill({ json: { generated: now, feeds: [] } }),
   );
   await page.route('**/data/outlets.json', (route) => route.fulfill({ json: [] }));
-  await page.goto('/');
+  await page.goto(path);
   await expect(page.locator('#rotate-toggle')).toBeVisible({ timeout: 60_000 });
+}
+
+/** The camera's latitude and longitude, from the readout. */
+async function view(page: Page): Promise<[number, number]> {
+  const text = (await page.locator('#hud').textContent()) ?? '';
+  const found = /([\d.]+)°([NS]) ([\d.]+)°([EW])/.exec(text);
+  if (!found) throw new Error(`No position in "${text}"`);
+  return [
+    Number(found[1]) * (found[2] === 'N' ? 1 : -1),
+    Number(found[3]) * (found[4] === 'E' ? 1 : -1),
+  ];
+}
+
+/** Centre of a map label that is on top at its spot, away from the screen's edges. */
+function visibleLabel(page: Page) {
+  return page.evaluate(() => {
+    for (const label of document.querySelectorAll<HTMLElement>('.map-label')) {
+      if (label.matches('.is-hidden, .is-crowded')) continue;
+      const area = label.getBoundingClientRect();
+      const x = area.x + area.width / 2;
+      const y = area.y + area.height / 2;
+      if (area.width && x > 60 && x < 260 && y > 200 && y < 520) {
+        if (document.elementFromPoint(x, y) === label) return { x, y };
+      }
+    }
+    return null;
+  });
 }
 
 async function box(page: Page, selector: string) {
@@ -167,6 +194,81 @@ test('a pinch on the controls does not zoom the page', async ({ page, browserNam
   });
   await page.waitForTimeout(300);
   expect(await page.evaluate(() => window.visualViewport?.scale)).toBe(1);
+});
+
+test('a drag that starts on a map label turns the globe, and a tap opens the label', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'The touch tool exists in Chromium and Edge only');
+  await openGlobe(page, '/?view=geo');
+  await page.locator('#rotate-toggle').click();
+  await expect(page.locator('#rotate-toggle')).toHaveAttribute('aria-pressed', 'false');
+  for (let i = 0; i < 3; i += 1) {
+    await page.locator('#zoom-in').click();
+    await page.waitForTimeout(500);
+  }
+  await expect.poll(() => visibleLabel(page), { timeout: 15_000 }).not.toBeNull();
+  await page.waitForTimeout(1000);
+
+  const start = await visibleLabel(page);
+  if (!start) throw new Error('No label to press');
+  const before = await view(page);
+  const client = await page.context().newCDPSession(page);
+  await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [start] });
+  for (let i = 1; i <= 12; i += 1) {
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: start.x + i * 8, y: start.y + i * 3 }],
+    });
+    await page.waitForTimeout(25);
+  }
+  await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect
+    .poll(async () => {
+      const after = await view(page);
+      return Math.abs(after[0] - before[0]) + Math.abs(after[1] - before[1]);
+    })
+    .toBeGreaterThan(3);
+  await expect(page.locator('#event-card')).toBeHidden();
+
+  await page.waitForTimeout(1800); // The globe glides to a stop after a drag.
+  const label = await visibleLabel(page);
+  if (!label) throw new Error('No label to tap');
+  await page.touchscreen.tap(label.x, label.y);
+  await expect(page.locator('#event-card')).toBeVisible();
+});
+
+test.describe('a panel that scrolls', () => {
+  test.use({ viewport: { width: 412, height: 640 } });
+
+  for (const [toggle, panel, name] of [
+    ['#news-toggle', '#news-panel', 'Headlines'],
+    ['#filter-toggle', '#filter-panel', 'Filters'],
+  ] as const) {
+    test(`${name}: the name moves to the gap above the panel`, async ({ page }) => {
+      await openGlobe(page);
+      const title = page.locator('#panel-float-title');
+      await page.locator(toggle).click();
+      await page.waitForTimeout(500);
+      await expect(title).toBeHidden();
+
+      await page.locator(panel).evaluate((element) => element.scrollTo(0, 400));
+      await expect(title).toBeVisible();
+      await expect(title).toHaveText(name);
+
+      const area = await box(page, panel);
+      const place = await box(page, '#panel-float-title');
+      const heading = await box(page, `${panel} .filter-head`);
+      const row = await box(page, toggle);
+      expect(heading.y + heading.height).toBeLessThanOrEqual(area.y + 1);
+      expect(place.y + place.height).toBeLessThanOrEqual(area.y);
+      expect(place.y).toBeGreaterThanOrEqual(row.y + row.height);
+
+      await page.locator(toggle).click();
+      await expect(title).toBeHidden();
+    });
+  }
 });
 
 test('the hint leaves at the first touch', async ({ page }) => {
