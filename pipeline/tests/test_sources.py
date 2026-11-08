@@ -208,9 +208,46 @@ def _gdelt_run(monkeypatch, gazetteer, now, cursor, latest, failing):
         return ""
 
     monkeypatch.setattr(gdelt, "PAUSE_SECONDS", 0)
+    monkeypatch.setattr(gdelt, "SECOND_TRY_PAUSE_SECONDS", 0)
     monkeypatch.setattr(gdelt, "latest_stamp", lambda: gdelt.parse_stamp(latest))
     monkeypatch.setattr(gdelt, "read_file", read_file)
     return gdelt.fetch(gazetteer, now, gdelt.parse_stamp(cursor))
+
+
+def test_gdelt_second_try_in_the_same_run_clears_a_failure(monkeypatch, gazetteer, caplog) -> None:
+    now = gdelt.parse_stamp("20261107121000")
+    attempts: list[str] = []
+
+    def read_file(moment):
+        attempts.append(gdelt.stamp(moment))
+        if attempts.count("20261107114500") == 1 and gdelt.stamp(moment) == "20261107114500":
+            raise FetchError("https://example.org/file: damaged file")
+        return ""
+
+    monkeypatch.setattr(gdelt, "PAUSE_SECONDS", 0)
+    monkeypatch.setattr(gdelt, "SECOND_TRY_PAUSE_SECONDS", 0)
+    monkeypatch.setattr(gdelt, "latest_stamp", lambda: gdelt.parse_stamp("20261107120000"))
+    monkeypatch.setattr(gdelt, "read_file", read_file)
+    with caplog.at_level("WARNING", logger="globe_pipeline"):
+        _, cursor, stats = gdelt.fetch(gazetteer, now, gdelt.parse_stamp("20261107113000"))
+    assert stats["files"] == 2
+    assert stats["missing_files"] == 0
+    assert gdelt.stamp(cursor) == "20261107120000"
+    # The reason reaches the run's log.
+    assert "20261107114500" in caplog.text
+    assert "damaged file" in caplog.text
+
+
+def test_gdelt_counts_only_failures_older_than_an_hour_as_overdue(monkeypatch, gazetteer) -> None:
+    now = gdelt.parse_stamp("20261107121000")
+    _, _, young = _gdelt_run(
+        monkeypatch, gazetteer, now, "20261107113000", "20261107120000", {"20261107114500"}
+    )
+    assert (young["missing_files"], young["overdue_files"]) == (1, 0)
+    _, _, old = _gdelt_run(
+        monkeypatch, gazetteer, now, "20261107103000", "20261107120000", {"20261107104500"}
+    )
+    assert (old["missing_files"], old["overdue_files"]) == (1, 1)
 
 
 def test_gdelt_comes_back_for_a_file_it_could_not_read(monkeypatch, gazetteer) -> None:

@@ -75,6 +75,8 @@ export interface GlobeApp {
    * news view with null. Call again whenever the filtered events change. */
   setGeography(data: GeographyData | null, severities: Map<string, Severity>): void;
   rotateBy(degreesLng: number, degreesLat: number): void;
+  /** Back out to the starting distance, looking at the same place. */
+  showWholeGlobe(): void;
   zoomBy(factor: number): void;
 }
 
@@ -111,8 +113,8 @@ const SUN_UPDATE_MS = 60_000;
 const MIN_ALTITUDE: Record<'2k' | '4k', number> = { '2k': 0.6, '4k': 0.5 };
 /** …and once NASA's sharp tiles show (./detail.ts). */
 const DETAIL_MIN_ALTITUDE = 0.15;
-/** Furthest zoom: the whole globe still fits across a phone screen (which starts at 3.6). */
-const MAX_ALTITUDE = 4;
+/** Furthest zoom, well past the point where the whole globe fits (phones start at 3.6). */
+const MAX_ALTITUDE = 7;
 
 /** Windows at least this wide (CSS pixels) get 4K textures; phones and small tablets 2K. */
 const WIDE_SCREEN = 1024;
@@ -705,6 +707,10 @@ export async function createGlobeApp(
       const p = globe.pointOfView();
       const lat = Math.max(-85, Math.min(85, p.lat + degreesLat));
       move({ lat, lng: p.lng + degreesLng, altitude: p.altitude }, STEP_MS);
+    },
+    showWholeGlobe() {
+      const p = globe.pointOfView();
+      move({ lat: p.lat, lng: p.lng, altitude: startAltitude() }, FLY_MS);
     },
     zoomBy(factor) {
       const p = globe.pointOfView();

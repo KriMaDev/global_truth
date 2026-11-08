@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import logging
 import re
 import time
 import zipfile
@@ -26,6 +27,8 @@ from ..models import Event, Geo, Source
 from ..normalize import clean_text
 from ..outlets import clean_headline, is_sport_page, outlet_for_url
 from ..severity import news_severity
+
+LOG = logging.getLogger("globe_pipeline")
 
 ID = "gdelt"
 NAME = "GDELT Project (Global Knowledge Graph), allowlisted outlets"
@@ -41,6 +44,11 @@ PAUSE_SECONDS = 2.0
 #: A file that could not be read is tried again on later runs for this long. After that it is
 #: given up on, so a file GDELT never publishes can't make every run re-read the same hours.
 RETRY_FOR = timedelta(hours=2)
+#: Files that failed get one more try at the end of the same run, after this pause.
+SECOND_TRY_PAUSE_SECONDS = 20.0
+#: A file younger than this that can't be read is only counted, not reported to visitors: such
+#: failures nearly always clear by the next run. Later runs keep retrying it (RETRY_FOR).
+REPORT_AFTER = timedelta(hours=1)
 MIN_TITLE_LENGTH = 20
 #: A real GKG file unzips to a few tens of megabytes; anything far larger is not one.
 MAX_UNZIPPED_BYTES = 500_000_000
@@ -266,25 +274,49 @@ def read_file(moment: datetime) -> str:
         raise FetchError(f"{url}: damaged file ({error})") from error
 
 
+def _try_read(moment: datetime) -> str | None:
+    """The file's text, or None if it could not be read (the reason goes to the run's log)."""
+    try:
+        return read_file(moment)
+    except FetchError as error:
+        LOG.warning("GDELT file %s failed: %s", stamp(moment), error)
+        return None
+
+
 def fetch(
     gazetteer: Gazetteer, now: datetime, cursor: datetime | None
 ) -> tuple[list[Event], datetime, dict[str, int]]:
     """New events since `cursor`, the new cursor, and counts for feeds.json."""
     latest = latest_stamp()
     events: list[Event] = []
-    stats = {"files": 0, "missing_files": 0, "unplaced": 0}
-    failed: list[datetime] = []
-    for index, moment in enumerate(stamps_to_fetch(cursor, latest)):
-        if index:
-            time.sleep(PAUSE_SECONDS)
-        try:
-            text = read_file(moment)
-        except FetchError:
-            stats["missing_files"] += 1
-            failed.append(moment)
-            continue
+    stats = {"files": 0, "missing_files": 0, "overdue_files": 0, "unplaced": 0}
+
+    def take(text: str) -> None:
         found, unplaced = parse_rows(text, gazetteer, now)
         events.extend(found)
         stats["files"] += 1
         stats["unplaced"] += unplaced
-    return events, next_cursor(failed, latest, now), stats
+
+    failed: list[datetime] = []
+    for index, moment in enumerate(stamps_to_fetch(cursor, latest)):
+        if index:
+            time.sleep(PAUSE_SECONDS)
+        text = _try_read(moment)
+        if text is None:
+            failed.append(moment)
+        else:
+            take(text)
+
+    if failed:
+        time.sleep(SECOND_TRY_PAUSE_SECONDS)
+    still_failed: list[datetime] = []
+    for moment in failed:
+        text = _try_read(moment)
+        if text is None:
+            still_failed.append(moment)
+        else:
+            take(text)
+
+    stats["missing_files"] = len(still_failed)
+    stats["overdue_files"] = sum(1 for moment in still_failed if now - moment >= REPORT_AFTER)
+    return events, next_cursor(still_failed, latest, now), stats

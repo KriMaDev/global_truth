@@ -1,5 +1,5 @@
 /**
- * The page shell: legend, motion switch, event card and keyboard list appear at once; the
+ * The page shell: legend, event card and keyboard list appear at once; the
  * events (/data/events.json, written by the pipeline) and the 3D globe (three.js, the largest
  * part) load afterwards. Without WebGL, or if the globe fails, the events are shown as a plain
  * list instead; if the events cannot be loaded, the globe still shows and says so.
@@ -51,7 +51,8 @@ import { createEventCard } from './ui/event-card';
 import { renderEventList } from './ui/event-list';
 import { parseOutletDirectory, setOutletDirectory } from './outlets';
 import { renderLegend, renderSummary } from './ui/legend';
-import { initialReducedMotion, setupMotionToggle } from './ui/motion';
+import { setupInfoPanel } from './ui/info-panel';
+import { followDeviceMotion, initialReducedMotion } from './ui/motion';
 
 function byId<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -125,6 +126,10 @@ function updateHud(): void {
   const data = dataTime ? ` · DATA ${new Date(dataTime).toISOString().slice(11, 16)}` : '';
   const lng = ((((view.lng + 180) % 360) + 360) % 360) - 180;
   hud.textContent = `UTC ${utc}${data} · ${degrees(view.lat, 'N', 'S')} ${degrees(lng, 'E', 'W')} · ALT ${view.altitude.toFixed(1)}`;
+  if (dataTime) {
+    byId('info-updated').textContent =
+      `Data updated ${new Date(dataTime).toISOString().slice(11, 16)} UTC`;
+  }
 }
 
 /** A message that stays visible over the globe (loading problems, empty data), or none. */
@@ -167,6 +172,34 @@ const rotateToggle = byId<HTMLButtonElement>('rotate-toggle');
 function showRotation(on: boolean): void {
   rotateToggle.setAttribute('aria-pressed', String(on));
   rotateToggle.title = on ? 'Stop the globe turning' : 'Let the globe turn by itself';
+}
+
+/** Steps of the on-screen zoom buttons: bigger than the keyboard's, to need fewer taps. */
+const BUTTON_ZOOM_IN = 0.65;
+const BUTTON_ZOOM_OUT = 1.5;
+
+/** On-screen zoom, for anyone who can't pinch, and a one-tap way back to the whole globe. */
+function showZoomButtons(globeApp: GlobeApp): void {
+  byId('zoom-in').addEventListener('click', () => globeApp.zoomBy(BUTTON_ZOOM_IN));
+  byId('zoom-out').addEventListener('click', () => globeApp.zoomBy(BUTTON_ZOOM_OUT));
+  byId('zoom-whole').addEventListener('click', () => globeApp.showWholeGlobe());
+  byId('zoom-controls').hidden = false;
+}
+
+/** How to use the globe, on touch screens, until the first touch. Nothing is stored. */
+function showGestureHint(): void {
+  if (!window.matchMedia('(pointer: coarse)').matches) return;
+  const hint = byId('gesture-hint');
+  hint.hidden = false;
+  document.addEventListener('pointerdown', () => (hint.hidden = true), { once: true });
+}
+
+/** iPhones can ignore `touch-action` for pinches (style.css); this stops them zooming the
+ * page. The globe's own pinch uses pointer events and is not affected. */
+function stopPageZoomOnIPhones(): void {
+  for (const type of ['gesturestart', 'gesturechange']) {
+    document.addEventListener(type, (event) => event.preventDefault(), { passive: false });
+  }
 }
 
 function clearFilters(): void {
@@ -585,10 +618,12 @@ async function start(): Promise<void> {
   showVersion();
   startAnalytics();
   renderLegend(byId('legend'));
-  setupMotionToggle(byId<HTMLButtonElement>('motion-toggle'), (on) => {
+  if (footer) setupInfoPanel(footer, byId<HTMLButtonElement>('info-toggle'));
+  stopPageZoomOnIPhones();
+  followDeviceMotion((on) => {
     app?.setReducedMotion(on);
-    // Turning reduced motion on also stops the rotation; turning it off leaves it to the
-    // Rotate button.
+    // The device asking for less motion also stops the rotation; turning it off leaves it to
+    // the Rotate button.
     if (on) app?.setRotating(false);
   });
 
@@ -641,6 +676,8 @@ async function start(): Promise<void> {
     rotateToggle.addEventListener('click', () =>
       app?.setRotating(rotateToggle.getAttribute('aria-pressed') !== 'true'),
     );
+    showZoomButtons(app);
+    showGestureHint();
     geoToggle.hidden = false;
     geoToggle.addEventListener('click', () => void setGeoView(!geoView));
     if (geoView) void setGeoView(true);

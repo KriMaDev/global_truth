@@ -50,7 +50,8 @@ An interactive, visually stunning 3D globe that shows current world events as gl
 - **Timeline:** 7 days, as daily files on the same hosting. **Clusters:** clicking a group opens a list. **Refresh:** stays every 30 min (cost: none).
 - **Place descriptions:** Wikidata (CC0) facts + the English Wikipedia introduction (CC BY-SA 4.0) shown **word for word** with a link to the exact revision, the licence and the fetch date. Facts filtered to the whole country and current (no "applies to part", no dissolved states). Fetched by hand with `tools/build_places.py` (1 request/s, cached), never by visitors.
 - **Close-up imagery:** NASA GIBS tiles loaded by visitors' browsers straight from gibs.earthdata.nasa.gov (not mirrored on Cloudflare). The privacy section on /legal/ says so; CSP `img-src` allows it; GIBS's acknowledgement is on /legal/. Day layer `BlueMarble_ShadedRelief_Bathymetry`, night `VIIRS_Black_Marble` (2016) only at levels 5–6 (PNG tiles up to 450 KB); a close view costs about 1–6 MB.
-- **Rotation:** separate Rotate button; Reduce motion is an accessibility setting (turning it on also stops rotation).
+- **Rotation (owner, 8 Nov 2026):** Rotate button in the top row, on by default. No Reduce motion button any more: the device's own "reduce animations" setting starts the globe still and stops the pulses, and Rotate still works. Furthest zoom is 7 (phones start at 3.6).
+- **Phones (owner, 8 Nov 2026):** every control on one row, at least 44 px tall; legend closed to one row by default (`wng-legend-open` remembers it, stated on /legal/); footer is one row with an Info button; +, − and "whole globe" buttons; page zoom is blocked on the globe page only (`touch-action`), the text pages stay zoomable. The layout rules are in one `@media (max-width: 640px), (max-height: 520px)` block in `style.css`.
 
 ## Commands (Windows)
 Node needs `$env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;" + $env:Path` in PowerShell.

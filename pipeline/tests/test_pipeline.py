@@ -235,12 +235,21 @@ def _run_with_news(tmp_path, monkeypatch, gazetteer, now, found, stats):
     return events, {f["id"]: f for f in feeds["feeds"]}["gdelt"]
 
 
-def test_some_files_missing_is_reported_as_partial(tmp_path, monkeypatch, gazetteer, now) -> None:
-    stats = {"files": 1, "missing_files": 2, "unplaced": 0}
+def test_overdue_files_are_reported_as_partial(tmp_path, monkeypatch, gazetteer, now) -> None:
+    stats = {"files": 1, "missing_files": 2, "overdue_files": 1, "unplaced": 0}
     _, gdelt_feed = _run_with_news(tmp_path, monkeypatch, gazetteer, now, lambda kept: [], stats)
     assert gdelt_feed["status"] == "partial"
     assert gdelt_feed["note"] == "2 of 3 files could not be read"
     assert gdelt_feed["last_success"] != "2026-11-07T11:30:00Z"
+
+
+def test_a_recent_file_failure_is_counted_but_stays_ok(
+    tmp_path, monkeypatch, gazetteer, now
+) -> None:
+    stats = {"files": 1, "missing_files": 1, "overdue_files": 0, "unplaced": 0}
+    _, gdelt_feed = _run_with_news(tmp_path, monkeypatch, gazetteer, now, lambda kept: [], stats)
+    assert gdelt_feed["status"] == "ok"
+    assert gdelt_feed["stats"]["missing_files"] == 1
 
 
 def test_no_file_read_keeps_the_last_success(tmp_path, monkeypatch, gazetteer, now) -> None:

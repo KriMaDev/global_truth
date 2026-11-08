@@ -121,6 +121,46 @@ function symbolList(): HTMLDetailsElement {
   return details;
 }
 
+const OPEN_KEY = 'wng-legend-open';
+
+function wasLeftOpen(): boolean {
+  try {
+    return window.localStorage.getItem(OPEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function rememberOpen(open: boolean): void {
+  try {
+    if (open) window.localStorage.setItem(OPEN_KEY, '1');
+    else window.localStorage.removeItem(OPEN_KEY);
+  } catch {
+    // Storage may be blocked; the button still works for this visit.
+  }
+}
+
+/** The arrow that opens or closes the legend on phones (hidden by CSS on wider screens). */
+function openButton(root: HTMLElement): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'legend-toggle';
+  button.setAttribute('aria-controls', 'legend-more');
+  button.append(span('legend-arrow'));
+  const apply = (open: boolean): void => {
+    root.classList.toggle('collapsed', !open);
+    button.setAttribute('aria-expanded', String(open));
+    button.setAttribute('aria-label', open ? 'Show less of the legend' : 'Show the whole legend');
+  };
+  apply(wasLeftOpen());
+  button.addEventListener('click', () => {
+    const open = root.classList.contains('collapsed');
+    apply(open);
+    rememberOpen(open);
+  });
+  return button;
+}
+
 export function renderLegend(root: HTMLElement): void {
   const link = document.createElement('a');
   link.className = 'legend-link';
@@ -133,10 +173,19 @@ export function renderLegend(root: HTMLElement): void {
   summary.setAttribute('aria-live', 'polite');
   summary.hidden = true;
 
-  root.replaceChildren(
+  const head = document.createElement('div');
+  head.className = 'legend-head';
+  head.append(
     heading('Severity'),
     paragraph('legend-note', 'How serious an event is. Each card says why it got its level.'),
     severityRows(),
+    openButton(root),
+  );
+
+  const more = document.createElement('div');
+  more.className = 'legend-more';
+  more.id = 'legend-more';
+  more.append(
     paragraph(
       'legend-note',
       'Deaths as stated in the headline; alerts from USGS and GDACS. More severe events are taller and pulse faster; high and critical also send out rings.',
@@ -147,8 +196,9 @@ export function renderLegend(root: HTMLElement): void {
     // Shown in the geography view only (by CSS, body.geo-view).
     paragraph('legend-geo-note', 'Countries take the colour of their most severe event.'),
     link,
-    summary,
   );
+
+  root.replaceChildren(head, more, summary);
 }
 
 /** "Showing 37 of 412 events · Clear filters" while filters are on; hidden otherwise. */

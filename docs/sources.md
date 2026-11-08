@@ -118,5 +118,5 @@ Only articles from these outlets appear. GDELT reads far more sites; the allowli
 ## How we fetch
 
 - Every 30 minutes, with a generic User-Agent `WorldNewsGlobe/0.1 (+https://globe.krimadev.com)`, timeouts, and a few retries with backoff.
-- GDELT: only the 15-minute files published since the last run (6 hours back on a fresh start, at most 24 files), with a pause between downloads. A file that can't be read is tried again on later runs for 2 hours, then given up on; meanwhile the feed's status reads "Partly read".
+- GDELT: only the 15-minute files published since the last run (6 hours back on a fresh start, at most 24 files), with a pause between downloads. A file that can't be read gets a second try at the end of the same run, then is tried again on later runs for 2 hours, then given up on. The feed's status reads "Partly read" only if a file is still failing after 1 hour, or if a run read no file at all; a younger failure is only counted in `feeds.json` (`stats.missing_files`) and logged with its reason.
 - We store only the headline, the outlet or provider, the time, the link, and for data feeds a short factual line built from the feed's own fields (e.g. "Magnitude 5.0, depth 77 km."). Never article text.

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="app">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -103,8 +103,16 @@
         >
           Filters<span class="toggle-count"></span>
         </button>
-        <button id="motion-toggle" class="motion-toggle glass" type="button" aria-pressed="false">
-          <span class="toggle-led" aria-hidden="true"></span>Reduce motion
+        <button
+          id="rotate-toggle"
+          class="motion-toggle rotate-toggle glass"
+          type="button"
+          aria-pressed="true"
+          aria-label="Rotate"
+          hidden
+        >
+          <span class="rotate-icon" aria-hidden="true"></span
+          ><span class="rotate-word" aria-hidden="true">Rotate</span>
         </button>
       </div>
     </header>
@@ -181,29 +189,63 @@
           <p class="news-empty">Loading the headlines…</p>
         </div>
       </section>
+      <div id="zoom-controls" class="zoom-controls" role="group" aria-label="Zoom" hidden>
+        <button id="zoom-in" class="zoom-button glass" type="button" aria-label="Zoom in">+</button>
+        <button id="zoom-out" class="zoom-button glass" type="button" aria-label="Zoom out">
+          −
+        </button>
+        <button
+          id="zoom-whole"
+          class="zoom-button glass"
+          type="button"
+          aria-label="Show the whole globe"
+          title="Show the whole globe"
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <g fill="none" stroke="currentColor" stroke-width="1.6">
+              <circle cx="12" cy="12" r="9.5" />
+              <ellipse cx="12" cy="12" rx="4.2" ry="9.5" />
+              <path d="M2.5 12h19" />
+            </g>
+          </svg>
+        </button>
+      </div>
+      <p id="gesture-hint" class="gesture-hint" aria-hidden="true" hidden>
+        Drag to turn · Pinch to zoom · Tap a light to read
+      </p>
     </main>
 
     <footer class="bottom">
       <section id="legend" class="legend glass" aria-label="Severity legend"></section>
       <div class="bottom-right">
-        <div class="hud-row">
-          <button id="rotate-toggle" class="rotate-toggle" type="button" aria-pressed="true" hidden>
-            <span class="rotate-icon" aria-hidden="true"></span>Rotate
-          </button>
-          <p id="hud" class="hud" aria-hidden="true"></p>
+        <p id="hud" class="hud" aria-hidden="true"></p>
+        <div id="info-panel" class="info-panel">
+          <p class="credits">
+            Created by <a class="maker" href="https://krimadev.com">KriMa Development</a> ·
+            <a href="/about/">About</a> · <a href="/sources/">Sources</a> ·
+            <a href="/legal/">Legal</a> · <a href="/news/">Text version</a> ·
+            <a href="https://github.com/KriMaDev/world_news_globe">Source code</a> ·
+            <a id="version" href="https://github.com/KriMaDev/world_news_globe">Version</a>
+          </p>
+          <p id="info-updated" class="credits info-updated"></p>
         </div>
-        <p class="credits">
-          Created by <a class="maker" href="https://krimadev.com">KriMa Development</a> ·
-          <a href="/about/">About</a> · <a href="/sources/">Sources</a> ·
-          <a href="/legal/">Legal</a> · <a href="/news/">Text version</a> ·
-          <a href="https://github.com/KriMaDev/world_news_globe">Source code</a> ·
-          <a id="version" href="https://github.com/KriMaDev/world_news_globe">Version</a>
-        </p>
-        <p class="credits">
-          Data: <a href="https://earthquake.usgs.gov/">USGS</a> ·
-          <a href="https://www.gdacs.org/">GDACS</a> ·
-          <a href="https://www.gdeltproject.org/">GDELT</a> · Earth imagery: NASA
-        </p>
+        <div class="foot-row">
+          <button
+            id="info-toggle"
+            class="info-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="info-panel"
+          >
+            Info
+          </button>
+          <p class="credits credits-data">
+            Data: <a href="https://earthquake.usgs.gov/">USGS</a> ·
+            <a href="https://www.gdacs.org/">GDACS</a> ·
+            <a href="https://www.gdeltproject.org/">GDELT</a> ·
+            <span class="credit-long">Earth imagery: </span>NASA
+          </p>
+        </div>
       </div>
     </footer>
 
