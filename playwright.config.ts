@@ -12,6 +12,8 @@ export default defineConfig({
   testDir: 'tests/browser',
   outputDir: 'test-results',
   retries: onCi ? 1 : 0,
+  // Without a graphics card, CI draws the globe at a few frames a second.
+  timeout: onCi ? 60_000 : 30_000,
   use: { baseURL: `http://localhost:${port}` },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], ...browser } },

@@ -3,7 +3,7 @@
  * gesture through the browser's own tools (Chromium and Edge).
  */
 import { expect, test } from '@playwright/test';
-import { altitude, box, openGlobe, view, visibleLabel } from './fixtures';
+import { altitude, box, knownWorld, openGlobe, showEurope, view, visibleLabel } from './fixtures';
 
 test.skip(({ isMobile }) => !isMobile, 'Phone layout only');
 
@@ -17,6 +17,7 @@ for (const [width, height] of [
 
     test('every control fits on one row, and is big enough to tap', async ({ page }) => {
       await openGlobe(page);
+      await expect(page.locator('.geo-rest')).toBeHidden();
       const controls = ['#geo-toggle', '#news-toggle', '#filter-toggle', '#rotate-toggle'];
       const boxes = await Promise.all(controls.map((selector) => box(page, selector)));
       for (const control of boxes) {
@@ -111,13 +112,11 @@ test('a drag that starts on a map label turns the globe, and a tap opens the lab
   browserName,
 }) => {
   test.skip(browserName !== 'chromium', 'The touch tool exists in Chromium and Edge only');
-  await openGlobe(page, '/?view=geo');
+  test.setTimeout(120_000); // Software graphics here run at a few frames a second.
+  await openGlobe(page, '/?view=geo', { events: knownWorld() });
   await page.locator('#rotate-toggle').click();
   await expect(page.locator('#rotate-toggle')).toHaveAttribute('aria-pressed', 'false');
-  for (let i = 0; i < 3; i += 1) {
-    await page.locator('#zoom-in').click();
-    await page.waitForTimeout(500);
-  }
+  await showEurope(page);
   await expect.poll(() => visibleLabel(page), { timeout: 15_000 }).not.toBeNull();
   await page.waitForTimeout(1000);
 
@@ -209,12 +208,9 @@ test('after a pinch with a finger on a label, one finger still turns the globe',
 }) => {
   test.skip(browserName !== 'chromium', 'The touch tool exists in Chromium and Edge only');
   test.setTimeout(120_000); // Software graphics here run at a few frames a second.
-  await openGlobe(page, '/?view=geo');
+  await openGlobe(page, '/?view=geo', { events: knownWorld() });
   await page.locator('#rotate-toggle').click();
-  for (let i = 0; i < 3; i += 1) {
-    await page.locator('#zoom-in').click();
-    await page.waitForTimeout(500);
-  }
+  await showEurope(page);
   await expect.poll(() => visibleLabel(page), { timeout: 15_000 }).not.toBeNull();
   await page.waitForTimeout(1000);
   const label = await visibleLabel(page);

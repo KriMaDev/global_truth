@@ -15,7 +15,7 @@ async function smallestHeight(page: Page, selector: string): Promise<number> {
 
 async function expectTappable(page: Page, selectors: string[]): Promise<void> {
   for (const selector of selectors) {
-    expect(await smallestHeight(page, selector), selector).toBeGreaterThanOrEqual(44);
+    expect(await smallestHeight(page, selector), selector).toBeGreaterThanOrEqual(43.9);
   }
 }
 

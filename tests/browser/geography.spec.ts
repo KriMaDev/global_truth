@@ -1,6 +1,6 @@
 /** The geography view: the switch, the labels, and place cards. Made-up events only. */
 import { expect, test, type Page } from '@playwright/test';
-import { knownWorld, openGlobe, watchProblems } from './fixtures';
+import { knownWorld, openGlobe, showEurope, watchProblems } from './fixtures';
 
 const shownLabels = (page: Page) => page.locator('.map-label:not(.is-hidden):not(.is-crowded)');
 
@@ -73,6 +73,7 @@ test('a country pressed on the map itself opens its card', async ({
   test.setTimeout(120_000); // Software graphics here run at a few frames a second.
   await openGlobe(page, '/?view=geo', { events: knownWorld() });
   await page.locator('#rotate-toggle').click();
+  await showEurope(page);
   await expect(page.locator('.map-label').first()).toBeAttached({ timeout: 30_000 });
   await page.waitForTimeout(2500); // The country shapes are built in the background.
 

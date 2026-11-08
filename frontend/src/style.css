@@ -1638,7 +1638,8 @@ body.page {
     padding: 0;
   }
 
-  .rotate-word {
+  .rotate-word,
+  .geo-rest {
     display: none;
   }
 

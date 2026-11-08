@@ -253,7 +253,7 @@ export function visibleLabel(page: Page) {
       const area = label.getBoundingClientRect();
       const x = area.x + area.width / 2;
       const y = area.y + area.height / 2;
-      if (area.width && x > 60 && x < 260 && y > 200 && y < 520) {
+      if (area.width && x > 40 && x < 370 && y > 200 && y < 520) {
         if (document.elementFromPoint(x, y)?.tagName === 'CANVAS') return { x, y };
       }
     }
@@ -267,4 +267,14 @@ export async function openEvent(page: Page, id: string): Promise<void> {
     document.querySelector<HTMLButtonElement>(`#event-list [data-event-id="${eventId}"]`)?.click();
   }, id);
   await expect(page.locator('#event-card')).toBeVisible();
+}
+
+/** Turns the globe to Europe and comes in close: where it starts depends on the time of day. */
+export async function showEurope(page: Page): Promise<void> {
+  await openEvent(page, 'news-fr');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#event-card')).toBeHidden();
+  await page.waitForTimeout(1800); // The flight to the event.
+  await page.locator('#zoom-in').click();
+  await page.waitForTimeout(800);
 }
