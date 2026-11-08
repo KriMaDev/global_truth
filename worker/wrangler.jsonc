@@ -1,0 +1,18 @@
+// The timer: a separate Worker with no web address, so no visitor or bot can ever run it.
+// Only its Cron Trigger does, 48 times a day, well inside the free plan. (On 8 Nov 2026 the
+// timer first lived in the site's Worker, but there every request for a missing page ran
+// the script too, using up the account's shared daily allowance of Worker runs.)
+// Deployed by .github/workflows/update.yml together with the site; see docs/deploy.md.
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "world-news-globe-timer",
+  "compatibility_date": "2026-10-01",
+  "main": "index.js",
+  // At minutes 7 and 37: ask GitHub to start the data update (index.js).
+  "triggers": { "crons": ["7,37 * * * *"] },
+  // Logs in the Cloudflare dashboard, to see that each run reached GitHub (48 a day).
+  "observability": { "enabled": true },
+  // No routes and no *.workers.dev address: nothing can reach it over the web.
+  "workers_dev": false,
+  "preview_urls": false
+}

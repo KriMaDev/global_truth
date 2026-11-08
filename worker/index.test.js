@@ -27,12 +27,9 @@ describe("startUpdate", () => {
   });
 });
 
-describe("fetch", () => {
-  it("hands every request to the static files", async () => {
-    const answer = new Response("ok");
-    const env = { ASSETS: { fetch: vi.fn(async () => answer) } };
-    const request = new Request("https://globe.krimadev.com/missing");
-    expect(await worker.fetch(request, env)).toBe(answer);
-    expect(env.ASSETS.fetch).toHaveBeenCalledWith(request);
+describe("the Worker", () => {
+  it("runs only on its timer: no fetch handler, so no web request can start it", () => {
+    expect(typeof worker.scheduled).toBe("function");
+    expect("fetch" in worker).toBe(false);
   });
 });

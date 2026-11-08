@@ -1,9 +1,9 @@
 # Architecture
 
-No server runs all the time. A Python pipeline runs on a schedule and writes static JSON. The site is plain files served by Cloudflare, whose Worker also keeps the time.
+No server runs all the time. A Python pipeline runs on a schedule and writes static JSON. The site is plain files served by Cloudflare; a second, tiny Worker with no web address keeps the time.
 
 ```
-Cloudflare Cron Trigger, minutes 7 and 37 (worker/index.js → GitHub workflow_dispatch)
+Cloudflare Worker world-news-globe-timer: Cron Trigger at minutes 7 and 37 (worker/ → GitHub workflow_dispatch)
 GitHub Actions (.github/workflows/update.yml, once LIVE is on; its own schedule is a 3-hourly backup)
   └─ Python pipeline (pipeline/globe_pipeline/run.py, standard library only)
        sources: USGS · GDACS · GDELT GKG (allowlisted outlets)
@@ -34,7 +34,7 @@ Cloudflare Workers static assets @ globe.krimadev.com
 | Docs | `docs/` |
 | CI and scheduled updates | `.github/workflows/ci.yml`, `.github/workflows/update.yml` |
 | Hosting config | `wrangler.jsonc`, `frontend/public/_headers` |
-| Timer (Cron Trigger that starts the update) | `worker/index.js`, tested in `worker/index.test.js` |
+| Timer Worker (Cron Trigger that starts the update; no web address) | `worker/index.js`, `worker/wrangler.jsonc`, tested in `worker/index.test.js` |
 
 ## Pipeline
 
