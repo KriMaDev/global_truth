@@ -11,7 +11,9 @@ from globe_pipeline.categorize import (
     HAZARD_WORDS,
     OFF_BY_DEFAULT,
     categorize_news,
+    category_basis,
     hazard_of,
+    section_categories,
 )
 from globe_pipeline.severity import (
     Severity,
@@ -193,6 +195,33 @@ def test_sport_section_is_sport_only() -> None:
     headline = "Sample: striker's offensive display storms past the defence"
     assert categorize_news(headline, ["MILITARY", "ARMEDCONFLICT"], sport_page=True) == ["sport"]
     assert "war" in categorize_news(headline, [])
+
+
+def test_outlet_section_in_the_address_leads() -> None:
+    url = "https://www.theguardian.com/business/2026/nov/08/sample-story"
+    assert section_categories(url) == {"economic": "business"}
+    # The section and the headline words both count, each with its basis.
+    basis = category_basis("Sample: minister defends the plan", [], url)
+    assert basis == {"politics": "headline", "economic": "section:business"}
+    # Topics are not used when the section gives a category.
+    assert category_basis("Sample: what next?", ["ARMEDCONFLICT", "MILITARY"], url) == {
+        "economic": "section:business"
+    }
+
+
+def test_only_folders_count_not_the_article_name() -> None:
+    assert section_categories("https://www.dw.com/en/health/a-123") == {"health": "health"}
+    assert section_categories("https://example.com/news/business") == {}
+    # Place folders say nothing.
+    assert section_categories("https://www.cbc.ca/news/canada/toronto/story-1") == {}
+
+
+def test_basis_of_headline_topics_and_sport() -> None:
+    assert category_basis("Sample: refugees reach the coast", []) == {"humanitarian": "headline"}
+    assert category_basis("Sample: what next?", ["REFUGEES", "DISPLACED"]) == {
+        "humanitarian": "topics"
+    }
+    assert category_basis("Sample: a big win", [], sport_page=True) == {"sport": "sport-section"}
 
 
 def test_categories_match_the_site() -> None:

@@ -48,10 +48,21 @@ function isGeo(value: unknown): boolean {
   );
 }
 
+/** Where each category came from: known categories, short texts. */
+function isCategoryBasis(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    Object.entries(value).every(
+      ([category, basis]) => (CATEGORIES as readonly string[]).includes(category) && isText(basis, 60),
+    )
+  );
+}
+
 /** Optional fields: absent, or well formed. */
 function hasValidExtras(value: Record<string, unknown>): boolean {
-  const { severity_reason, feed, hazard, first_seen, coverage, geo, location_method } = value;
+  const { severity_reason, feed, hazard, first_seen, coverage, geo, location_method, category_basis } = value;
   return (
+    (category_basis === undefined || isCategoryBasis(category_basis)) &&
     (severity_reason === undefined || isText(severity_reason, 200)) &&
     (feed === undefined || isText(feed, 20)) &&
     (hazard === undefined || isNullableText(hazard)) &&

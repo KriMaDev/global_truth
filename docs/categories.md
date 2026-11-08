@@ -10,7 +10,9 @@ Eleven categories, which can be combined: **War**, **Politics**, **Natural disas
 
 1. **Data feeds** (USGS, GDACS) are Natural disasters.
 2. **News from an outlet's sport section** (web address containing `/sport` or `/football`) is **Sport, and only Sport.** Sport headlines are full of words like "offensive", "attack", "storm" or "court" that mean something else on a news page.
-3. **Other news: the headline decides.** Every category whose listed words appear in the headline applies (whole words, any case). The lists:
+3. **Other news: the outlet's own section and the headline decide together.**
+   - **The outlet's section** comes first, because it is the outlet's own editorial label: a folder in the article's web address with a topical name. `business`, `economy` → Economic; `politics` → Politics; `environment`, `climate-crisis`, `energy-and-environment` → Climate & environment; `science` → Science & space; `technology`, `tech`, `science-technology` → Technology advancements; `health` → Health & outbreaks; `law`, `crime`, `courts-crime` → Crime & justice; `global-development` → Humanitarian & migration. Only folders count, not the article's own name. Most outlets' addresses name only places or dates (BBC, CBC, The Hindu, ABC, Xinhua), so this covers few items: 16 of 372 in a sample on 8 Nov 2026 (The Guardian, Premium Times, The Straits Times, Anadolu Agency).
+   - **The headline's words** add every category whose listed words appear in it (whole words, any case). The lists:
    - **War:** war, troops, army, military, airstrike(s), missile(s), drone(s), shelling, ceasefire, truce, invasion, rebels, militants, insurgents, front line, offensive, bombing, soldiers, armed conflict, warplanes.
    - **Politics:** election(s), vote(s), voters, parliament, president, prime minister, government, minister, senate, congress, referendum, coalition, opposition, protest(s), protesters, sanctions, summit, diplomat(s), treaty, impeachment, cabinet, lawmakers.
    - **Natural disasters:** earthquake, quake, tsunami, hurricane, typhoon, cyclone, tornado, flood(s), flooding, wildfire(s), bushfire, volcano, eruption, landslide, mudslide, drought, heatwave, storm, blizzard, avalanche.
@@ -22,7 +24,7 @@ Eleven categories, which can be combined: **War**, **Politics**, **Natural disas
    - **Humanitarian & migration:** refugee(s), migrant(s), migration, asylum (seekers), displaced, displacement, famine, hunger, starvation, malnutrition, humanitarian (aid), aid convoy, aid workers, aid trucks, food aid, food crisis, food insecurity, UNHCR, UNRWA, World Food Programme, deportation(s), deported. ("Aid" alone is not used: "military aid" is not humanitarian.)
    - **Science & space:** satellite(s), rocket, spacecraft, space station, telescope, gene(s), genome, fusion, space, NASA, ESA, ISRO, Mars, Moon, lunar, asteroid, comet, astronaut(s), astronomers, galaxy, black hole, exoplanet, scientists, researchers, study finds, new study, fossils, dinosaur, species, physics.
    - **Sport:** World Cup, Olympics, Olympic, Paralympics, Premier League, Champions League, La Liga, Bundesliga, Serie A, FIFA, UEFA, NBA, NFL, MLB, NHL, cricket, rugby, tennis, Wimbledon, Grand Slam, Formula 1, Formula One, Grand Prix, Tour de France, Super Bowl, footballer, golf, boxing, UFC. ("Marathon" was tried and dropped on 8 Nov 2026: headlines use it figuratively.)
-4. **News: if the headline has none of these words,** GDELT's themes for the article decide. The one category with the most matching themes applies, if it has at least two; on a tie, the first in the order above. The themes per category (names checked against GDELT's theme list on 8 Nov 2026):
+4. **News: if neither the section nor the headline gives a category,** GDELT's themes for the article decide. The one category with the most matching themes applies, if it has at least two; on a tie, the first in the order above. The themes per category (names checked against GDELT's theme list on 8 Nov 2026):
    - **War:** ARMEDCONFLICT, MILITARY, TERROR, REBELLION, WMD, CEASEFIRE, PEACEKEEPING, SEIGE, WB_2433_CONFLICT_AND_VIOLENCE.
    - **Politics:** ELECTION, LEGISLATION, DEMOCRACY, PROTEST, IMPEACHMENT, REFERENDUM, CONSTITUTIONAL, USPEC_POLITICS_GENERAL1, GOV_REFORM, SANCTIONS.
    - **Natural disasters:** NATURAL_DISASTER and NATURAL_DISASTER_*, ENV_DROUGHT, ENV_WILDFIRE.
@@ -34,6 +36,7 @@ Eleven categories, which can be combined: **War**, **Politics**, **Natural disas
    - **Humanitarian & migration:** REFUGEES, DISPLACED, IMMIGRATION, WB_2837_IMMIGRATION, EPU_CATS_MIGRATION_FEAR_MIGRATION, FOOD_SECURITY, SELF_IDENTIFIED_HUMANITARIAN_CRISIS, AID_HUMANITARIAN.
    - **Science & space:** SCIENCE, TAX_FNCACT_ASTRONOMER.
    - **Sport:** none (GDELT has no sport theme).
+   - **Why themes are only the last resort** (tested 8 Nov 2026 on 372 real articles): letting themes add categories next to the headline mostly added wrong ones. With 3 matching themes it added 60 categories, most of them wrong ("Advani enters 100th year" → War, "measles outbreaks" → Economic); with 4 it still added a few wrong ones. GDELT's themes describe everything an article touches, not what it is about.
 5. **With no category, the item is not shown.** The globe covers these eleven subjects only. Culture, lifestyle and opinion pages are left out by their web address (see `docs/sources.md`).
 
 ## Review of what people search for
@@ -42,6 +45,14 @@ The categories follow what people around the world look for in the news. **Once 
 
 - **8 November 2026** (Year in Search 2025): the biggest news searches not covered by the first six categories were crimes and court cases (an assassination, the Epstein files), climate beyond disasters, science and space, refugees and migration, and sport, the most searched subject of all. All five were added; Sport is off by default. A first real run (6 hours, 59 news items) put 11 items in Crime & justice, 4 in Climate & environment, 4 in Sport and 2 in Humanitarian & migration; "marathon" was dropped from Sport after it caught a figurative use.
 - **Next review:** December 2026 / January 2027 (Year in Search 2026).
+
+## Where each category came from
+
+Every news card says it, e.g. 'Economic from the outlet's own section "business".', 'War and Politics from words in the headline.' or 'Humanitarian & migration from GDELT's reading of the whole article.' (`category_basis` in the data; `frontend/src/ui/category-basis.ts`).
+
+## Outlets' own tags in their feeds (8 Nov 2026)
+
+Some outlets' RSS feeds carry editorial tags (The Guardian: "Climate crisis", "COP31"; CBC: "News/Science") or come per section (BBC, NPR). They would be the best source of categories, but their terms do not allow this use without permission: The Guardian's Open Platform terms forbid using its content or sites "for any text and data aggregation, analysis or mining purposes"; NPR's feeds are for personal, non-commercial use; CBC's terms require an agreement for any use beyond private purposes; the BBC's current feed terms could not be confirmed. So feed tags are used **only for outlets that give written permission** (to be asked by email; draft written 8 Nov 2026), recorded in `docs/sources.md` and here, outlet by outlet.
 
 ## Type of natural disaster
 

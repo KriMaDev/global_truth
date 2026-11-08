@@ -4,10 +4,11 @@ Sport (the last five added 8 Nov 2026 after a review of what people search for).
 
 Rules (docs/categories.md): data feeds are natural disasters. For news:
 1. An article in an outlet's sport section is Sport, and only Sport.
-2. Otherwise, if the headline contains words from the lists below, the categories of those
-   words apply (possibly several).
-3. Otherwise the one category with the most GDELT themes for the article applies, if it has
-   at least two (ties: the first in the order of CATEGORIES).
+2. Otherwise the outlet's own section in the web address (SECTION_CATEGORIES) and the words
+   of the headline (KEYWORDS) both apply: every category either gives.
+3. If neither gives one, the one category with the most GDELT themes for the article
+   applies, if it has at least two (ties: the first in the order of CATEGORIES). Tested on
+   8 Nov 2026: letting themes add categories next to the headline mostly added wrong ones.
 4. With no category, the item is not shown.
 The headline leads because it is what the reader sees; GDELT's themes describe the whole
 article, which often touches many subjects.
@@ -16,6 +17,7 @@ article, which often touches many subjects.
 from __future__ import annotations
 
 import re
+from urllib.parse import urlsplit
 
 CATEGORIES = (
     "war",
@@ -527,16 +529,76 @@ def hazard_of(headline: str) -> str | None:
     return None
 
 
-def categorize_news(headline: str, themes: list[str], sport_page: bool = False) -> list[str]:
-    """The categories of a news item (possibly several, possibly none). An article from an
-    outlet's sport section (`sport_page`) is Sport only: sport headlines are full of words
+#: The outlet's own section, from a folder name in the article's web address (a whole path
+#: segment, not the article's own name): the outlet's editorial label, so it leads. Only
+#: topical names; most addresses name places (e.g. /canada/toronto/), which say nothing.
+#: Seen in GDELT's data on 8 Nov 2026 (Guardian, Straits Times, Premium Times, Anadolu
+#: Agency, The Hindu) or the outlets' standard section names.
+SECTION_CATEGORIES: dict[str, str] = {
+    "business": "economic",
+    "economy": "economic",
+    "politics": "politics",
+    "environment": "climate",
+    "climate-crisis": "climate",
+    "energy-and-environment": "climate",
+    "science": "science",
+    "technology": "technology",
+    "tech": "technology",
+    "science-technology": "technology",
+    "health": "health",
+    "law": "crime",
+    "crime": "crime",
+    "courts-crime": "crime",
+    "global-development": "humanitarian",
+}
+
+#: Where a category came from, shown on the event's card.
+BASIS_SPORT_SECTION = "sport-section"
+BASIS_HEADLINE = "headline"
+BASIS_TOPICS = "topics"
+SECTION_PREFIX = "section:"
+
+
+def section_categories(url: str) -> dict[str, str]:
+    """The categories of the outlet's sections in `url`'s folders, each with its section name
+    ({"economic": "business"}). The last part of the path (the article itself) is ignored."""
+    folders = [part for part in urlsplit(url).path.lower().split("/") if part][:-1]
+    found: dict[str, str] = {}
+    for folder in folders:
+        category = SECTION_CATEGORIES.get(folder)
+        if category and category not in found:
+            found[category] = folder
+    return found
+
+
+def category_basis(
+    headline: str, themes: list[str], url: str = "", sport_page: bool = False
+) -> dict[str, str]:
+    """The categories of a news item, each with where it came from: "section:<name>" (the
+    outlet's own section), "headline" (listed words), "topics" (GDELT's topics for the whole
+    article, only when the first two give nothing) or "sport-section". Ordered as CATEGORIES;
+    empty when the item fits none.
+
+    An article from an outlet's sport section is Sport only: sport headlines are full of words
     like "offensive", "attack" or "storm" that mean something else elsewhere."""
     if sport_page:
-        return ["sport"]
+        return {"sport": BASIS_SPORT_SECTION}
+    sections = section_categories(url) if url else {}
     words = keyword_hits(headline)
-    from_headline = [c for c in CATEGORIES if words[c]]
-    if from_headline:
-        return from_headline
+    found = {
+        c: SECTION_PREFIX + sections[c] if c in sections else BASIS_HEADLINE
+        for c in CATEGORIES
+        if c in sections or words[c]
+    }
+    if found:
+        return found
     counts = theme_hits(themes)
     best = max(CATEGORIES, key=lambda c: counts[c])
-    return [best] if counts[best] >= MIN_THEMES else []
+    return {best: BASIS_TOPICS} if counts[best] >= MIN_THEMES else {}
+
+
+def categorize_news(
+    headline: str, themes: list[str], sport_page: bool = False, url: str = ""
+) -> list[str]:
+    """The categories of a news item (possibly several, possibly none); see category_basis."""
+    return list(category_basis(headline, themes, url, sport_page))

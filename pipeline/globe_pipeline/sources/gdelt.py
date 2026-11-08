@@ -19,7 +19,7 @@ import zipfile
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from ..categorize import categorize_news, hazard_of
+from ..categorize import category_basis, hazard_of
 from ..geocode import Gazetteer, place_name
 from ..http import FetchError, get
 from ..models import Event, Geo, Source
@@ -174,7 +174,8 @@ def parse_rows(text: str, gazetteer: Gazetteer, now: datetime) -> tuple[list[Eve
         if len(title) < MIN_TITLE_LENGTH:
             continue
         themes = [t for t in f[COL_THEMES].split(";") if t]
-        categories = categorize_news(title, themes, sport_page=is_sport_page(url))
+        basis = category_basis(title, themes, url, sport_page=is_sport_page(url))
+        categories = list(basis)
         if not categories:
             continue
         chosen = main_place(parse_mentions(f[COL_LOCATIONS]), title)
@@ -195,6 +196,7 @@ def parse_rows(text: str, gazetteer: Gazetteer, now: datetime) -> tuple[list[Eve
             severity=severity,
             severity_reason=reason,
             categories=categories,
+            category_basis=basis,
             kind="news",
             feed=ID,
             hazard=hazard_of(title) if "natural-disasters" in categories else None,

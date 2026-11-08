@@ -6,6 +6,7 @@
 
 import type { Cluster } from "../clusters";
 import { SEVERITY_STYLES } from "../severity";
+import { categoryBasisLines } from "./category-basis";
 import { CATEGORY_LABELS, KIND_LABELS, hazardLabel, type GlobeEvent } from "../types";
 
 export interface EventCard {
@@ -72,6 +73,7 @@ function notes(event: GlobeEvent): string[] {
     if (event.location_method === "machine-coded") {
       lines.push("Location machine-coded by GDELT from the article.");
     }
+    lines.push(...categoryBasisLines(event));
   }
   if (event.feed === "gdacs" || event.sources.some((s) => s.name === "GDACS")) {
     lines.push("GDACS alerts are automated estimates. Check official national authorities.");

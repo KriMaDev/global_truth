@@ -54,6 +54,8 @@ COMMON_EXCLUDED_PATHS = (
     "/games",
     "/crosswords",
     "/shopping",
+    "/promoted",
+    "/sponsored",
     "/recipes",
     "/horoscope",
     "/puzzles",

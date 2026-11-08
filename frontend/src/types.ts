@@ -99,6 +99,9 @@ export interface GlobeEvent {
   lng: number;
   severity: Severity;
   categories: Category[];
+  /** Where each category came from: "headline", "section:<name>", "topics" or
+   * "sport-section" (docs/categories.md). Absent for data feeds. */
+  category_basis?: Partial<Record<Category, string>>;
   kind: EventKind;
   /** ISO 8601 time the source published it (for news: when GDELT first saw it). */
   published: string;

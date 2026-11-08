@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from globe_pipeline import cluster as cluster_module
 from globe_pipeline import run as run_module
 from globe_pipeline.cluster import cluster, headline_words, similarity
 from globe_pipeline.models import Event, Geo, Source
@@ -108,6 +109,19 @@ def test_outlet_balance_is_per_day(now) -> None:
     ]
     kept = run_module.balance_outlets(today + yesterday, limit=2)
     assert sorted(e.id[0] for e in kept) == ["t", "t", "y", "y"]
+
+
+def test_category_basis_survives_json_and_grouping(now) -> None:
+    a = replace(news("a", "Sample story one", "dw", now), category_basis={"war": "headline"})
+    again = Event.from_json(json.loads(json.dumps(a.to_json())))
+    assert again.category_basis == {"war": "headline"}
+    b = replace(
+        news("b", "Sample story two", "bbc", now),
+        categories=["war", "economic"],
+        category_basis={"war": "topics", "economic": "section:business"},
+    )
+    merged = cluster_module.merge(a, b)
+    assert merged.category_basis == {"war": "headline", "economic": "section:business"}
 
 
 def test_sport_has_its_own_allowance(now) -> None:

@@ -27,6 +27,8 @@ describe("isGlobeEvent", () => {
     ["longitude out of range", { lng: -181 }],
     ["unknown severity", { severity: "extreme" }],
     ["unknown category", { categories: ["gossip"] }],
+    ["a category basis for an unknown category", { category_basis: { gossip: "headline" } }],
+    ["a category basis that is not text", { category_basis: { war: 3 } }],
     ["unknown kind", { kind: "opinion" }],
     ["unreadable time", { published: "yesterday" }],
     ["empty title", { title: "  " }],
@@ -54,6 +56,7 @@ describe("isGlobeEvent", () => {
         precision: "city",
       },
       location_method: "machine-coded",
+      category_basis: { politics: "section:politics" },
       sources: [{ name: "Example News", url: "https://example.com/a", state_affiliated: true }],
     };
     expect(isGlobeEvent(full)).toBe(true);

@@ -86,6 +86,7 @@ def merge(primary: Event, other: Event) -> Event:
     urls = {source.url for source in primary.sources}
     primary.sources.extend(s for s in other.sources if s.url not in urls)
     primary.categories = sorted(set(primary.categories) | set(other.categories))
+    primary.category_basis = {**other.category_basis, **primary.category_basis}
     if other.severity > primary.severity:
         primary.severity, primary.severity_reason = other.severity, other.severity_reason
     primary.first_seen = min(primary.first_seen, other.first_seen)
