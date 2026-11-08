@@ -11,6 +11,55 @@
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#05070a" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- The globe images start downloading at once; phones and small tablets use the smaller set. -->
+    <link
+      rel="preload"
+      as="image"
+      type="image/webp"
+      crossorigin
+      href="/textures/day-2k.webp"
+      media="(max-width: 1023px)"
+    />
+    <link
+      rel="preload"
+      as="image"
+      type="image/webp"
+      crossorigin
+      href="/textures/night-2k.webp"
+      media="(max-width: 1023px)"
+    />
+    <link
+      rel="preload"
+      as="image"
+      type="image/webp"
+      crossorigin
+      href="/textures/topo-2k.webp"
+      media="(max-width: 1023px)"
+    />
+    <link
+      rel="preload"
+      as="image"
+      type="image/webp"
+      crossorigin
+      href="/textures/day-4k.webp"
+      media="(min-width: 1024px)"
+    />
+    <link
+      rel="preload"
+      as="image"
+      type="image/webp"
+      crossorigin
+      href="/textures/night-4k.webp"
+      media="(min-width: 1024px)"
+    />
+    <link
+      rel="preload"
+      as="image"
+      type="image/webp"
+      crossorigin
+      href="/textures/topo-4k.webp"
+      media="(min-width: 1024px)"
+    />
     <link rel="canonical" href="https://globe.krimadev.com/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="World News Globe" />

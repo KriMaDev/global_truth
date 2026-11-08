@@ -8,6 +8,7 @@
 
 import Globe from 'globe.gl';
 import {
+  Color,
   MeshBasicMaterial,
   NoColorSpace,
   RepeatWrapping,
@@ -39,6 +40,8 @@ import { DetailLayer } from './detail';
 import { createLines, createWaterLines, parseLines } from './lines';
 import { PillarField } from './markers';
 import { PressTracker } from './press';
+import { ResolutionGuard } from './resolution';
+import { findShapeGroups, ShapeLayer, type Rgba } from './shapes';
 import { createStars } from './stars';
 import { sunPosition } from './sun';
 
@@ -106,6 +109,8 @@ const MAX_HTML_LABELS = 150;
 /** Labels are chosen again once the view has turned this far. */
 const LABEL_REFRESH_DEGREES = 8;
 const FOLLOW_VIEW_MS = 200;
+/** How long to wait for globe.gl to finish building the country shapes. */
+const ADOPT_MAX_FRAMES = 240;
 /** Screen space a count badge keeps clear of labels (half width, half height in px). */
 const BADGE_HALF: [number, number] = [14, 10];
 /** Panels that map labels keep clear of. */
@@ -283,33 +288,25 @@ interface LakeFeature {
 
 type ShapeFeature = CountryFeature | LakeFeature;
 
-/** Lakes: deep water blue, nearly opaque, unlit like the countries. */
-const lakeMaterial = new MeshBasicMaterial({
-  color: '#123e66',
-  transparent: true,
-  opacity: 0.9,
-  depthWrite: false,
-});
+/** globe.gl's own shape objects are never drawn (./shapes.ts), only clicked and hovered. */
+const pickMaterial = new MeshBasicMaterial();
 
-/**
- * A country's tint: its severity colour, or a faint neutral glass without events. Five
- * shared, unlit materials for all countries (one each would cost a lot per frame), and
- * unlit so the colours read the same on the night side.
- */
-const countryMaterials = new Map<Severity | 'none', MeshBasicMaterial>();
-function countryMaterial(severity: Severity | undefined): MeshBasicMaterial {
+/** Lakes: deep water blue, nearly opaque, unlit like the countries. */
+const lakeTint = new Color('#123e66');
+const LAKE_COLOR: Rgba = [lakeTint.r, lakeTint.g, lakeTint.b, 0.9];
+
+/** A country's tint: its severity colour, or a faint neutral glass without events; unlit, so
+ * the colours read the same on the night side. */
+const countryColors = new Map<Severity | 'none', Rgba>();
+function countryColor(severity: Severity | undefined): Rgba {
   const key = severity ?? 'none';
-  let material = countryMaterials.get(key);
-  if (!material) {
-    material = new MeshBasicMaterial({
-      color: severity ? SEVERITY_STYLES[severity].color : '#d6dae0',
-      transparent: true,
-      opacity: severity ? 0.42 : 0.05,
-      depthWrite: false,
-    });
-    countryMaterials.set(key, material);
+  let color = countryColors.get(key);
+  if (!color) {
+    const tint = new Color(severity ? SEVERITY_STYLES[severity].color : '#d6dae0');
+    color = [tint.r, tint.g, tint.b, severity ? 0.42 : 0.05];
+    countryColors.set(key, color);
   }
-  return material;
+  return color;
 }
 
 /** The count badge at the foot of a group's pillar: a clear click target for the group.
@@ -443,6 +440,7 @@ export async function createGlobeApp(
       return element;
     })
     // Flat shapes: no sides, and no outline (the borders are drawn already, see ./lines.ts).
+    .polygonCapMaterial(() => pickMaterial)
     .polygonSideColor(() => '')
     .polygonStrokeColor(() => '')
     .polygonAltitude((d) => ((d as ShapeFeature).lake ? LAKE_ALTITUDE : COUNTRY_ALTITUDE))
@@ -736,10 +734,41 @@ export async function createGlobeApp(
   controls.addEventListener('start', pauseAutoRotate);
   applyRotation();
 
+  // Countries and lakes, drawn as one object once globe.gl has built its own (./shapes.ts).
+  const shapeLayer = new ShapeLayer();
+  globe.scene().add(shapeLayer.mesh);
+  let shapeSeverities = new Map<string, Severity>();
+  let shapesWanted = 0;
+  const colorOfShape = (shape: unknown): Rgba => {
+    const feature = shape as ShapeFeature;
+    return feature.lake ? LAKE_COLOR : countryColor(shapeSeverities.get(feature.iso2));
+  };
+  const adoptShapes = (shapes: ShapeFeature[], wanted: number): void => {
+    const expected = shapes.reduce((sum, s) => sum + s.geometry.coordinates.length, 0);
+    let frames = 0;
+    const attempt = (): void => {
+      if (wanted !== shapesWanted) return;
+      const groups = findShapeGroups(globe.scene());
+      frames += 1;
+      if (groups.length >= expected || (groups.length > 0 && frames > ADOPT_MAX_FRAMES)) {
+        shapeLayer.adopt(groups, colorOfShape);
+        container.dataset.shapes = String(groups.length);
+      } else if (frames <= ADOPT_MAX_FRAMES * 2) {
+        window.requestAnimationFrame(attempt);
+      }
+    };
+    attempt();
+  };
+
   // Pulses and pillar sizes: one loop for every light.
   const start = performance.now();
+  const resolution = new ResolutionGuard(renderer.getPixelRatio());
+  let lastFrame = start;
   let lastDeclutter = 0;
   const tick = (now: number): void => {
+    const sharper = resolution.frame(now - lastFrame);
+    lastFrame = now;
+    if (sharper !== null) renderer.setPixelRatio(sharper);
     if (geography && now - lastDeclutter > DECLUTTER_MS) {
       lastDeclutter = now;
       declutter();
@@ -815,13 +844,19 @@ export async function createGlobeApp(
           geometry: { type: 'MultiPolygon', coordinates: lake.polygons },
         }));
       }
-      // A new accessor function makes globe.gl recolour the existing shapes.
-      globe
-        .polygonCapMaterial((d) => {
-          const shape = d as ShapeFeature;
-          return shape.lake ? lakeMaterial : countryMaterial(severities.get(shape.iso2));
-        })
-        .polygonsData(data ? [...countryFeatures, ...lakeFeatures] : []);
+      shapeSeverities = severities;
+      if (switched) {
+        const shapes = data ? [...countryFeatures, ...lakeFeatures] : [];
+        globe.polygonsData(shapes);
+        shapesWanted += 1;
+        if (data) adoptShapes(shapes, shapesWanted);
+        else {
+          shapeLayer.clear();
+          delete container.dataset.shapes;
+        }
+      } else {
+        shapeLayer.paint(colorOfShape);
+      }
       if (data) loadWater();
       for (const line of waterLines) line.visible = data !== null;
       if (switched) {

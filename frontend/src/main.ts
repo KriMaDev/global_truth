@@ -133,6 +133,11 @@ function updateHud(): void {
   }
 }
 
+/** What the page is waiting for on the way to the globe. */
+function showLoadStep(step: number, text: string): void {
+  status.textContent = `Step ${step} of 3 · ${text}`;
+}
+
 /** A message that stays visible over the globe (loading problems, empty data), or none. */
 let noticeTimer = 0;
 function notice(message: string | null, hideAfterMs?: number): void {
@@ -466,6 +471,20 @@ async function loadGeography(): Promise<GeographyData> {
   };
 }
 
+/** The texts for "About this place", fetched once; the map works without them. */
+let placesLoading: Promise<void> | null = null;
+function loadPlaces(): Promise<void> {
+  placesLoading ??= fetchJson('/geo/places.json')
+    .then((doc) => {
+      const places = doc as Partial<PlacesData> | null;
+      placesData = places?.places
+        ? { generated: String(places.generated ?? ''), places: places.places }
+        : null;
+    })
+    .catch((error: unknown) => console.warn('Place descriptions unavailable:', error));
+  return placesLoading;
+}
+
 async function setGeoView(on: boolean): Promise<void> {
   geoView = on;
   geoToggle.setAttribute('aria-pressed', String(on));
@@ -473,18 +492,7 @@ async function setGeoView(on: boolean): Promise<void> {
   if (on && !geoData) {
     try {
       notice('Loading the map…');
-      const [geography, places] = await Promise.all([
-        loadGeography(),
-        fetchJson('/geo/places.json').catch((error: unknown) => {
-          console.warn('Place descriptions unavailable:', error);
-          return null;
-        }),
-      ]);
-      geoData = geography;
-      const doc = places as Partial<PlacesData> | null;
-      placesData = doc?.places
-        ? { generated: String(doc.generated ?? ''), places: doc.places }
-        : null;
+      geoData = await loadGeography();
       notice(null);
     } catch (error) {
       console.warn('Geography unavailable:', error);
@@ -497,6 +505,8 @@ async function setGeoView(on: boolean): Promise<void> {
   }
   app?.setGeography(geoView ? geoData : null, countrySeverity(events));
   applyFilters();
+  // The map first, the texts for the cards after it.
+  if (geoView) void loadPlaces();
 }
 
 /** "12 events: 3 high, 9 low", for the current filters and time window. */
@@ -535,13 +545,16 @@ function openPlace(
 ): void {
   closePanels();
   app?.select(null);
-  const facts = label.wikidata ? placesData?.places[label.wikidata] : undefined;
-  card.openPanel(
-    label.id,
-    placeCardParts({ label, facts, asOf: placesData?.generated ?? null, ...extra }),
-    false,
-  );
-  app?.setCardOpen(true);
+  // On a slow connection the card waits for its text rather than opening without it.
+  void loadPlaces().then(() => {
+    const facts = label.wikidata ? placesData?.places[label.wikidata] : undefined;
+    card.openPanel(
+      label.id,
+      placeCardParts({ label, facts, asOf: placesData?.generated ?? null, ...extra }),
+      false,
+    );
+    app?.setCardOpen(true);
+  });
   // Closer for small places, never further out than now.
   const reach: Record<MapLabel['kind'], number> = {
     ocean: 2.4,
@@ -656,6 +669,12 @@ async function start(): Promise<void> {
     .then((doc) => headlines.setFeeds(parseFeeds(doc)))
     .catch((error: unknown) => console.warn('Feed status unavailable:', error));
 
+  // The 3D code starts downloading now, alongside the events, not after them.
+  const canDraw = hasWebGL();
+  const globeCode = canDraw ? import('./globe/globe') : null;
+  globeCode?.catch(() => undefined); // Reported where it is awaited, below.
+  showLoadStep(1, 'Getting the latest news…');
+
   try {
     const loaded = await loadEvents();
     allEvents = loaded.events;
@@ -668,12 +687,14 @@ async function start(): Promise<void> {
   applyFilters();
   if (startWithHeadlines) headlines.open(false);
 
-  if (!hasWebGL()) {
+  if (!globeCode || !canDraw) {
     showList('This browser cannot show the 3D globe, so the events are listed instead.');
     return;
   }
   try {
-    const { createGlobeApp } = await import('./globe/globe');
+    showLoadStep(2, 'Loading the globe…');
+    const { createGlobeApp } = await globeCode;
+    showLoadStep(3, 'Loading the map images…');
     app = await createGlobeApp(container, {
       events,
       reducedMotion: initialReducedMotion(),

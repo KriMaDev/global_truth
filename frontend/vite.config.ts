@@ -27,6 +27,12 @@ const { date, commit } = version();
 // The frontend lives in frontend/; `npm run build` writes frontend/dist,
 // which wrangler.jsonc publishes as static assets.
 export default defineConfig({
+  resolve: {
+    // Code that globe.gl's libraries import but this site never uses (src/globe/unused-modules.ts).
+    alias: [
+      { find: /^(three\/(webgpu|tsl)|h3-js)$/, replacement: `${root}src/globe/unused-modules.ts` },
+    ],
+  },
   define: {
     __BUILD_DATE__: JSON.stringify(date),
     __BUILD_COMMIT__: JSON.stringify(commit),

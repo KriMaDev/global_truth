@@ -22,6 +22,20 @@ test('the switch changes the map and the address, and back again', async ({ page
   expect(problems).toEqual([]);
 });
 
+test('the country shapes are drawn as one object, also after switching away and back', async ({
+  page,
+}) => {
+  await openGlobe(page, '/?view=geo', { events: knownWorld() });
+  const globe = page.locator('#globe');
+  await expect(globe).toHaveAttribute('data-shapes', /^[1-9]\d+$/, { timeout: 30_000 });
+
+  await page.locator('#geo-toggle').click();
+  await expect(globe).not.toHaveAttribute('data-shapes');
+
+  await page.locator('#geo-toggle').click();
+  await expect(globe).toHaveAttribute('data-shapes', /^[1-9]\d+$/, { timeout: 30_000 });
+});
+
 test('a country label opens "About this place", with where its text comes from', async ({
   page,
 }) => {
