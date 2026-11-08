@@ -6,6 +6,9 @@ import "@fontsource/hanken-grotesk/600.css";
 import "@fontsource/jetbrains-mono/400.css";
 import "@fontsource/jetbrains-mono/500.css";
 import "./style.css";
+import { startAnalytics } from "./analytics";
+
+startAnalytics();
 
 const link = document.getElementById("version");
 if (link instanceof HTMLAnchorElement) {

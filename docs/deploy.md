@@ -51,3 +51,13 @@ Cloudflare dashboard → Workers & Pages → `world-news-globe` → Deployments 
 ## Remove the site
 
 Delete both Workers in the dashboard (`world-news-globe-timer` first, or it keeps starting updates). The site's custom domain and DNS record go with it.
+
+## Visitor counts: Cloudflare Web Analytics
+
+Set up as on krimadev.com: no cookies, and only visits on globe.krimadev.com count.
+
+1. Cloudflare → Analytics & Logs → Web Analytics → Add a site → `globe.krimadev.com` → choose the **JS snippet** option (not the automatic setup: it would add a second beacon, and the site's security policy would block it).
+2. Copy the `token` from the snippet into `frontend/src/analytics.ts`. It is public: it is in every page. Empty means no beacon.
+3. The numbers are in Cloudflare → Analytics & Logs → Web Analytics. The privacy section of `/legal/` describes this, so keep the two in step.
+
+The beacon is set to `spa: false`, because the site rewrites its address on every filter change. Without it, one visit could count as many page views. The security policy in `frontend/public/_headers` allows `static.cloudflareinsights.com` (script) and `cloudflareinsights.com` (sending the count).

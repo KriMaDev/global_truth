@@ -13,6 +13,7 @@ import "@fontsource/hanken-grotesk/600.css";
 import "@fontsource/jetbrains-mono/400.css";
 import "@fontsource/jetbrains-mono/500.css";
 import "./style.css";
+import { startAnalytics } from "./analytics";
 import { compareBySeverity, parseEvents } from "./events";
 import type { Cluster } from "./clusters";
 import {
@@ -552,6 +553,7 @@ function showVersion(): void {
 
 async function start(): Promise<void> {
   showVersion();
+  startAnalytics();
   renderLegend(byId("legend"));
   setupMotionToggle(byId<HTMLButtonElement>("motion-toggle"), (on) => {
     app?.setReducedMotion(on);
