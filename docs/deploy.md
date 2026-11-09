@@ -26,7 +26,7 @@ npm run deploy        # builds frontend/dist (with the data), then `wrangler dep
 The timer needs one Worker secret, **`GITHUB_TOKEN`**:
 
 1. GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate new token.
-2. Repository access: **Only select repositories** → `KriMaDev/world_news_globe`. Permissions → Repository permissions → **Actions: Read and write** (nothing else). Expiration: the longest offered; write the date in CLAUDE.md.
+2. Repository access: **Only select repositories** → `KriMaDev/world_news_globe`. Permissions → Repository permissions → **Actions: Read and write** (nothing else). Expiration: the longest offered; write the date in your private notes.
 3. In the project folder: `npx wrangler secret put GITHUB_TOKEN -c worker/wrangler.jsonc`, then paste the token when asked. It is stored by Cloudflare only, never in a file. Secrets survive deploys.
 4. When the token expires (or is revoked), the timer's runs fail with "401" in its logs (Cloudflare dashboard → Workers & Pages → `world-news-globe-timer` → Logs), and the backup schedule keeps the site updated every 3 hours until a new token is set the same way.
 
@@ -42,7 +42,7 @@ Each run:
 It needs, under GitHub → the repository → Settings → Environments → **production** (deployment branches: `main` only):
 
 - **Secrets**:
-  - `CLOUDFLARE_API_TOKEN`: Cloudflare dashboard → Manage Account → API Tokens → an account-owned token limited to the one Worker `world-news-globe`, role **Editor**, with an expiry date (a year at most; write the date in CLAUDE.md). It can't touch krimadev.com, Star Teller, the timer, routes or DNS: those are changed by hand from this PC.
+  - `CLOUDFLARE_API_TOKEN`: Cloudflare dashboard → Manage Account → API Tokens → an account-owned token limited to the one Worker `world-news-globe`, role **Editor**, with an expiry date (a year at most; write the date in your private notes). It can't touch krimadev.com, Star Teller, the timer, routes or DNS: those are changed by hand from this PC.
   - `CLOUDFLARE_ACCOUNT_ID`: shown on the Workers & Pages overview page.
 - **Variable** (Settings → Secrets and variables → Actions) `LIVE` = `true`: the switch. Without it the workflow does nothing, so nothing goes public by accident. Set it to `false` to pause the updates (the site stays as last deployed).
 

@@ -52,7 +52,7 @@ Every news card says it, e.g. 'Economic from the outlet's own section "business"
 
 ## Outlets' own tags in their feeds (8 Nov 2026)
 
-Some outlets' RSS feeds carry editorial tags (The Guardian: "Climate crisis", "COP31"; CBC: "News/Science") or come per section (BBC, NPR). They would be the best source of categories, but their terms do not allow this use without permission: The Guardian's Open Platform terms forbid using its content or sites "for any text and data aggregation, analysis or mining purposes"; NPR's feeds are for personal, non-commercial use; CBC's terms require an agreement for any use beyond private purposes; the BBC's current feed terms could not be confirmed. So feed tags would be used **only for outlets that give written permission**, recorded in `docs/sources.md` and here, outlet by outlet. None has been asked: the owner decided on 8 Nov 2026 that this is not worth the effort, so feed tags are not used.
+Some outlets' RSS feeds carry editorial tags (The Guardian: "Climate crisis", "COP31"; CBC: "News/Science") or come per section (BBC, NPR). They would be the best source of categories, but their terms do not allow this use without permission: The Guardian's Open Platform terms forbid using its content or sites "for any text and data aggregation, analysis or mining purposes"; NPR's feeds are for personal, non-commercial use; CBC's terms require an agreement for any use beyond private purposes; the BBC's current feed terms could not be confirmed. So feed tags would be used **only for outlets that give written permission**, recorded in `docs/sources.md` and here, outlet by outlet. Feed tags are not used today.
 
 ## Type of natural disaster
 

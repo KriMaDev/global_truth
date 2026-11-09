@@ -23,6 +23,8 @@ __pycache__/
 .env
 .env.*
 !.env.example
+.dev.vars
+.dev.vars.*
 *.pem
 *.key
 
