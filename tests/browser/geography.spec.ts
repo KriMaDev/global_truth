@@ -6,7 +6,7 @@ import {
   openEvent,
   openGlobe,
   showEurope,
-  view,
+  settledView,
   watchProblems,
 } from './fixtures';
 
@@ -129,8 +129,7 @@ test('zoomed right in, opening an event keeps it in view', async ({ page }) => {
   }
   expect(await altitude(page)).toBeLessThan(0.7);
   await openEvent(page, 'news-fr');
-  await page.waitForTimeout(1800); // The flight to the event.
-  const [lat, lng] = await view(page);
+  const [lat, lng] = await settledView(page);
   // Degrees from the middle of the screen to its top, at this zoom.
   const reach = (1 + (await altitude(page))) * Math.sin((25 * Math.PI) / 180);
   const halfView = (Math.asin(Math.min(1, reach)) * 180) / Math.PI - 25;

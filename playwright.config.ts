@@ -12,6 +12,8 @@ export default defineConfig({
   testDir: 'tests/browser',
   outputDir: 'test-results',
   retries: onCi ? 1 : 0,
+  // Lets the three CI machines (--shard) share the tests evenly.
+  fullyParallel: onCi,
   // Without a graphics card, CI draws the globe at a few frames a second.
   timeout: onCi ? 60_000 : 30_000,
   use: { baseURL: `http://localhost:${port}` },

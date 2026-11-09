@@ -80,16 +80,16 @@ test('zoom buttons work, stop at the limit, and Whole globe comes back', async (
   await openGlobe(page);
   await expect.poll(() => altitude(page)).toBeGreaterThan(3);
   await page.locator('#zoom-in').click();
-  await expect.poll(() => altitude(page)).toBeLessThan(3);
+  await expect.poll(() => altitude(page), { timeout: 30_000 }).toBeLessThan(3);
 
   await page.locator('#zoom-whole').click();
-  await expect.poll(() => altitude(page), { timeout: 5000 }).toBeGreaterThan(3.5);
+  await expect.poll(() => altitude(page), { timeout: 30_000 }).toBeGreaterThan(3.5);
 
   for (let i = 0; i < 4; i += 1) {
     await page.locator('#zoom-out').click();
     await page.waitForTimeout(500);
   }
-  await expect.poll(() => altitude(page), { timeout: 5000 }).toBe(7);
+  await expect.poll(() => altitude(page), { timeout: 30_000 }).toBe(7);
 });
 
 test('Whole globe also goes back to the starting view', async ({ page }) => {

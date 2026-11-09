@@ -238,6 +238,19 @@ export async function view(page: Page): Promise<[number, number]> {
   ];
 }
 
+/** The camera's position once it has stopped: flights take longer without a graphics card. */
+export async function settledView(page: Page): Promise<[number, number]> {
+  let last = await view(page);
+  let still = 0;
+  for (let check = 0; check < 60 && still < 3; check += 1) {
+    await page.waitForTimeout(500);
+    const now = await view(page);
+    still = now.join() === last.join() ? still + 1 : 0;
+    last = now;
+  }
+  return last;
+}
+
 /** Where the camera is, from the readout (kept up to date even when hidden on phones). */
 export async function altitude(page: Page): Promise<number> {
   const text = await page.locator('#hud').textContent();

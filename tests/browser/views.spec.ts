@@ -6,6 +6,7 @@ import {
   openEvent,
   openGlobe,
   showEurope,
+  settledView,
   syntheticEvent,
   view,
 } from './fixtures';
@@ -130,17 +131,13 @@ test('with a mouse, clicking a place name leaves the globe still afterwards', as
   await page.waitForTimeout(150);
   await page.mouse.up();
   await expect(page.locator('#event-card .card-title')).not.toBeEmpty({ timeout: 10_000 });
-  // The flight to the place, which takes longer without a graphics card.
-  let before = await view(page);
-  for (let check = 0; check < 40; check += 1) {
-    await page.waitForTimeout(500);
-    const now = await view(page);
-    if (now.join() === before.join()) break;
-    before = now;
-  }
+  const before = await settledView(page);
   await page.mouse.move(spot.x + 200, spot.y + 120, { steps: 12 });
   await page.waitForTimeout(400);
-  expect(await view(page)).toEqual(before);
+  // A drag would move it by many degrees; a last trace of the flight, by a fraction of one.
+  const after = await view(page);
+  expect(Math.abs(after[0] - before[0])).toBeLessThan(1);
+  expect(Math.abs(after[1] - before[1])).toBeLessThan(1);
 });
 
 test('zoomed in, news at the same place fans out and each can be opened', async ({
