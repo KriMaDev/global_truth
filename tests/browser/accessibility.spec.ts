@@ -154,7 +154,7 @@ test.describe('keyboard and screen readers', () => {
     await expect(announcer).toHaveText('7 events shown');
   });
 
-  test('the disaster symbols control looks like a button and works by keyboard', async ({
+  test('the disaster symbols control looks clickable and works by keyboard', async ({
     page,
     isMobile,
   }) => {
@@ -162,7 +162,7 @@ test.describe('keyboard and screen readers', () => {
     if (isMobile) await page.locator('.legend-toggle').click();
     const control = page.locator('.legend-symbols summary');
     await expect(control).toHaveText('Show disaster symbols');
-    await expect(control).toHaveCSS('border-top-style', 'solid');
+    await expect(control).toHaveCSS('text-decoration-line', 'underline');
     if (isMobile) expect((await control.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     await control.focus();
     await page.keyboard.press('Enter');

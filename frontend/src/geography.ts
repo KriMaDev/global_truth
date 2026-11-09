@@ -158,21 +158,67 @@ export function angularDegrees(lat1: number, lng1: number, lat2: number, lng2: n
 /** Past the horizon, so that a small turn doesn't show an empty edge. */
 const LABEL_MARGIN_DEGREES = 15;
 
-/** The labels that can be on screen from this view, most important first, at most `limit`. */
+/** The camera's vertical field of view (globe.gl's default), in degrees. */
+const CAMERA_FOV = 50;
+/** A little past the screen's corners, so that a small turn finds its labels already there. */
+const SCREEN_MARGIN = 1.35;
+/** Of the limit, how much mountains and deserts, and rivers and lakes, are each sure of. */
+const NATURE_SHARE = 0.2;
+
+/** Degrees from the view's centre to the screen's corner, or to the horizon if that is nearer. */
+export function screenRadiusDegrees(altitude: number, aspect: number): number {
+  const rad = Math.PI / 180;
+  const corner = Math.atan(Math.tan((CAMERA_FOV / 2) * rad) * Math.hypot(1, aspect));
+  const reach = (1 + altitude) * Math.sin(corner);
+  if (reach >= 1) return Math.acos(1 / (1 + altitude)) / rad;
+  return (Math.asin(reach) - corner) / rad;
+}
+
+function natureGroup(kind: LabelKind): 'land' | 'water' | null {
+  if (kind === 'range' || kind === 'desert' || kind === 'peak') return 'land';
+  return kind === 'river' || kind === 'lake' ? 'water' : null;
+}
+
+/**
+ * The labels to put in the page, at most `limit`: those on screen before those just past it,
+ * then the most important. Mountains and water are each sure of a share, so country names
+ * can't crowd them out.
+ */
 export function labelsInView(
   labels: MapLabel[],
   lat: number,
   lng: number,
   altitude: number,
   limit: number,
+  aspect = 1,
 ): MapLabel[] {
   const horizon = (Math.acos(1 / (1 + altitude)) * 180) / Math.PI;
-  return labels
-    .filter(
-      (label) => angularDegrees(lat, lng, label.lat, label.lng) <= horizon + LABEL_MARGIN_DEGREES,
-    )
-    .sort((a, b) => labelPriority(a) - labelPriority(b))
-    .slice(0, limit);
+  const screen = screenRadiusDegrees(altitude, aspect) * SCREEN_MARGIN;
+  const onScreen = new Set<MapLabel>();
+  const reachable = labels.filter((label) => {
+    const distance = angularDegrees(lat, lng, label.lat, label.lng);
+    if (distance <= screen) onScreen.add(label);
+    return distance <= horizon + LABEL_MARGIN_DEGREES;
+  });
+  const ordered = reachable.sort(
+    (a, b) =>
+      Number(onScreen.has(b)) - Number(onScreen.has(a)) || labelPriority(a) - labelPriority(b),
+  );
+  if (ordered.length <= limit) return ordered;
+
+  const chosen = new Set<MapLabel>();
+  const share = Math.floor(limit * NATURE_SHARE);
+  for (const group of ['land', 'water'] as const) {
+    ordered
+      .filter((label) => onScreen.has(label) && natureGroup(label.kind) === group)
+      .slice(0, share)
+      .forEach((label) => chosen.add(label));
+  }
+  for (const label of ordered) {
+    if (chosen.size >= limit) break;
+    chosen.add(label);
+  }
+  return ordered.filter((label) => chosen.has(label));
 }
 
 /** A country's label (also what its card is built from). */

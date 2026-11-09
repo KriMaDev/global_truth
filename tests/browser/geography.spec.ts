@@ -94,3 +94,14 @@ test('a country pressed on the map itself opens its card', async ({
   }
   throw new Error('No press on the map opened a country');
 });
+
+test('close up, the map names rivers, lakes or mountains, not only countries', async ({ page }) => {
+  await openGlobe(page, '/?view=geo', { events: knownWorld() });
+  await expect(shownLabels(page).first()).toBeAttached({ timeout: 30_000 });
+  await showEurope(page);
+  await page.locator('#zoom-in').click();
+  await page.waitForTimeout(800);
+  const nature =
+    '.map-label.kind-river, .map-label.kind-lake, .map-label.kind-range, .map-label.kind-peak';
+  await expect.poll(() => page.locator(nature).count(), { timeout: 15_000 }).toBeGreaterThan(0);
+});

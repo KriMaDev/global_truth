@@ -32,12 +32,12 @@ BASE = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/ge
 USER_AGENT = "WorldNewsGlobe/0.1 (+https://globe.krimadev.com)"
 
 #: Simplification tolerances in degrees (Ramer-Douglas-Peucker).
-LINE_TOLERANCE = 0.04
-SHAPE_TOLERANCE = 0.04
-# Islands smaller than this (square degrees, about 250 km² at the equator) are left out of the
-# country shapes: too small to see coloured, and they cost the most to draw. Each country
-# always keeps its largest shape, so small island nations stay.
-MIN_ISLAND_AREA = 0.02
+#: Lines and shapes use the same one, so the colours stay inside the borders drawn on them.
+LINE_TOLERANCE = 0.015
+SHAPE_TOLERANCE = 0.015
+# Islands smaller than this (square degrees, about 12 km² at the equator) are left out of the
+# country shapes. Each country always keeps its largest shape, so small island nations stay.
+MIN_ISLAND_AREA = 0.001
 #: Rivers and lake shores are finer than coastlines (rivers are thin, lakes small).
 WATER_TOLERANCE = 0.02
 #: Lakes smaller than this (square degrees, about 60 km²) are left out of the lake shapes.

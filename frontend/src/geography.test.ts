@@ -10,6 +10,7 @@ import {
   labelsFor,
   labelsInView,
   lakeLabel,
+  screenRadiusDegrees,
   type GeographyData,
   type MapLabel,
 } from './geography';
@@ -73,6 +74,31 @@ describe('labelsInView', () => {
       2,
     );
     expect(seen.map((l) => l.id)).toEqual(['major', 'middle']);
+  });
+
+  it('prefers what is on screen, even when it is less important', () => {
+    const seen = labelsInView(
+      [label('off-screen major', 0, 30, 2), label('on-screen minor', 0, 1, 7)],
+      0,
+      0,
+      0.3,
+      1,
+    );
+    expect(seen.map((l) => l.id)).toEqual(['on-screen minor']);
+  });
+
+  it('keeps room for rivers and mountains among many country names', () => {
+    const countries = Array.from({ length: 20 }, (_, i) => label(`c${i}`, 0, i * 0.1, 2));
+    const river: MapLabel = { ...label('river', 1, 1, 7), kind: 'river' };
+    const peak: MapLabel = { ...label('peak', 2, 1, 7), kind: 'peak' };
+    const seen = labelsInView([...countries, river, peak], 0, 0, 0.3, 10);
+    expect(seen).toHaveLength(10);
+    expect(seen.map((l) => l.id)).toEqual(expect.arrayContaining(['river', 'peak']));
+  });
+
+  it('reaches further on a wide screen, and never past the horizon', () => {
+    expect(screenRadiusDegrees(0.4, 2)).toBeGreaterThan(screenRadiusDegrees(0.4, 0.5));
+    expect(screenRadiusDegrees(4, 1)).toBeCloseTo((Math.acos(1 / 5) * 180) / Math.PI);
   });
 
   it('measures across the date line', () => {

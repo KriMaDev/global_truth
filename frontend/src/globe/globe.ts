@@ -27,6 +27,7 @@ import {
   labelLevel,
   labelsFor,
   labelsInView,
+  screenRadiusDegrees,
   lakeLabel,
   type GeographyData,
   type LakeShape,
@@ -503,7 +504,9 @@ export async function createGlobeApp(
       const pov = globe.pointOfView();
       labelsCentre = pov;
       const all = labelsFor(pov.altitude, geography);
-      for (const label of labelsInView(all, pov.lat, pov.lng, pov.altitude, MAX_HTML_LABELS)) {
+      const aspect = container.clientWidth / Math.max(1, container.clientHeight);
+      const shown = labelsInView(all, pov.lat, pov.lng, pov.altitude, MAX_HTML_LABELS, aspect);
+      for (const label of shown) {
         let item = labelItems.get(label.id);
         if (!item) {
           item = { type: 'label', label, lat: label.lat, lng: label.lng };
@@ -670,7 +673,13 @@ export async function createGlobeApp(
     if (!geography) return;
     const level = labelLevel(pov.altitude);
     const moved = angularDegrees(pov.lat, pov.lng, labelsCentre.lat, labelsCentre.lng);
-    if (level !== labelsAt || moved > LABEL_REFRESH_DEGREES) {
+    // Close up the view is small, so the labels are chosen again after a shorter move.
+    const aspect = container.clientWidth / Math.max(1, container.clientHeight);
+    const refreshAfter = Math.min(
+      LABEL_REFRESH_DEGREES,
+      screenRadiusDegrees(pov.altitude, aspect) * 0.3,
+    );
+    if (level !== labelsAt || moved > refreshAfter) {
       labelsAt = level;
       refreshHtml();
     }

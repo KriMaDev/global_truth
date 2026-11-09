@@ -15,6 +15,9 @@ import {
   type Object3D,
 } from 'three';
 
+/** In globe units (the globe's radius is 100): about 0.15° across the surface. */
+const TINY_SHAPE_RADIUS = 0.25;
+
 /** Red, green, blue (linear) and opacity. */
 export type Rgba = readonly [number, number, number, number];
 
@@ -121,6 +124,12 @@ export class ShapeLayer {
       const mesh = group.children[0] as Mesh;
       const position = mesh.geometry?.attributes.position;
       if (!position) continue;
+      if (!mesh.geometry.boundingSphere) mesh.geometry.computeBoundingSphere();
+      // Tiny islands are coloured but not tappable: testing each one under the finger slows
+      // every gesture, and they are too small to aim at.
+      if ((mesh.geometry.boundingSphere?.radius ?? 1) < TINY_SHAPE_RADIUS) {
+        mesh.raycast = () => undefined;
+      }
       parts.push({
         shape: (group as unknown as { __data: { data: unknown } }).__data.data,
         positions: position.array,
