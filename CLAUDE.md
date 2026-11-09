@@ -82,7 +82,7 @@ krimadev.com, Star Teller and this project keep one baseline: the same tool vers
 - Start every new feature in plan mode and get approval before large changes.
 - Work in small steps and show the result after each milestone.
 - Explain trade-offs briefly, in plain language.
-- Every new feature ships with browser tests (`tests/browser`, synthetic data only, shared in `fixtures.ts`). CI runs them inside the `verify` check, so a failing test blocks a merge.
+- Every new feature ships with browser tests (`tests/browser`, synthetic data only, shared in `fixtures.ts`). They run on the owner's PC, not on GitHub (owner, 10 Nov 2026: without a graphics card they took 15 minutes there): before every deploy run `private/scripts/ci-local.ps1`, which tests a clean copy of the exact commit, and once more the way GitHub's machines would. GitHub's `verify` and `pipeline` keep the quick checks.
 - Commit often with clear, descriptive messages.
 - Ask before guessing on important decisions (stack, data sources, licensing, hosting).
 - Tell the owner clearly about anything that needs manual work (DNS, hosting settings, API keys).
