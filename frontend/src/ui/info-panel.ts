@@ -13,6 +13,8 @@ export function setupInfoPanel(footer: HTMLElement, button: HTMLButtonElement): 
     if (!footer.contains(event.target as Node)) setOpen(false);
   });
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') setOpen(false);
+    if (event.key !== 'Escape' || !footer.classList.contains('info-open')) return;
+    setOpen(false);
+    button.focus();
   });
 }

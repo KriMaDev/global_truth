@@ -173,7 +173,6 @@ export function renderLegend(root: HTMLElement): void {
   const summary = document.createElement('p');
   summary.className = 'legend-summary';
   summary.id = 'legend-summary';
-  summary.setAttribute('aria-live', 'polite');
   summary.hidden = true;
 
   const head = document.createElement('div');

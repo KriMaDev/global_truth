@@ -111,6 +111,17 @@ let dataTime: string | null = null;
 let loadFailed = false;
 const container = byId<HTMLDivElement>('globe');
 const status = byId<HTMLParagraphElement>('status');
+const announcer = byId<HTMLParagraphElement>('announce');
+let announcedCount: number | null = null;
+
+/** Tells screen readers how many events are left, only when a change alters the number. */
+function announceCount(count: number): void {
+  if (allEvents.length === 0 || loadingHistory) return;
+  if (announcedCount !== null && count !== announcedCount) {
+    announcer.textContent = `${count} ${count === 1 ? 'event' : 'events'} shown`;
+  }
+  announcedCount = count;
+}
 const list = byId<HTMLElement>('event-list');
 
 const hud = byId<HTMLParagraphElement>('hud');
@@ -408,6 +419,7 @@ function applyFilters(): void {
     inWindow.filter((e) => matchesExceptTime(e, { ...filters, place: [] })),
   );
   renderSummary(events.length, allEvents.length, !isDefault(filters), clearFilters);
+  announceCount(events.length);
   headlines.render({
     events,
     place: placeNames(allEvents, filters.place),
