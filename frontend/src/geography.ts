@@ -174,6 +174,15 @@ export function screenRadiusDegrees(altitude: number, aspect: number): number {
   return (Math.asin(reach) - corner) / rad;
 }
 
+/**
+ * How far south of an event to look when opening it, so it sits above the card. Close up the
+ * view is small, so this is at most half the way to the top of the screen: a fixed angle would
+ * leave the event out of sight.
+ */
+export function flyTiltDegrees(tilt: number, altitude: number): number {
+  return Math.min(tilt, screenRadiusDegrees(altitude, 0) * 0.5);
+}
+
 function natureGroup(kind: LabelKind): 'land' | 'water' | null {
   if (kind === 'range' || kind === 'desert' || kind === 'peak') return 'land';
   return kind === 'river' || kind === 'lake' ? 'water' : null;

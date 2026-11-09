@@ -28,6 +28,7 @@ import {
   labelsFor,
   labelsInView,
   screenRadiusDegrees,
+  flyTiltDegrees,
   lakeLabel,
   type GeographyData,
   type LakeShape,
@@ -814,8 +815,9 @@ export async function createGlobeApp(
       // Look from a little south of the target, so its pillar is seen standing up and it
       // sits above the screen's middle, clear of the card.
       const current = globe.pointOfView();
-      const lat = Math.max(-80, Math.min(80, target.lat - viewTilt()));
-      move({ lat, lng: target.lng, altitude: Math.min(current.altitude, 1.6) }, FLY_MS);
+      const altitude = Math.min(current.altitude, 1.6);
+      const lat = Math.max(-80, Math.min(80, target.lat - flyTiltDegrees(viewTilt(), altitude)));
+      move({ lat, lng: target.lng, altitude }, FLY_MS);
     },
     flyOver(lat, lng, altitude) {
       move({ lat, lng, altitude: clampAltitude(altitude) }, FLY_MS);

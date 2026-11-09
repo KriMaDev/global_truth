@@ -1,6 +1,14 @@
 /** The geography view: the switch, the labels, and place cards. Made-up events only. */
 import { expect, test, type Page } from '@playwright/test';
-import { knownWorld, openGlobe, showEurope, watchProblems } from './fixtures';
+import {
+  altitude,
+  knownWorld,
+  openEvent,
+  openGlobe,
+  showEurope,
+  view,
+  watchProblems,
+} from './fixtures';
 
 const shownLabels = (page: Page) => page.locator('.map-label:not(.is-hidden):not(.is-crowded)');
 
@@ -104,4 +112,20 @@ test('close up, the map names rivers, lakes or mountains, not only countries', a
   const nature =
     '.map-label.kind-river, .map-label.kind-lake, .map-label.kind-range, .map-label.kind-peak';
   await expect.poll(() => page.locator(nature).count(), { timeout: 15_000 }).toBeGreaterThan(0);
+});
+
+test('zoomed right in, opening an event keeps it in view', async ({ page }) => {
+  await openGlobe(page, '/?view=geo', { events: knownWorld() });
+  await expect(shownLabels(page).first()).toBeAttached({ timeout: 30_000 });
+  await showEurope(page);
+  for (let step = 0; step < 3; step += 1) {
+    await page.locator('#zoom-in').click();
+    await page.waitForTimeout(600);
+  }
+  expect(await altitude(page)).toBeLessThan(0.7);
+  await openEvent(page, 'news-fr');
+  await page.waitForTimeout(1800); // The flight to the event.
+  const [lat, lng] = await view(page);
+  expect(Math.abs(lat - 48.8)).toBeLessThan(10);
+  expect(Math.abs(lng - 2.3)).toBeLessThan(1);
 });

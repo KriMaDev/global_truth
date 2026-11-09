@@ -11,6 +11,7 @@ import {
   labelsInView,
   lakeLabel,
   screenRadiusDegrees,
+  flyTiltDegrees,
   type GeographyData,
   type MapLabel,
 } from './geography';
@@ -99,6 +100,11 @@ describe('labelsInView', () => {
   it('reaches further on a wide screen, and never past the horizon', () => {
     expect(screenRadiusDegrees(0.4, 2)).toBeGreaterThan(screenRadiusDegrees(0.4, 0.5));
     expect(screenRadiusDegrees(4, 1)).toBeCloseTo((Math.acos(1 / 5) * 180) / Math.PI);
+  });
+
+  it('looks only slightly south of an event when close up, and as before from far away', () => {
+    expect(flyTiltDegrees(22, 0.2)).toBeLessThan(5);
+    expect(flyTiltDegrees(22, 1.6)).toBe(22);
   });
 
   it('measures across the date line', () => {
