@@ -149,7 +149,16 @@
           aria-expanded="false"
           aria-controls="filter-panel"
         >
-          Filters<span class="toggle-count"></span>
+          <svg class="filter-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path
+              d="M3 5h18l-7 8.5V20l-4-2v-4.5z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span class="filter-word">Filters</span><span class="toggle-count"></span>
         </button>
         <button
           id="rotate-toggle"
@@ -269,6 +278,14 @@
       <div class="bottom-right">
         <p id="hud" class="hud" aria-hidden="true"></p>
         <div id="info-panel" class="info-panel">
+          <div class="text-size" role="group" aria-label="Text size">
+            <button id="text-normal" type="button" aria-pressed="true" aria-label="A, normal text">
+              A
+            </button>
+            <button id="text-large" type="button" aria-pressed="false" aria-label="A+, larger text">
+              A+
+            </button>
+          </div>
           <p class="credits">
             Created by <a class="maker" href="https://krimadev.com">KriMa Development</a> ·
             <a href="/about/">About</a> · <a href="/sources/">Sources</a> ·

@@ -170,3 +170,145 @@ test.describe('keyboard and screen readers', () => {
     await expect(page.locator('.legend-symbols ul')).toBeVisible();
   });
 });
+
+/** Text smaller than 11 px on the page, with where it is. */
+const tinyText = (page: Page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>('body *')]
+      .filter((element) => {
+        const hasText = [...element.childNodes].some(
+          (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+        );
+        return hasText && element.getClientRects().length > 0 && !element.closest('.sr-only');
+      })
+      .filter((element) => parseFloat(getComputedStyle(element).fontSize) < 10.99)
+      .map((element) => `${element.tagName}.${element.className}`),
+  );
+
+/** Whether the top row's controls sit on one line, inside the screen. */
+const topRowFits = (page: Page) =>
+  page.evaluate(() => {
+    const controls = [...document.querySelectorAll<HTMLElement>('.topbar-actions > *')]
+      .filter((element) => element.getClientRects().length > 0)
+      .map((element) => element.getBoundingClientRect());
+    return (
+      controls.every((area) => Math.abs(area.top - (controls[0]?.top ?? 0)) < 2) &&
+      controls.every((area) => area.right <= window.innerWidth)
+    );
+  });
+
+const panelInsideScreen = (page: Page, selector: string) =>
+  page.evaluate((target) => {
+    const area = document.querySelector(target)?.getBoundingClientRect();
+    return (
+      Boolean(area) &&
+      Number(area?.right) <= window.innerWidth + 1 &&
+      Number(area?.bottom) <= window.innerHeight + 1 &&
+      Number(area?.left) >= -1
+    );
+  }, selector);
+
+test.describe('readable text', () => {
+  test.setTimeout(120_000);
+
+  test('no text under 11 px on the globe and its panels', async ({ page, isMobile }) => {
+    await openWorld(page, '/?view=geo');
+    await expect(page.locator('.map-label').first()).toBeAttached({ timeout: 30_000 });
+    expect(await tinyText(page)).toEqual([]);
+    if (isMobile) await page.locator('.legend-toggle').click();
+    expect(await tinyText(page)).toEqual([]);
+    await page.locator('#filter-toggle').click();
+    expect(await tinyText(page)).toEqual([]);
+    await page.keyboard.press('Escape');
+    await page.locator('#news-toggle').click();
+    expect(await tinyText(page)).toEqual([]);
+    await page.keyboard.press('Escape');
+    await openEvent(page, 'war-ua');
+    expect(await tinyText(page)).toEqual([]);
+  });
+
+  for (const path of ['/about/', '/sources/', '/legal/']) {
+    test(`no text under 11 px on ${path}`, async ({ page }) => {
+      await serveWorld(page);
+      await page.goto(path);
+      expect(await tinyText(page)).toEqual([]);
+    });
+  }
+
+  test('phones show a funnel for Filters, still named and tappable', async ({ page, isMobile }) => {
+    await openWorld(page);
+    const button = page.locator('#filter-toggle');
+    await expect(button).toHaveAccessibleName(/^Filters/);
+    const icon = button.locator('.filter-icon');
+    if (!isMobile) {
+      await expect(icon).toBeHidden();
+      await expect(button.locator('.filter-word')).toHaveCSS('position', 'static');
+      return;
+    }
+    await expect(icon).toBeVisible();
+    const area = await button.boundingBox();
+    expect(area?.width).toBeGreaterThanOrEqual(44);
+    expect(area?.height).toBeGreaterThanOrEqual(44);
+    expect((await button.locator('.filter-word').boundingBox())?.width).toBeLessThanOrEqual(1);
+  });
+
+  test('A+ enlarges the text and is remembered', async ({ page, isMobile }) => {
+    await openWorld(page);
+    const size = () =>
+      page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+    const normal = await size();
+    if (isMobile) await page.locator('#info-toggle').click();
+    await page.locator('#text-large').click();
+    await expect(page.locator('#text-large')).toHaveAttribute('aria-pressed', 'true');
+    expect(await size()).toBeCloseTo(normal * 1.25, 1);
+    expect(await page.evaluate(() => localStorage.getItem('wng-text-size'))).toBe('large');
+
+    await page.reload();
+    await expect(page.locator('#rotate-toggle')).toBeVisible({ timeout: 60_000 });
+    expect(await size()).toBeCloseTo(normal * 1.25, 1);
+    if (isMobile) await page.locator('#info-toggle').click();
+    await page.locator('#text-normal').click();
+    expect(await size()).toBeCloseTo(normal, 1);
+    expect(await page.evaluate(() => localStorage.getItem('wng-text-size'))).toBeNull();
+  });
+
+  for (const screen of [
+    { name: 'phone', width: 390, height: 844 },
+    { name: 'small phone', width: 320, height: 640 },
+    { name: 'tablet', width: 820, height: 1180 },
+  ]) {
+    test(`on a ${screen.name} the top row and panels fit at A and A+`, async ({
+      page,
+      isMobile,
+    }) => {
+      await page.setViewportSize({ width: screen.width, height: screen.height });
+      await openWorld(page);
+      await expect(page.locator('#geo-toggle')).toBeVisible({ timeout: 30_000 });
+      expect(await topRowFits(page)).toBe(true);
+      await page.evaluate(() => document.documentElement.classList.add('text-large'));
+      await page.waitForTimeout(200);
+      // A narrow window with a mouse may use two rows; touch screens keep one.
+      if (isMobile || screen.width <= 640) expect(await topRowFits(page)).toBe(true);
+      await page.locator('#filter-toggle').click();
+      await expect(page.locator('#filter-panel')).toBeVisible();
+      expect(await panelInsideScreen(page, '#filter-panel')).toBe(true);
+      await page.keyboard.press('Escape');
+      await openEvent(page, 'war-ua');
+      expect(await panelInsideScreen(page, '#event-card')).toBe(true);
+    });
+  }
+
+  test('nothing runs off the screen at 200% text size', async ({ page }) => {
+    await openWorld(page);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '200%';
+    });
+    await page.locator('#filter-toggle').click({ force: true });
+    await expect(page.locator('#filter-panel')).toBeVisible();
+    await page.waitForTimeout(200);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      await page.evaluate(() => window.innerWidth),
+    );
+    expect(await panelInsideScreen(page, '#filter-panel')).toBe(true);
+  });
+});

@@ -54,6 +54,9 @@ import { renderLegend, renderSummary } from './ui/legend';
 import { setupInfoPanel } from './ui/info-panel';
 import { followDeviceMotion, initialReducedMotion } from './ui/motion';
 import { setupFloatingPanelTitle } from './ui/panel-title';
+import { applySavedTextSize, setupTextSize } from './ui/text-size';
+
+applySavedTextSize();
 
 function byId<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -662,6 +665,7 @@ async function start(): Promise<void> {
   startAnalytics();
   renderLegend(byId('legend'));
   if (footer) setupInfoPanel(footer, byId<HTMLButtonElement>('info-toggle'));
+  setupTextSize(byId('text-normal'), byId('text-large'));
   setupFloatingPanelTitle(byId('news-toggle'), [byId('news-panel'), byId('filter-panel')]);
   stopPageZoomOnIPhones();
   followDeviceMotion((on) => {
