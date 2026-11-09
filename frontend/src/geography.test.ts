@@ -77,7 +77,7 @@ describe('labelsInView', () => {
     expect(seen.map((l) => l.id)).toEqual(['major', 'middle']);
   });
 
-  it('prefers what is on screen, even when it is less important', () => {
+  it('leaves out what cannot come into view, even when it is more important', () => {
     const seen = labelsInView(
       [label('off-screen major', 0, 30, 2), label('on-screen minor', 0, 1, 7)],
       0,
@@ -89,12 +89,34 @@ describe('labelsInView', () => {
   });
 
   it('keeps room for rivers and mountains among many country names', () => {
-    const countries = Array.from({ length: 20 }, (_, i) => label(`c${i}`, 0, i * 0.1, 2));
+    const seas = Array.from({ length: 20 }, (_, i): MapLabel => ({
+      ...label(`s${i}`, 0, i * 0.1, 2),
+      kind: 'sea',
+    }));
     const river: MapLabel = { ...label('river', 1, 1, 7), kind: 'river' };
     const peak: MapLabel = { ...label('peak', 2, 1, 7), kind: 'peak' };
-    const seen = labelsInView([...countries, river, peak], 0, 0, 0.3, 10);
+    const seen = labelsInView([...seas, river, peak], 0, 0, 0.3, 10);
     expect(seen).toHaveLength(10);
     expect(seen.map((l) => l.id)).toEqual(expect.arrayContaining(['river', 'peak']));
+  });
+
+  it('always takes countries and capitals before rivers and peaks', () => {
+    const river = (i: number): MapLabel => ({ ...label(`r${i}`, 0, i * 0.1, 3), kind: 'river' });
+    const capital: MapLabel = { ...label('capital', 1, 1, 0), kind: 'capital' };
+    const seen = labelsInView(
+      [...Array.from({ length: 20 }, (_, i) => river(i)), label('country', 2, 2, 7), capital],
+      0,
+      0,
+      0.3,
+      5,
+    );
+    expect(
+      seen
+        .map((l) => l.id)
+        .slice(0, 2)
+        .sort(),
+    ).toEqual(['capital', 'country']);
+    expect(seen).toHaveLength(5);
   });
 
   it('reaches further on a wide screen, and never past the horizon', () => {
@@ -174,6 +196,8 @@ const data: GeographyData = {
       { name: 'Capitalville', rank: 0, wikidata: 'Q1', at: [5, 50] },
       { name: 'Contested City', rank: 0, wikidata: 'Q2', at: [6, 51], disputed: true },
     ],
+    states: [{ name: 'Teststate', rank: 1, wikidata: 'Q3', at: [-100, 40] }],
+    stateCapitals: [{ name: 'Statetown', rank: 2, wikidata: 'Q4', at: [-99, 41] }],
   },
   lakes: [
     {
@@ -204,6 +228,14 @@ describe('labelsFor', () => {
   it('gives the Atlas everything, with capitals', () => {
     const kinds = new Set(labelsFor(0.3, data, 'atlas').map((l) => l.kind));
     for (const kind of ['river', 'lake', 'peak', 'range', 'capital']) expect(kinds).toContain(kind);
+  });
+
+  it('shows US states closer in, and their capitals closer still', () => {
+    const texts = (altitude: number) => labelsFor(altitude, data, 'geo').map((l) => l.text);
+    expect(texts(1.2)).not.toContain('Teststate');
+    expect(texts(0.8)).toContain('Teststate');
+    expect(texts(0.8)).not.toContain('Statetown');
+    expect(texts(0.3)).toContain('Statetown');
   });
 
   it('shows capitals only once zoomed in', () => {

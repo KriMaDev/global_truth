@@ -259,6 +259,39 @@ def build_capitals() -> list[dict]:
     return sorted(capitals, key=lambda c: c["name"])
 
 
+def build_states() -> list[dict]:
+    """The 50 US states (the only country shown with its states: owner, 10 Nov 2026)."""
+    states = [
+        {
+            "name": p["name"],
+            "rank": 1,
+            "wikidata": p.get("wikidataid") or None,
+            "at": [round(p["longitude"], 2), round(p["latitude"], 2)],
+        }
+        for p in (f["properties"] for f in load("ne_50m_admin_1_states_provinces")["features"])
+        if p.get("adm0_a3") == "USA" and p.get("type_en") == "State"
+    ]
+    return sorted(states, key=lambda s: s["name"])
+
+
+def build_state_capitals() -> list[dict]:
+    """The capital of each US state."""
+    capitals = []
+    for feature in load("ne_10m_populated_places")["features"]:
+        p = feature["properties"]
+        if p.get("ADM0_A3") != "USA" or p.get("FEATURECLA") != "Admin-1 capital":
+            continue
+        capitals.append(
+            {
+                "name": " ".join((p.get("NAME_EN") or p["NAME"]).split()),
+                "rank": 2,
+                "wikidata": p.get("WIKIDATAID") or None,
+                "at": [round(c, 2) for c in feature["geometry"]["coordinates"][:2]],
+            }
+        )
+    return sorted(capitals, key=lambda c: c["name"])
+
+
 def build_labels() -> dict:
     seas = [
         {
@@ -304,6 +337,8 @@ def build_labels() -> dict:
         "peaks": unique(peaks),
         "waters": build_waters(),
         "capitals": build_capitals(),
+        "states": build_states(),
+        "stateCapitals": build_state_capitals(),
     }
 
 
@@ -429,6 +464,13 @@ def main() -> None:
         lines_of({"features": river_features()}), shores, "water.bin", WATER_TOLERANCE
     )
     print(f"wrote geo/water.bin ({size // 1024} KB)")
+    us_lines = [
+        f
+        for f in load("ne_50m_admin_1_states_provinces_lines")["features"]
+        if f["properties"].get("ADM0_A3") == "USA"
+    ]
+    size = write_lines([], lines_of({"features": us_lines}), "states.bin")
+    print(f"wrote geo/states.bin ({size // 1024} KB)")
     for name, data in (
         ("countries", build_countries()),
         ("labels", build_labels()),

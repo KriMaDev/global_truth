@@ -489,6 +489,8 @@ async function loadGeography(): Promise<GeographyData> {
       peaks: parts.peaks ?? [],
       waters: parts.waters ?? [],
       capitals: parts.capitals ?? [],
+      states: parts.states ?? [],
+      stateCapitals: parts.stateCapitals ?? [],
     },
     lakes: Array.isArray(lakes) ? (lakes as GeographyData['lakes']) : [],
   };
@@ -596,6 +598,7 @@ function openPlace(
     country: 1.6,
     sea: 1.6,
     capital: 0.6,
+    state: 0.9,
     city: 0.6,
     range: 1.4,
     desert: 1.6,

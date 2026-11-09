@@ -456,6 +456,11 @@ button {
   background-clip: content-box;
 }
 
+.map-label.kind-state {
+  color: rgb(214 218 224 / 72%);
+  letter-spacing: 0.2em;
+}
+
 .map-label.kind-country {
   color: rgb(240 242 245 / 92%);
   font-size: 0.6875rem;

@@ -186,3 +186,19 @@ test('zoomed in, news at the same place fans out and each can be opened', async 
     'Stacked headline two',
   ]);
 });
+
+test('the United States shows its states, and a state opens its card', async ({ page }) => {
+  await openGlobe(page, '/?view=geo', { events: knownWorld() });
+  await expect(page.locator('.map-label').first()).toBeAttached({ timeout: 30_000 });
+  await openEvent(page, 'group-1');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(1800);
+  await page.locator('#zoom-in').click();
+  await page.waitForTimeout(800);
+  await page.locator('#zoom-in').click();
+  const state = page.locator('.map-label.kind-state').first();
+  await expect(state).toBeAttached({ timeout: 15_000 });
+  await state.evaluate((element) => (element as HTMLElement).click());
+  await expect(page.locator('#event-card .card-kind')).toContainText('State');
+  await expect(page.locator('#event-card a[href*="wikipedia.org"]').first()).toBeAttached();
+});

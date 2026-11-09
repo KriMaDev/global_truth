@@ -108,7 +108,7 @@ const WATER_ALTITUDE = 0.0041;
 const LABEL_EDGE = 0.3;
 const DECLUTTER_MS = 120;
 /** Most map labels in the page at once (only a few dozen fit on screen after decluttering). */
-const MAX_HTML_LABELS = 150;
+const MAX_HTML_LABELS = window.matchMedia('(any-pointer: coarse)').matches ? 150 : 250;
 /** Labels are chosen again once the view has turned this far. */
 const LABEL_REFRESH_DEGREES = 8;
 const FOLLOW_VIEW_MS = 200;
@@ -346,6 +346,8 @@ export async function createGlobeApp(
   let selectedId: string | null = null;
   let events = options.events;
   let degrees = -1;
+  let stateLines: LineSegments[] = [];
+  let statesRequested = false;
   /** Zoomed right in: which zoom step the markers were last fanned out for. */
   let fanStep: number | null = null;
   /** Degrees that keep fanned-out markers apart on screen, at the widest view of a zoom step. */
@@ -510,7 +512,7 @@ export async function createGlobeApp(
    * refreshes instead of rebuilding it. */
   const labelItems = new Map<string, HtmlItem>();
   const badgeItems = new WeakMap<Cluster, HtmlItem>();
-  let labelsCentre = { lat: 0, lng: 0 };
+  let labelsCentre = { lat: 0, lng: 0, altitude: 2 };
 
   /** The group badges and, in the geography view, the map labels for the current view. Only
    * labels that can be on screen are kept in the page: every one is moved on every frame. */
@@ -656,6 +658,25 @@ export async function createGlobeApp(
     })
     .catch((error: unknown) => console.warn('Coastlines and borders unavailable:', error));
 
+  /** The lines between the US states, on the Geography map and the Atlas. */
+  function loadStates(): void {
+    if (statesRequested) return;
+    statesRequested = true;
+    void fetch('/geo/states.bin')
+      .then((response) =>
+        response.ok ? response.arrayBuffer() : Promise.reject(new Error(`HTTP ${response.status}`)),
+      )
+      .then((buffer) => {
+        const coords = (lat: number, lng: number) => globe.getCoords(lat, lng, WATER_ALTITUDE);
+        stateLines = createLines(parseLines(buffer), coords, sunVector);
+        for (const line of stateLines) {
+          line.visible = geography !== null;
+          globe.scene().add(line);
+        }
+      })
+      .catch((error: unknown) => console.warn('US state lines unavailable:', error));
+  }
+
   /** Rivers and lake shores for the geography view; the map works without them. */
   function loadWater(): void {
     if (waterRequested) return;
@@ -711,7 +732,9 @@ export async function createGlobeApp(
       LABEL_REFRESH_DEGREES,
       screenRadiusDegrees(pov.altitude, aspect) * 0.3,
     );
-    if (level !== labelsAt || moved > refreshAfter) {
+    // Zooming out shows more of the map, so the labels are chosen again for that too.
+    const zoomed = Math.abs(Math.log(pov.altitude / labelsCentre.altitude)) > 0.12;
+    if (level !== labelsAt || moved > refreshAfter || zoomed) {
       labelsAt = level;
       refreshHtml();
     }
@@ -909,6 +932,8 @@ export async function createGlobeApp(
       }
       if (view === 'atlas') loadWater();
       for (const line of waterLines) line.visible = view === 'atlas';
+      if (data) loadStates();
+      for (const line of stateLines) line.visible = data !== null;
       if (viewChanged) {
         regroupForAltitude(globe.pointOfView().altitude);
         showMarkers();

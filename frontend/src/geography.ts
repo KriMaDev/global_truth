@@ -39,6 +39,9 @@ export interface GeoLabels {
   waters: (PlaceLabel & { kind: 'river' | 'lake' })[];
   /** National capitals; `disputed` ones show as plain cities (rule on /sources/). */
   capitals: (PlaceLabel & { disputed?: boolean })[];
+  /** The US states and their capitals. */
+  states: PlaceLabel[];
+  stateCapitals: PlaceLabel[];
 }
 
 /** A lake's shape, painted as water over the country colours. */
@@ -56,7 +59,17 @@ export interface GeographyData {
 }
 
 export type LabelKind =
-  'country' | 'ocean' | 'sea' | 'range' | 'desert' | 'peak' | 'river' | 'lake' | 'capital' | 'city';
+  | 'country'
+  | 'ocean'
+  | 'sea'
+  | 'range'
+  | 'desert'
+  | 'peak'
+  | 'river'
+  | 'lake'
+  | 'capital'
+  | 'city'
+  | 'state';
 
 /** The three maps: news markers, countries coloured by their news, and the news-free atlas. */
 export type MapView = 'news' | 'geo' | 'atlas';
@@ -124,6 +137,9 @@ const LIMITS = {
   water: [0, 3, 4, 5, 7],
   /** Capitals (rank 0) from altitude 1.4 down. */
   capital: [-1, -1, 0, 0, 0],
+  /** US states below altitude 1, their capitals below 0.5. */
+  state: [-1, -1, -1, 1, 1],
+  stateCapital: [-1, -1, -1, -1, 2],
 } as const;
 
 const formatter = new Intl.NumberFormat('en-GB');
@@ -140,6 +156,7 @@ const KIND_ORDER: Record<LabelKind, number> = {
   ocean: 0,
   country: 1,
   capital: 2,
+  state: 2,
   city: 2,
   sea: 2,
   range: 3,
@@ -163,9 +180,6 @@ export function angularDegrees(lat1: number, lng1: number, lat2: number, lng2: n
     Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.cos((lng1 - lng2) * rad);
   return Math.acos(Math.min(1, Math.max(-1, cosine))) / rad;
 }
-
-/** Past the horizon, so that a small turn doesn't show an empty edge. */
-const LABEL_MARGIN_DEGREES = 15;
 
 /** The camera's vertical field of view (globe.gl's default), in degrees. */
 const CAMERA_FOV = 50;
@@ -192,16 +206,21 @@ export function flyTiltDegrees(tilt: number, altitude: number): number {
   return Math.min(tilt, screenRadiusDegrees(altitude, 0) * 0.5);
 }
 
+/** Of the room for countries and capitals, how much capitals and states are sure of. */
+const CAPITAL_SHARE = 0.25;
+
+/** Always chosen first: a map missing a country's name looks broken. */
+const FIRST_KINDS: ReadonlySet<LabelKind> = new Set(['country', 'capital', 'state']);
+
 function shareGroup(kind: LabelKind): 'land' | 'water' | 'cities' | null {
   if (kind === 'range' || kind === 'desert' || kind === 'peak') return 'land';
-  if (kind === 'capital' || kind === 'city') return 'cities';
+  if (kind === 'city') return 'cities';
   return kind === 'river' || kind === 'lake' ? 'water' : null;
 }
 
 /**
- * The labels to put in the page, at most `limit`: those on screen before those just past it,
- * then the most important. Mountains and water are each sure of a share, so country names
- * can't crowd them out.
+ * The labels to put in the page, at most `limit`: the countries, states and capitals on screen
+ * first, a share each for mountains, water and cities, then the rest.
  */
 export function labelsInView(
   labels: MapLabel[],
@@ -211,33 +230,44 @@ export function labelsInView(
   limit: number,
   aspect = 1,
 ): MapLabel[] {
-  const horizon = (Math.acos(1 / (1 + altitude)) * 180) / Math.PI;
+  // Only what can come into view: every label in the page is moved on every frame.
   const screen = screenRadiusDegrees(altitude, aspect) * SCREEN_MARGIN;
-  const onScreen = new Set<MapLabel>();
-  const reachable = labels.filter((label) => {
+  const distances = new Map<MapLabel, number>();
+  const inView = labels.filter((label) => {
     const distance = angularDegrees(lat, lng, label.lat, label.lng);
-    if (distance <= screen) onScreen.add(label);
-    return distance <= horizon + LABEL_MARGIN_DEGREES;
+    distances.set(label, distance);
+    return distance <= screen;
   });
-  const ordered = reachable.sort(
-    (a, b) =>
-      Number(onScreen.has(b)) - Number(onScreen.has(a)) || labelPriority(a) - labelPriority(b),
-  );
+  // Equally important: the one nearest the middle of the view.
+  const byImportance = (a: MapLabel, b: MapLabel): number =>
+    labelPriority(a) - labelPriority(b) || distances.get(a)! - distances.get(b)!;
+  const ordered = inView.sort(byImportance);
   if (ordered.length <= limit) return ordered;
 
   const chosen = new Set<MapLabel>();
+  const add = (label: MapLabel): void => {
+    if (chosen.size < limit) chosen.add(label);
+  };
   const share = Math.floor(limit * NATURE_SHARE);
-  for (const group of ['land', 'water', 'cities'] as const) {
-    ordered
-      .filter((label) => onScreen.has(label) && shareGroup(label.kind) === group)
-      .slice(0, share)
-      .forEach((label) => chosen.add(label));
-  }
-  for (const label of ordered) {
-    if (chosen.size >= limit) break;
-    chosen.add(label);
-  }
-  return ordered.filter((label) => chosen.has(label));
+  const shares = (['land', 'water', 'cities'] as const).map((group) =>
+    ordered.filter((label) => shareGroup(label.kind) === group).slice(0, share),
+  );
+  // Countries come first, then capitals, leaving only what the shares can actually use.
+  const room = limit - shares.reduce((sum, picked) => sum + picked.length, 0);
+  const first = ordered.filter((label) => FIRST_KINDS.has(label.kind));
+  // A wide view holds more countries than fit, so the capitals nearest the middle are kept too.
+  first
+    .filter((label) => label.kind !== 'country')
+    .slice(0, Math.ceil(room * CAPITAL_SHARE))
+    .forEach(add);
+  first
+    .filter((label) => !chosen.has(label))
+    .slice(0, room - chosen.size)
+    .forEach(add);
+  shares.flat().forEach(add);
+  ordered.forEach(add);
+  // Placed in this order on screen, so that where two overlap the more important one shows.
+  return [...chosen].sort(byImportance);
 }
 
 /** A country's label (also what its card is built from). */
@@ -271,6 +301,34 @@ export function capitalLabel(capital: GeoLabels['capitals'][number]): MapLabel {
   };
 }
 
+function stateLabel(state: GeoLabels['states'][number]): MapLabel {
+  return {
+    id: `state:${state.name}`,
+    kind: 'state',
+    type: 'State',
+    name: state.name,
+    text: state.name,
+    rank: state.rank,
+    wikidata: state.wikidata ?? null,
+    lng: state.at[0],
+    lat: state.at[1],
+  };
+}
+
+function stateCapitalLabel(capital: GeoLabels['stateCapitals'][number]): MapLabel {
+  return {
+    id: `state-capital:${capital.name}:${capital.at.join(',')}`,
+    kind: 'city',
+    type: 'State capital',
+    name: capital.name,
+    text: capital.name,
+    rank: capital.rank,
+    wikidata: capital.wikidata ?? null,
+    lng: capital.at[0],
+    lat: capital.at[1],
+  };
+}
+
 /** The labels to show at a camera altitude, on the Geography map or the Atlas. */
 export function labelsFor(
   altitude: number,
@@ -284,6 +342,10 @@ export function labelsFor(
     labels.push(countryLabel(country));
   }
   if (LIMITS.capital[level] >= 0) labels.push(...data.labels.capitals.map(capitalLabel));
+  if (LIMITS.state[level] >= 0) labels.push(...data.labels.states.map(stateLabel));
+  if (LIMITS.stateCapital[level] >= 0) {
+    labels.push(...data.labels.stateCapitals.map(stateCapitalLabel));
+  }
   for (const sea of data.labels.seas) {
     if (sea.rank > LIMITS.sea[level]) continue;
     if (view === 'geo' && sea.kind !== 'sea' && sea.kind !== 'ocean') continue;
@@ -447,6 +509,16 @@ export function factRows(
       list(f.languages),
     );
     add('Currency', list(f.currency));
+    add('Highest point', f.highest_point);
+  } else if (label.kind === 'state') {
+    add('Capital', f.capital);
+    add(
+      'Population',
+      f.population
+        ? `${formatPopulation(f.population)}${f.population_year ? ` (${f.population_year})` : ''}`
+        : undefined,
+    );
+    add('Area', area);
     add('Highest point', f.highest_point);
   } else if (label.kind === 'capital' || label.kind === 'city') {
     add('Country', list(f.countries));
