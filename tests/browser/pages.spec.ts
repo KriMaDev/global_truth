@@ -39,7 +39,7 @@ test('Sources shows each feed and how many events each outlet has', async ({ pag
   await serveWorld(page, { feeds: feedsDocument({ gdelt: { status: 'partial' } }), outlets });
   await page.goto('/sources/');
   await expect(page.locator('#feed-rows tr')).toHaveCount(3);
-  await expect(page.locator('#feed-rows')).toContainText('Partly read');
+  await expect(page.locator('#feed-rows')).toContainText('Some data missing');
   await expect(page.locator('#feed-summary')).toContainText('Updated');
   await expect(page.locator('#outlet-bbc-news [data-count]')).toHaveText('7');
   expect(await page.locator('[data-count]').count()).toBeGreaterThan(20);

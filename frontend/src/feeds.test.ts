@@ -51,7 +51,7 @@ describe('describeFreshness', () => {
     ).toEqual([
       'GDELT was read only in part in the last update. The missing part is tried again next time.',
     ]);
-    expect(statusLabel('partial')).toBe('Partly read');
+    expect(statusLabel('partial')).toBe('Some data missing');
     expect(statusLabel('ok')).toBe('OK');
     expect(statusLabel('error')).toBe('Failed');
   });

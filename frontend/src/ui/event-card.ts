@@ -60,7 +60,7 @@ function notes(event: GlobeEvent): string[] {
   if (event.kind === 'news') {
     lines.push(`Headline as published by ${event.sources[0]?.name ?? 'the outlet'}.`);
     if (event.location_method === 'machine-coded') {
-      lines.push('Location machine-coded by GDELT from the article.');
+      lines.push('Place worked out by software from the article (GDELT).');
     }
     lines.push(...categoryBasisLines(event));
   }

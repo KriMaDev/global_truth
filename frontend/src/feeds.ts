@@ -53,7 +53,7 @@ export function relativeTime(time: string, now: number): string {
 /** A feed's status in words, for the Sources page. */
 export function statusLabel(status: string): string {
   if (status === 'ok') return 'OK';
-  return status === 'partial' ? 'Partly read' : 'Failed';
+  return status === 'partial' ? 'Some data missing' : 'Failed';
 }
 
 function feedName(feed: FeedStatus): string {
