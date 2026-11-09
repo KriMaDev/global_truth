@@ -131,6 +131,9 @@ test('zoomed right in, opening an event keeps it in view', async ({ page }) => {
   await openEvent(page, 'news-fr');
   await page.waitForTimeout(1800); // The flight to the event.
   const [lat, lng] = await view(page);
-  expect(Math.abs(lat - 48.8)).toBeLessThan(10);
+  // Degrees from the middle of the screen to its top, at this zoom.
+  const reach = (1 + (await altitude(page))) * Math.sin((25 * Math.PI) / 180);
+  const halfView = (Math.asin(Math.min(1, reach)) * 180) / Math.PI - 25;
+  expect(Math.abs(lat - 48.8), 'the event stays on screen').toBeLessThan(halfView);
   expect(Math.abs(lng - 2.3)).toBeLessThan(1);
 });

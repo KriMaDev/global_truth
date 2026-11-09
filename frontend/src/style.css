@@ -1087,6 +1087,11 @@ html.text-large {
   .geo-rest {
     display: none;
   }
+
+  /* The title gives way (it can wrap), never the buttons. */
+  .topbar-actions {
+    flex-shrink: 0;
+  }
 }
 
 /* The Geography map has no markers, the Atlas no news at all. */
@@ -1809,7 +1814,11 @@ body.page {
 
     .motion-toggle:not(.rotate-toggle),
     .view-option {
-      padding: 0 4px;
+      padding: 0 3px;
+    }
+
+    .topbar-actions {
+      gap: 2px;
     }
 
     .view-switch {

@@ -130,8 +130,14 @@ test('with a mouse, clicking a place name leaves the globe still afterwards', as
   await page.waitForTimeout(150);
   await page.mouse.up();
   await expect(page.locator('#event-card .card-title')).not.toBeEmpty({ timeout: 10_000 });
-  await page.waitForTimeout(1800); // The flight to the place.
-  const before = await view(page);
+  // The flight to the place, which takes longer without a graphics card.
+  let before = await view(page);
+  for (let check = 0; check < 40; check += 1) {
+    await page.waitForTimeout(500);
+    const now = await view(page);
+    if (now.join() === before.join()) break;
+    before = now;
+  }
   await page.mouse.move(spot.x + 200, spot.y + 120, { steps: 12 });
   await page.waitForTimeout(400);
   expect(await view(page)).toEqual(before);
