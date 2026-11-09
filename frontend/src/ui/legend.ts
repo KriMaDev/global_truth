@@ -110,7 +110,10 @@ function symbolList(): HTMLDetailsElement {
   const details = document.createElement('details');
   details.className = 'legend-symbols';
   const summary = document.createElement('summary');
-  summary.textContent = 'All disaster symbols';
+  summary.textContent = 'Show disaster symbols';
+  details.addEventListener('toggle', () => {
+    summary.textContent = `${details.open ? 'Hide' : 'Show'} disaster symbols`;
+  });
   const list = document.createElement('ul');
   for (const icon of HAZARD_ICONS) {
     const item = document.createElement('li');

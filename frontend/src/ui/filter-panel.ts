@@ -55,8 +55,9 @@ export function allToggled<T>(set: Set<T>, all: readonly T[]): Set<T> {
 
 function setAllButton(button: HTMLButtonElement | null, anyOn: boolean, what: string): void {
   if (!button) return;
-  button.textContent = anyOn ? 'All off' : 'All on';
-  button.setAttribute('aria-label', `${anyOn ? 'Turn off' : 'Turn on'} every ${what}`);
+  const word = anyOn ? 'All off' : 'All on';
+  button.textContent = word;
+  button.setAttribute('aria-label', `${word}: turn ${anyOn ? 'off' : 'on'} every ${what}`);
 }
 
 function toggled<T>(set: Set<T>, value: T): Set<T> {

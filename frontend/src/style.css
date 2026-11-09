@@ -930,18 +930,44 @@ html.app body {
   font-size: 0.78rem;
 }
 
+/* Drawn as a button, with an arrow that turns when open: plain text didn't look clickable. */
 .legend-symbols summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   width: max-content;
-  color: var(--muted);
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--muted);
+  border-radius: 3px;
+  color: var(--fg);
   font: 400 0.7rem/1.6 var(--ff-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
+  list-style: none;
 }
 
-.legend-symbols summary:hover,
-.legend-symbols summary:focus-visible {
-  color: var(--fg);
+.legend-symbols summary::-webkit-details-marker {
+  display: none;
+}
+
+.legend-symbols summary::before {
+  content: '';
+  width: 0.42em;
+  height: 0.42em;
+  border-right: 1.5px solid currentcolor;
+  border-bottom: 1.5px solid currentcolor;
+  transform: rotate(-45deg);
+}
+
+.legend-symbols[open] summary::before {
+  transform: rotate(45deg);
+}
+
+.legend-symbols summary:hover {
+  border-color: var(--fg);
+  background: var(--fg);
+  color: var(--accent-ink);
 }
 
 .legend-symbols ul {
@@ -1858,7 +1884,10 @@ body.page {
     margin: 0;
   }
 
-  .legend-symbols summary,
+  .legend-symbols summary {
+    min-height: 44px;
+  }
+
   .legend-link {
     display: block;
     line-height: 44px;
