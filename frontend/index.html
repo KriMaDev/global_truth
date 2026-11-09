@@ -122,17 +122,27 @@
         <p id="preview-note" class="preview-note" hidden>Preview · sample events, not real news</p>
       </div>
       <div class="topbar-actions">
-        <button
-          id="geo-toggle"
-          hidden
-          class="view-switch glass"
-          type="button"
-          aria-pressed="false"
-          title="Switch between the news view and the geography view"
-        >
-          <span class="view-option" data-view="news">News</span>
-          <span class="view-option" data-view="geo">Geo<span class="geo-rest">graphy</span></span>
-        </button>
+        <div id="view-switch" class="view-switch glass" role="group" aria-label="Map" hidden>
+          <button id="view-news" class="view-option" type="button" aria-pressed="true">News</button>
+          <button
+            id="view-geo"
+            class="view-option"
+            type="button"
+            aria-pressed="false"
+            title="Countries coloured by their news"
+          >
+            Geo<span class="geo-rest">graphy</span>
+          </button>
+          <button
+            id="view-atlas"
+            class="view-option"
+            type="button"
+            aria-pressed="false"
+            title="Every place, without the news"
+          >
+            Atlas
+          </button>
+        </div>
         <button
           id="news-toggle"
           class="motion-toggle glass"
@@ -274,7 +284,7 @@
     </main>
 
     <footer class="bottom">
-      <section id="legend" class="legend glass" aria-label="Severity legend"></section>
+      <section id="legend" class="legend glass" aria-label="Legend"></section>
       <div class="bottom-right">
         <p id="hud" class="hud" aria-hidden="true"></p>
         <div id="info-panel" class="info-panel">

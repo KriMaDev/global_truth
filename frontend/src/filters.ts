@@ -4,6 +4,7 @@
  */
 
 import { CATEGORIES, SEVERITIES, type Category, type GlobeEvent, type Severity } from './types';
+import type { MapView } from './geography';
 
 /** Time windows, in hours. The data covers 7 days. */
 export const RANGES = { '6h': 6, '24h': 24, '3d': 72, '7d': 168 } as const;
@@ -99,10 +100,19 @@ export function toQuery(state: FilterState): string {
 }
 
 /** Adds the page's own switches to a filter query ("?cat=war" → "?cat=war&view=geo&list=1"). */
-export function withPageState(query: string, page: { geo: boolean; list: boolean }): string {
-  const extras = [page.geo ? 'view=geo' : '', page.list ? 'list=1' : ''].filter(Boolean);
+export function withPageState(query: string, page: { view: MapView; list: boolean }): string {
+  const extras = [
+    page.view === 'news' ? '' : `view=${page.view}`,
+    page.list ? 'list=1' : '',
+  ].filter(Boolean);
   if (extras.length === 0) return query;
   return `${query ? `${query}&` : '?'}${extras.join('&')}`;
+}
+
+/** Which map the address asks for; anything unknown is the news map. */
+export function viewFromQuery(search: string): MapView {
+  const view = new URLSearchParams(search).get('view');
+  return view === 'geo' || view === 'atlas' ? view : 'news';
 }
 
 /** A list from the address; "none" means none chosen, and a missing list or one with no valid

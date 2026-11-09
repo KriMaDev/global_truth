@@ -77,6 +77,13 @@ test.describe('axe finds nothing serious', () => {
     await expectNoSeriousProblems(page);
   });
 
+  test('the Atlas', async ({ page }) => {
+    await openWorld(page, '/?view=atlas');
+    await expect(page.locator('.legend-atlas')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('.map-label').first()).toBeAttached({ timeout: 30_000 });
+    await expectNoSeriousProblems(page);
+  });
+
   test('a place card', async ({ page }) => {
     await openWorld(page, '/?view=geo');
     const label = page.locator('.map-label.kind-country:not(.is-hidden):not(.is-crowded)').first();
@@ -103,10 +110,12 @@ test.describe('keyboard and screen readers', () => {
     isMobile,
   }) => {
     await openWorld(page);
-    await expect(page.locator('#geo-toggle')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#view-switch')).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('#zoom-in')).toBeVisible();
     const wanted = [
-      'geo-toggle',
+      'view-news',
+      'view-geo',
+      'view-atlas',
       'news-toggle',
       'filter-toggle',
       'rotate-toggle',
@@ -283,7 +292,7 @@ test.describe('readable text', () => {
     }) => {
       await page.setViewportSize({ width: screen.width, height: screen.height });
       await openWorld(page);
-      await expect(page.locator('#geo-toggle')).toBeVisible({ timeout: 30_000 });
+      await expect(page.locator('#view-switch')).toBeVisible({ timeout: 30_000 });
       expect(await topRowFits(page)).toBe(true);
       await page.evaluate(() => document.documentElement.classList.add('text-large'));
       await page.waitForTimeout(200);

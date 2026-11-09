@@ -234,6 +234,31 @@ def region_name(name: str) -> str:
     return " ".join(ABBREVIATIONS.get(word, word) for word in name.split())
 
 
+#: Capitals whose own status as capital is disputed are shown as plain cities (rule on /sources/).
+DISPUTED_CAPITALS = {"Jerusalem"}
+#: Renamed since Natural Earth's data was made.
+CAPITAL_NAMES = {"Nur-Sultan": "Astana"}
+
+
+def build_capitals() -> list[dict]:
+    """The national capitals Natural Earth marks (some countries have several)."""
+    capitals = []
+    for feature in load("ne_10m_populated_places")["features"]:
+        p = feature["properties"]
+        if p.get("ADM0CAP") != 1:
+            continue
+        capital = {
+            "name": CAPITAL_NAMES.get(p["NAME_EN"], p["NAME_EN"]),
+            "rank": 0,
+            "wikidata": p.get("WIKIDATAID") or None,
+            "at": [round(c, 2) for c in feature["geometry"]["coordinates"][:2]],
+        }
+        if p["NAME"] in DISPUTED_CAPITALS:
+            capital["disputed"] = True
+        capitals.append(capital)
+    return sorted(capitals, key=lambda c: c["name"])
+
+
 def build_labels() -> dict:
     seas = [
         {
@@ -278,6 +303,7 @@ def build_labels() -> dict:
         "regions": unique(regions),
         "peaks": unique(peaks),
         "waters": build_waters(),
+        "capitals": build_capitals(),
     }
 
 

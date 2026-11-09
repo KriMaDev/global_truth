@@ -63,7 +63,7 @@ How many outlets cover a story is shown as **coverage**, separately. It never ra
 - **Natural disasters** (data feeds, and news headlines in Natural disasters) are a **symbol on a glass disc**, floating just above a small glowing spot, with a rim and a soft halo in the severity colour. The symbol shows the type: earthquake (seismograph trace), tsunami (curling wave), tropical cyclone (the weather-map sign), volcano, wildfire (flame), flood (house in water), landslide (rocks on a slope), avalanche, drought (sun over cracked ground), heatwave (thermometer), storm (cloud and bolt), and a warning sign for a disaster of unknown type.
 - Severity shows the same way on both: colour, size, pulse speed and (high, critical) rings. The symbol adds the type, a second signal that does not depend on colour.
 - The symbols are our own drawings (`frontend/src/globe/hazard-icons.ts`); the legend lists them all under "Disaster symbols".
-- In the geography view, news shrinks to small dots and the symbols sit smaller and lower.
+- The Geography map and the Atlas draw no markers: on Geography the country colours (below) show the news, and tapping a country lists it.
 - The legend sums up each level in a few words (`LEVEL_MEANING` in `frontend/src/ui/legend.ts`) and the About page in a table (`frontend/about/index.html`). Any change to a rule must change those too. Its marker samples are grey, so colour only ever means severity.
 
 ### Groups of events

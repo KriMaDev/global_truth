@@ -33,6 +33,7 @@ import {
   type GeographyData,
   type LakeShape,
   type MapLabel,
+  type MapView,
 } from '../geography';
 import { SEVERITY_STYLES } from '../severity';
 import { hazardLabel, type GlobeEvent, type Severity } from '../types';
@@ -78,9 +79,9 @@ export interface GlobeApp {
   setRotating(on: boolean): void;
   /** While a card or list is open, rotation does not come back by itself. */
   setCardOpen(open: boolean): void;
-  /** The geography view (countries coloured by severity, map labels) with this data, or the
-   * news view with null. Call again whenever the filtered events change. */
-  setGeography(data: GeographyData | null, severities: Map<string, Severity>): void;
+  /** Which map to draw: the Geography map or the Atlas with this data, or the News map with
+   * null. Call again whenever the filtered events change. */
+  setGeography(data: GeographyData | null, severities: Map<string, Severity>, view: MapView): void;
   rotateBy(degreesLng: number, degreesLat: number): void;
   /** Back to the view the globe opens on, at its starting distance. */
   showWholeGlobe(): void;
@@ -296,6 +297,8 @@ const pickMaterial = new MeshBasicMaterial();
 /** Lakes: deep water blue, nearly opaque, unlit like the countries. */
 const lakeTint = new Color('#123e66');
 const LAKE_COLOR: Rgba = [lakeTint.r, lakeTint.g, lakeTint.b, 0.9];
+/** Countries on the Atlas: invisible, but still there to tap. */
+const NO_COLOR: Rgba = [0, 0, 0, 0];
 
 /** A country's tint: its severity colour, or a faint neutral glass without events; unlit, so
  * the colours read the same on the night side. */
@@ -339,6 +342,7 @@ export async function createGlobeApp(
   let degrees = -1;
   let clusters: Cluster[] = [];
   let geography: GeographyData | null = null;
+  let mapView: MapView = 'news';
   let countryFeatures: CountryFeature[] = [];
   let lakeFeatures: LakeFeature[] = [];
   /** Rivers and lake shores, loaded the first time the geography view opens. */
@@ -449,6 +453,7 @@ export async function createGlobeApp(
     .polygonsTransitionDuration(0)
     .polygonLabel((d) => {
       const shape = d as ShapeFeature;
+      if (shape.lake && mapView !== 'atlas') return '';
       const label = document.createElement('div');
       label.className = 'globe-label';
       const title = document.createElement('strong');
@@ -471,7 +476,8 @@ export async function createGlobeApp(
       if (!press.wasTap) return;
       const shape = d as ShapeFeature;
       if (!shape.lake) options.onCountry?.(shape.iso2);
-      else if (geography) options.onPlace?.(lakeLabel(shape.lake, geography));
+      else if (geography && mapView === 'atlas')
+        options.onPlace?.(lakeLabel(shape.lake, geography));
     })
     .htmlElementVisibilityModifier((el, isVisible) => {
       el.classList.toggle('is-hidden', !isVisible);
@@ -481,6 +487,12 @@ export async function createGlobeApp(
   /** Rings pulse in the news view only (and never with reduced motion). */
   const ringClusters = (): Cluster[] =>
     reducedMotion || geography ? [] : clusters.filter((c) => SEVERITY_STYLES[c.severity].rings);
+
+  /** Markers belong to the News map; the others have none to see or to tap. */
+  const showMarkers = (): void => {
+    pillars.group.visible = mapView === 'news';
+    container.dataset.markers = mapView === 'news' ? 'on' : 'off';
+  };
 
   /** The same item for the same label or group, so the page keeps its element between
    * refreshes instead of rebuilding it. */
@@ -492,7 +504,7 @@ export async function createGlobeApp(
    * labels that can be on screen are kept in the page: every one is moved on every frame. */
   const refreshHtml = (): void => {
     const items: HtmlItem[] = clusters
-      .filter((c) => c.events.length > 1)
+      .filter((c) => mapView === 'news' && c.events.length > 1)
       .map((cluster) => {
         let item = badgeItems.get(cluster);
         if (!item) {
@@ -504,7 +516,7 @@ export async function createGlobeApp(
     if (geography) {
       const pov = globe.pointOfView();
       labelsCentre = pov;
-      const all = labelsFor(pov.altitude, geography);
+      const all = labelsFor(pov.altitude, geography, mapView);
       const aspect = container.clientWidth / Math.max(1, container.clientHeight);
       const shown = labelsInView(all, pov.lat, pov.lng, pov.altitude, MAX_HTML_LABELS, aspect);
       for (const label of shown) {
@@ -595,9 +607,9 @@ export async function createGlobeApp(
     clusters = clusterEvents(events, degrees);
     pillars.dispose();
     pillars = new PillarField(clusters, pillarCoords);
-    pillars.setFlat(geography !== null);
+    showMarkers();
     globe.scene().add(pillars.group);
-    globe.customLayerData(clusters).ringsData(ringClusters());
+    globe.customLayerData(mapView === 'news' ? clusters : []).ringsData(ringClusters());
     refreshHtml();
   };
 
@@ -637,7 +649,7 @@ export async function createGlobeApp(
         const coords = (lat: number, lng: number) => globe.getCoords(lat, lng, WATER_ALTITUDE);
         waterLines = createWaterLines(parseLines(buffer), coords, sunVector);
         for (const line of waterLines) {
-          line.visible = geography !== null;
+          line.visible = mapView === 'atlas';
           globe.scene().add(line);
         }
       })
@@ -755,7 +767,8 @@ export async function createGlobeApp(
   let shapesWanted = 0;
   const colorOfShape = (shape: unknown): Rgba => {
     const feature = shape as ShapeFeature;
-    return feature.lake ? LAKE_COLOR : countryColor(shapeSeverities.get(feature.iso2));
+    if (feature.lake) return LAKE_COLOR;
+    return mapView === 'atlas' ? NO_COLOR : countryColor(shapeSeverities.get(feature.iso2));
   };
   const adoptShapes = (shapes: ShapeFeature[], wanted: number): void => {
     const expected = shapes.reduce((sum, s) => sum + s.geometry.coordinates.length, 0);
@@ -844,9 +857,12 @@ export async function createGlobeApp(
       if (!open) pauseAutoRotate();
       else applyRotation();
     },
-    setGeography(data, severities) {
+    setGeography(data, severities, view) {
       const switched = (data === null) !== (geography === null);
+      const viewChanged = view !== mapView;
       geography = data;
+      mapView = view;
+      container.dataset.view = view;
       if (data && countryFeatures.length === 0) {
         countryFeatures = data.countries.map((c) => ({
           iso2: c.iso2,
@@ -872,10 +888,11 @@ export async function createGlobeApp(
       } else {
         shapeLayer.paint(colorOfShape);
       }
-      if (data) loadWater();
-      for (const line of waterLines) line.visible = data !== null;
-      if (switched) {
-        pillars.setFlat(data !== null);
+      if (view === 'atlas') loadWater();
+      for (const line of waterLines) line.visible = view === 'atlas';
+      if (viewChanged) {
+        showMarkers();
+        globe.customLayerData(view === 'news' ? clusters : []);
         globe.ringsData(ringClusters());
         labelsAt = labelLevel(globe.pointOfView().altitude);
         refreshHtml();

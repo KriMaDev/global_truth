@@ -108,6 +108,40 @@ function sourcesBlock(event: GlobeEvent): HTMLElement {
   return block;
 }
 
+/** Headlines as a list of buttons: a group's card, or a country's on the Geography map. */
+export function eventRows(
+  events: GlobeEvent[],
+  onPick: (event: GlobeEvent) => void,
+): HTMLUListElement {
+  const list = el('ul', 'card-list');
+  for (const event of events) {
+    const button = el('button', 'card-list-item');
+    button.type = 'button';
+    const text = el('span', 'card-list-text');
+    text.append(
+      el('span', 'card-list-title', event.title),
+      el(
+        'span',
+        'card-list-meta',
+        [
+          hazardLabel(event),
+          SEVERITY_STYLES[event.severity].label,
+          event.sources[0]?.name ?? KIND_LABELS[event.kind],
+          timeFormat.format(new Date(event.published)),
+        ]
+          .filter(Boolean)
+          .join(' · '),
+      ),
+    );
+    button.append(severityDot(event.severity), text);
+    button.addEventListener('click', () => onPick(event));
+    const item = el('li', '');
+    item.append(button);
+    list.append(item);
+  }
+  return list;
+}
+
 export function createEventCard(root: HTMLElement, onClose: () => void): EventCard {
   let openId: string | null = null;
   let returnFocus: HTMLElement | null = null;
@@ -212,32 +246,7 @@ export function createEventCard(root: HTMLElement, onClose: () => void): EventCa
     );
     title.id = 'event-card-title';
     title.tabIndex = -1;
-    const list = el('ul', 'card-list');
-    for (const event of cluster.events) {
-      const button = el('button', 'card-list-item');
-      button.type = 'button';
-      const text = el('span', 'card-list-text');
-      text.append(
-        el('span', 'card-list-title', event.title),
-        el(
-          'span',
-          'card-list-meta',
-          [
-            hazardLabel(event),
-            SEVERITY_STYLES[event.severity].label,
-            event.sources[0]?.name ?? KIND_LABELS[event.kind],
-            timeFormat.format(new Date(event.published)),
-          ]
-            .filter(Boolean)
-            .join(' · '),
-        ),
-      );
-      button.append(severityDot(event.severity), text);
-      button.addEventListener('click', () => onPick(event));
-      const item = el('li', '');
-      item.append(button);
-      list.append(item);
-    }
+    const list = eventRows(cluster.events, onPick);
     root.replaceChildren(
       closeButton(),
       el('p', 'card-kind', `Group · ${cluster.events.length} events`),

@@ -37,6 +37,8 @@ export interface GeoLabels {
   peaks: (PlaceLabel & { elevation: number })[];
   /** Rivers (ranked by length) and lakes. */
   waters: (PlaceLabel & { kind: 'river' | 'lake' })[];
+  /** National capitals; `disputed` ones show as plain cities (rule on /sources/). */
+  capitals: (PlaceLabel & { disputed?: boolean })[];
 }
 
 /** A lake's shape, painted as water over the country colours. */
@@ -54,7 +56,10 @@ export interface GeographyData {
 }
 
 export type LabelKind =
-  'country' | 'ocean' | 'sea' | 'range' | 'desert' | 'peak' | 'river' | 'lake';
+  'country' | 'ocean' | 'sea' | 'range' | 'desert' | 'peak' | 'river' | 'lake' | 'capital' | 'city';
+
+/** The three maps: news markers, countries coloured by their news, and the news-free atlas. */
+export type MapView = 'news' | 'geo' | 'atlas';
 
 export interface MapLabel {
   id: string;
@@ -117,6 +122,8 @@ const LIMITS = {
   peak: [1, 2, 4, 5, 7],
   /** Rivers and lakes: none from far away, then the largest (rank 3) first. */
   water: [0, 3, 4, 5, 7],
+  /** Capitals (rank 0) from altitude 1.4 down. */
+  capital: [-1, -1, 0, 0, 0],
 } as const;
 
 const formatter = new Intl.NumberFormat('en-GB');
@@ -132,6 +139,8 @@ function titleCase(text: string): string {
 const KIND_ORDER: Record<LabelKind, number> = {
   ocean: 0,
   country: 1,
+  capital: 2,
+  city: 2,
   sea: 2,
   range: 3,
   desert: 3,
@@ -162,7 +171,7 @@ const LABEL_MARGIN_DEGREES = 15;
 const CAMERA_FOV = 50;
 /** A little past the screen's corners, so that a small turn finds its labels already there. */
 const SCREEN_MARGIN = 1.35;
-/** Of the limit, how much mountains and deserts, and rivers and lakes, are each sure of. */
+/** Of the limit, how much mountains and deserts, rivers and lakes, and cities are each sure of. */
 const NATURE_SHARE = 0.2;
 
 /** Degrees from the view's centre to the screen's corner, or to the horizon if that is nearer. */
@@ -183,8 +192,9 @@ export function flyTiltDegrees(tilt: number, altitude: number): number {
   return Math.min(tilt, screenRadiusDegrees(altitude, 0) * 0.5);
 }
 
-function natureGroup(kind: LabelKind): 'land' | 'water' | null {
+function shareGroup(kind: LabelKind): 'land' | 'water' | 'cities' | null {
   if (kind === 'range' || kind === 'desert' || kind === 'peak') return 'land';
+  if (kind === 'capital' || kind === 'city') return 'cities';
   return kind === 'river' || kind === 'lake' ? 'water' : null;
 }
 
@@ -217,9 +227,9 @@ export function labelsInView(
 
   const chosen = new Set<MapLabel>();
   const share = Math.floor(limit * NATURE_SHARE);
-  for (const group of ['land', 'water'] as const) {
+  for (const group of ['land', 'water', 'cities'] as const) {
     ordered
-      .filter((label) => onScreen.has(label) && natureGroup(label.kind) === group)
+      .filter((label) => onScreen.has(label) && shareGroup(label.kind) === group)
       .slice(0, share)
       .forEach((label) => chosen.add(label));
   }
@@ -246,16 +256,37 @@ export function countryLabel(country: CountryShape): MapLabel {
   };
 }
 
-/** The labels to show at a camera altitude. */
-export function labelsFor(altitude: number, data: GeographyData): MapLabel[] {
+/** A capital's label; one whose status as capital is disputed reads as a plain city. */
+export function capitalLabel(capital: GeoLabels['capitals'][number]): MapLabel {
+  return {
+    id: `capital:${capital.name}:${capital.at.join(',')}`,
+    kind: capital.disputed ? 'city' : 'capital',
+    type: capital.disputed ? 'City' : 'Capital city',
+    name: capital.name,
+    text: capital.name,
+    rank: capital.rank,
+    wikidata: capital.wikidata ?? null,
+    lng: capital.at[0],
+    lat: capital.at[1],
+  };
+}
+
+/** The labels to show at a camera altitude, on the Geography map or the Atlas. */
+export function labelsFor(
+  altitude: number,
+  data: GeographyData,
+  view: MapView = 'atlas',
+): MapLabel[] {
   const level = labelLevel(altitude);
   const labels: MapLabel[] = [];
   for (const country of data.countries) {
     if (country.rank > LIMITS.country[level]) continue;
     labels.push(countryLabel(country));
   }
+  if (LIMITS.capital[level] >= 0) labels.push(...data.labels.capitals.map(capitalLabel));
   for (const sea of data.labels.seas) {
     if (sea.rank > LIMITS.sea[level]) continue;
+    if (view === 'geo' && sea.kind !== 'sea' && sea.kind !== 'ocean') continue;
     const name = titleCase(sea.name);
     labels.push({
       id: `sea:${sea.name}`,
@@ -269,6 +300,7 @@ export function labelsFor(altitude: number, data: GeographyData): MapLabel[] {
       lat: sea.at[1],
     });
   }
+  if (view === 'geo') return labels;
   for (const region of data.labels.regions) {
     if (region.rank > LIMITS.region[level]) continue;
     const name = titleCase(region.name);
@@ -416,6 +448,15 @@ export function factRows(
     );
     add('Currency', list(f.currency));
     add('Highest point', f.highest_point);
+  } else if (label.kind === 'capital' || label.kind === 'city') {
+    add('Country', list(f.countries));
+    add(
+      'Population',
+      f.population
+        ? `${formatPopulation(f.population)}${f.population_year ? ` (${f.population_year})` : ''}`
+        : undefined,
+    );
+    add('Area', area);
   } else if (label.kind === 'ocean' || label.kind === 'sea') {
     add('Area', area);
     add('Greatest depth', f.max_depth_m ? metres(f.max_depth_m) : undefined);

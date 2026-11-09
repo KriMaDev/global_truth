@@ -15,17 +15,20 @@ const shownLabels = (page: Page) => page.locator('.map-label:not(.is-hidden):not
 test('the switch changes the map and the address, and back again', async ({ page }) => {
   const problems = watchProblems(page);
   await openGlobe(page, '/', { events: knownWorld() });
-  const toggle = page.locator('#geo-toggle');
-  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  const geo = page.locator('#view-geo');
+  await expect(page.locator('#view-news')).toHaveAttribute('aria-pressed', 'true');
 
-  await toggle.click();
-  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await geo.click();
+  await expect(geo).toHaveAttribute('aria-pressed', 'true');
   await expect(page).toHaveURL(/view=geo/);
   await expect(shownLabels(page).first()).toBeAttached({ timeout: 30_000 });
 
-  await toggle.click();
-  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
-  await expect(page).not.toHaveURL(/view=geo/);
+  await page.locator('#view-atlas').click();
+  await expect(page).toHaveURL(/view=atlas/);
+  await expect(page.locator('#view-atlas')).toHaveAttribute('aria-pressed', 'true');
+
+  await page.locator('#view-news').click();
+  await expect(page).not.toHaveURL(/view=/);
   await expect(page.locator('.map-label')).toHaveCount(0);
   expect(problems).toEqual([]);
 });
@@ -37,10 +40,10 @@ test('the country shapes are drawn as one object, also after switching away and 
   const globe = page.locator('#globe');
   await expect(globe).toHaveAttribute('data-shapes', /^[1-9]\d+$/, { timeout: 30_000 });
 
-  await page.locator('#geo-toggle').click();
+  await page.locator('#view-news').click();
   await expect(globe).not.toHaveAttribute('data-shapes');
 
-  await page.locator('#geo-toggle').click();
+  await page.locator('#view-geo').click();
   await expect(globe).toHaveAttribute('data-shapes', /^[1-9]\d+$/, { timeout: 30_000 });
 });
 
@@ -103,8 +106,10 @@ test('a country pressed on the map itself opens its card', async ({
   throw new Error('No press on the map opened a country');
 });
 
-test('close up, the map names rivers, lakes or mountains, not only countries', async ({ page }) => {
-  await openGlobe(page, '/?view=geo', { events: knownWorld() });
+test('close up, the Atlas names rivers, lakes or mountains, not only countries', async ({
+  page,
+}) => {
+  await openGlobe(page, '/?view=atlas', { events: knownWorld() });
   await expect(shownLabels(page).first()).toBeAttached({ timeout: 30_000 });
   await showEurope(page);
   await page.locator('#zoom-in').click();

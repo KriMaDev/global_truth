@@ -297,9 +297,6 @@ export class PillarField {
   private readonly hits = new Map<string, Mesh>();
   private lastZoom = -1;
   private lastSelected: string | null = null;
-  /** In the geography view, pillars shrink to small dots and symbols sink low (still
-   * clickable). */
-  private flat = false;
 
   /** One pillar or symbol per group (see ../clusters.ts); `coords` turns latitude and
    * longitude into a point on the globe's surface. */
@@ -450,12 +447,6 @@ export class PillarField {
     hit.quaternion.setFromUnitVectors(UP, hit.position.clone().normalize());
   }
 
-  /** Small dots instead of pillars (geography view), or pillars again. */
-  setFlat(on: boolean): void {
-    this.flat = on;
-    this.lastZoom = -1;
-  }
-
   /** Advances the shared pulse; with reduced motion the pillars stay still. */
   pulse(seconds: number, reducedMotion: boolean): void {
     for (const level of this.levels) {
@@ -482,11 +473,11 @@ export class PillarField {
       const size = Math.sqrt(style.size);
       level.anchors.forEach((anchor, index) => {
         const selected = anchor.cluster.id === selectedId ? SELECTED_SCALE : 1;
-        const width = size * zoom * selected * anchor.widen * (this.flat ? 0.75 : 1);
+        const width = size * zoom * selected * anchor.widen;
         if (level.symbols) {
-          const side = SYMBOL_SIZE * size * zoom * selected * anchor.widen * (this.flat ? 0.7 : 1);
+          const side = SYMBOL_SIZE * size * zoom * selected * anchor.widen;
           const radius = (side * DISC_RADIUS) / 2;
-          const lift = radius * (this.flat ? 0.9 : SYMBOL_LIFT);
+          const lift = radius * SYMBOL_LIFT;
           for (const part of level.parts) {
             if (part.kind === 'spot') scale.setScalar(width * SYMBOL_SPOT);
             else if (part.kind === 'stem') scale.set(width * STEM_WIDTH, lift, width * STEM_WIDTH);
@@ -498,8 +489,7 @@ export class PillarField {
           this.hits.get(anchor.cluster.id)?.scale.set(reach, lift + radius, reach);
           return;
         }
-        const height =
-          pillarHeight(level.severity) * heightZoom * selected * (this.flat ? 0.12 : 1);
+        const height = pillarHeight(level.severity) * heightZoom * selected;
         for (const part of level.parts) {
           if (part.kind === 'spot') scale.setScalar(width);
           else scale.set(width, height, width);

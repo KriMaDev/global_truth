@@ -170,6 +170,10 @@ const data: GeographyData = {
       { name: 'Lake Baikal', kind: 'lake', rank: 3, wikidata: 'Q5513', at: [108, 53.5] },
       { name: 'Small Creek', kind: 'river', rank: 7, at: [1, 1] },
     ],
+    capitals: [
+      { name: 'Capitalville', rank: 0, wikidata: 'Q1', at: [5, 50] },
+      { name: 'Contested City', rank: 0, wikidata: 'Q2', at: [6, 51], disputed: true },
+    ],
   },
   lakes: [
     {
@@ -190,6 +194,29 @@ const data: GeographyData = {
 };
 
 describe('labelsFor', () => {
+  it('keeps the Geography map to countries, seas, oceans and capitals', () => {
+    const kinds = new Set(labelsFor(0.3, data, 'geo').map((l) => l.kind));
+    for (const kind of ['river', 'lake', 'peak', 'range']) expect(kinds).not.toContain(kind);
+    expect(kinds).toContain('capital');
+    expect(labelsFor(0.3, data, 'geo').map((l) => l.text)).not.toContain('Gulf of Aden');
+  });
+
+  it('gives the Atlas everything, with capitals', () => {
+    const kinds = new Set(labelsFor(0.3, data, 'atlas').map((l) => l.kind));
+    for (const kind of ['river', 'lake', 'peak', 'range', 'capital']) expect(kinds).toContain(kind);
+  });
+
+  it('shows capitals only once zoomed in', () => {
+    expect(labelsFor(2, data, 'geo').some((l) => l.kind === 'capital')).toBe(false);
+    expect(labelsFor(1.2, data, 'geo').some((l) => l.kind === 'capital')).toBe(true);
+  });
+
+  it('shows a capital whose status is disputed as a plain city', () => {
+    const label = labelsFor(0.3, data, 'geo').find((l) => l.text === 'Contested City');
+    expect(label?.kind).toBe('city');
+    expect(label?.type).toBe('City');
+  });
+
   it('shows only the most important from far away', () => {
     expect(labelsFor(2.4, data).map((l) => l.text)).toEqual([
       'Russia',

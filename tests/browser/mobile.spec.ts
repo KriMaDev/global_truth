@@ -18,7 +18,7 @@ for (const [width, height] of [
     test('every control fits on one row, and is big enough to tap', async ({ page }) => {
       await openGlobe(page);
       await expect(page.locator('.geo-rest')).toBeHidden();
-      const controls = ['#geo-toggle', '#news-toggle', '#filter-toggle', '#rotate-toggle'];
+      const controls = ['#view-switch', '#news-toggle', '#filter-toggle', '#rotate-toggle'];
       const boxes = await Promise.all(controls.map((selector) => box(page, selector)));
       for (const control of boxes) {
         expect(control.height).toBeGreaterThanOrEqual(44);

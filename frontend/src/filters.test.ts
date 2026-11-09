@@ -7,6 +7,7 @@ import {
   toQuery,
   windowOf,
   withPageState,
+  viewFromQuery,
 } from './filters';
 import { CATEGORIES, type GlobeEvent } from './types';
 
@@ -14,17 +15,27 @@ const NOW = Date.parse('2026-11-08T12:00:00Z');
 
 describe('withPageState', () => {
   it.each([
-    ['', false, false, ''],
-    ['?cat=war', false, false, '?cat=war'],
-    ['', true, false, '?view=geo'],
-    ['', false, true, '?list=1'],
-    ['?cat=war', true, true, '?cat=war&view=geo&list=1'],
-  ])('%j geo=%s list=%s gives %j', (query, geo, list, expected) => {
-    expect(withPageState(query, { geo, list })).toBe(expected);
+    ['', 'news', false, ''],
+    ['?cat=war', 'news', false, '?cat=war'],
+    ['', 'geo', false, '?view=geo'],
+    ['', 'atlas', false, '?view=atlas'],
+    ['', 'news', true, '?list=1'],
+    ['?cat=war', 'geo', true, '?cat=war&view=geo&list=1'],
+  ] as const)('%j view=%s list=%s gives %j', (query, view, list, expected) => {
+    expect(withPageState(query, { view, list })).toBe(expected);
+  });
+
+  it.each([
+    ['', 'news'],
+    ['?view=geo', 'geo'],
+    ['?view=atlas', 'atlas'],
+    ['?view=nonsense', 'news'],
+  ])('%j opens the %s map', (search, view) => {
+    expect(viewFromQuery(search)).toBe(view);
   });
 
   it('leaves the filters readable', () => {
-    const state = fromQuery(withPageState('?range=24h', { geo: true, list: true }));
+    const state = fromQuery(withPageState('?range=24h', { view: 'geo', list: true }));
     expect(state.range).toBe('24h');
   });
 });

@@ -56,7 +56,7 @@ for (const [name, width, height] of TOUCH_SCREENS) {
       ]);
       await expect(page.locator('.legend-toggle')).toHaveAttribute('aria-expanded', 'false');
       const tops = await page
-        .locator('.topbar-actions button:visible')
+        .locator('.topbar-actions > :visible')
         .evaluateAll((all) => all.map((e) => Math.round(e.getBoundingClientRect().top)));
       expect(new Set(tops).size, 'the controls stay on one row').toBe(1);
 

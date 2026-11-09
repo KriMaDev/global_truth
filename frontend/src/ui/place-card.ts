@@ -1,6 +1,6 @@
 /**
- * "About this place": the card for a country, ocean, sea, mountain range, desert or peak in
- * the geography view. The Wikipedia text is shown word for word, with the article revision
+ * "About this place": the card for a country, capital, sea or any other place on the
+ * Geography map or the Atlas. The Wikipedia text is shown word for word, with the article revision
  * and its licence (CC BY-SA 4.0); the facts come from Wikidata (CC0). Without data for a
  * place, the card says so and shows only Natural Earth's name and type: no invented text.
  * Built from text nodes only.
@@ -15,8 +15,9 @@ export interface PlaceCardInput {
   facts?: PlaceFacts;
   /** When the facts and text were fetched (YYYY-MM-DD). */
   asOf?: string | null;
-  /** Countries: their current events, and a way to show only those. */
-  events?: { summary: string; onShow?: () => void } | null;
+  /** Countries on the Geography map: their headlines (null when there are none), and a way to
+   * show only those on the other views. */
+  events?: { list: HTMLElement | null; onShow?: () => void } | null;
 }
 
 const LICENCE_URL = 'https://creativecommons.org/licenses/by-sa/4.0/';
@@ -66,7 +67,10 @@ export function placeCardParts(input: PlaceCardInput): HTMLElement[] {
 
   if (input.events) {
     const block = el('div', 'place-events');
-    block.append(el('h3', 'card-subtitle', 'Events here now'), el('p', '', input.events.summary));
+    block.append(
+      el('h3', 'card-subtitle', 'News here now'),
+      input.events.list ?? el('p', '', 'No news here in the current filters and time window.'),
+    );
     if (input.events.onShow) {
       const show = el('button', 'card-back', 'Show only these events');
       show.type = 'button';

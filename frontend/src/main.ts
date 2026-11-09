@@ -24,6 +24,7 @@ import {
   toQuery,
   windowOf,
   withPageState,
+  viewFromQuery,
   type FilterState,
 } from './filters';
 import { parseFeeds } from './feeds';
@@ -40,14 +41,15 @@ import {
   formatPopulation,
   type GeographyData,
   type MapLabel,
+  type MapView,
   type PlacesData,
 } from './geography';
-import { placeCardParts } from './ui/place-card';
+import { placeCardParts, type PlaceCardInput } from './ui/place-card';
 import type { GlobeApp } from './globe/globe';
 import { attachKeyboard } from './globe/keyboard';
 import { SEVERITY_STYLES } from './severity';
 import type { GlobeEvent } from './types';
-import { createEventCard } from './ui/event-card';
+import { createEventCard, eventRows } from './ui/event-card';
 import { renderEventList } from './ui/event-list';
 import { parseOutletDirectory, setOutletDirectory } from './outlets';
 import { renderLegend, renderSummary } from './ui/legend';
@@ -433,7 +435,7 @@ function applyFilters(): void {
   updateAddress();
   if (app) {
     app.setEvents(events);
-    if (geoView && geoData) app.setGeography(geoData, countrySeverity(events));
+    if (mapView !== 'news' && geoData) app.setGeography(geoData, countrySeverity(events), mapView);
     renderEventList(list, events, listHandlers);
     if (allEvents.length > 0 && !loadingHistory) {
       // A short hint when filters leave nothing, unless a whole group was switched off on
@@ -450,15 +452,20 @@ function applyFilters(): void {
  * small dots, and "About this place" for everything labelled. Its data (Natural Earth; facts
  * and text from Wikidata and Wikipedia) loads the first time it is opened.
  */
-let geoView = new URLSearchParams(window.location.search).get('view') === 'geo';
+let mapView: MapView = viewFromQuery(window.location.search);
 let geoData: GeographyData | null = null;
 /** Facts and text for places; the view works without them. */
 let placesData: PlacesData | null = null;
-const geoToggle = byId<HTMLButtonElement>('geo-toggle');
+const viewSwitch = byId('view-switch');
+const viewButtons: Record<MapView, HTMLButtonElement> = {
+  news: byId('view-news'),
+  geo: byId('view-geo'),
+  atlas: byId('view-atlas'),
+};
 
 /** Keeps the web address in step with the filters, the view and the Headlines panel. */
 function updateAddress(): void {
-  const query = withPageState(toQuery(filters), { geo: geoView, list: headlines.isOpen });
+  const query = withPageState(toQuery(filters), { view: mapView, list: headlines.isOpen });
   window.history.replaceState(null, '', window.location.pathname + query);
 }
 
@@ -481,6 +488,7 @@ async function loadGeography(): Promise<GeographyData> {
       regions: parts.regions ?? [],
       peaks: parts.peaks ?? [],
       waters: parts.waters ?? [],
+      capitals: parts.capitals ?? [],
     },
     lakes: Array.isArray(lakes) ? (lakes as GeographyData['lakes']) : [],
   };
@@ -500,28 +508,40 @@ function loadPlaces(): Promise<void> {
   return placesLoading;
 }
 
-async function setGeoView(on: boolean): Promise<void> {
-  geoView = on;
-  geoToggle.setAttribute('aria-pressed', String(on));
-  document.body.classList.toggle('geo-view', on);
-  if (on && !geoData) {
+/** Shows which map is on, on the switch and for the page's styles. */
+function showMapView(): void {
+  for (const [view, button] of Object.entries(viewButtons)) {
+    button.setAttribute('aria-pressed', String(view === mapView));
+  }
+  document.body.classList.toggle('geo-view', mapView === 'geo');
+  document.body.classList.toggle('atlas-view', mapView === 'atlas');
+}
+
+async function setMapView(next: MapView): Promise<void> {
+  mapView = next;
+  showMapView();
+  // The Atlas has no news, so nothing about the news stays open on it.
+  if (next === 'atlas') {
+    closePanels();
+    card.close();
+  }
+  if (next !== 'news' && !geoData) {
     try {
       notice('Loading the map…');
       geoData = await loadGeography();
       notice(null);
     } catch (error) {
       console.warn('Geography unavailable:', error);
-      notice("The geography view couldn't be loaded. Please try again later.");
-      geoView = false;
-      geoToggle.setAttribute('aria-pressed', 'false');
-      document.body.classList.remove('geo-view');
+      notice("The map couldn't be loaded. Please try again later.");
+      mapView = 'news';
+      showMapView();
       return;
     }
   }
-  app?.setGeography(geoView ? geoData : null, countrySeverity(events));
+  app?.setGeography(mapView === 'news' ? null : geoData, countrySeverity(events), mapView);
   applyFilters();
   // The map first, the texts for the cards after it.
-  if (geoView) void loadPlaces();
+  if (mapView !== 'news') void loadPlaces();
 }
 
 /** "12 events: 3 high, 9 low", for the current filters and time window. */
@@ -548,7 +568,7 @@ function describeCountry(iso2: string): string[] {
     facts?.population ? `${formatPopulation(facts.population)} people` : null,
   ].filter(Boolean);
   if (basics.length) lines.push(basics.join(' · '));
-  lines.push(countryEventSummary(iso2) ?? 'No events in the current filters');
+  if (mapView === 'geo') lines.push(countryEventSummary(iso2) ?? 'No news in the current filters');
   lines.push(`Click for more about ${country?.name ?? 'this country'}`);
   return lines;
 }
@@ -556,7 +576,7 @@ function describeCountry(iso2: string): string[] {
 /** Opens "About this place" for a label (or a country) and turns the globe to it. */
 function openPlace(
   label: MapLabel,
-  extra: { where?: string | null; events?: { summary: string; onShow?: () => void } | null } = {},
+  extra: { where?: string | null; events?: PlaceCardInput['events'] } = {},
 ): void {
   closePanels();
   app?.select(null);
@@ -575,6 +595,8 @@ function openPlace(
     ocean: 2.4,
     country: 1.6,
     sea: 1.6,
+    capital: 0.6,
+    city: 0.6,
     range: 1.4,
     desert: 1.6,
     peak: 1,
@@ -584,7 +606,7 @@ function openPlace(
   app?.flyOver(label.lat, label.lng, Math.min(view.altitude, reach[label.kind]));
 }
 
-/** A country (shape or name) was clicked: its card, with its events and a filter button. */
+/** A country (shape or name) was clicked: its card, with its news on the Geography map. */
 function chooseCountry(iso2: string): void {
   const country = geoData?.countries.find((c) => c.iso2 === iso2);
   if (!country) return;
@@ -595,21 +617,31 @@ function chooseCountry(iso2: string): void {
       e.geo?.country_code === iso2 && e.geo.continent && e.geo.region && time >= from && time <= to
     );
   });
-  const summary = countryEventSummary(iso2);
-  const severity = countrySeverity(events).get(iso2);
+  const here = mapView === 'geo' ? events.filter((e) => e.geo?.country_code === iso2) : [];
+  const severity = countrySeverity(here).get(iso2);
   setAccent(severity ? SEVERITY_STYLES[severity].color : null);
   openPlace(countryLabel(country), {
     where: [country.region, country.continent].filter(Boolean).join(' · '),
-    events: {
-      summary: summary ?? 'No events in the current filters and time window.',
-      onShow:
-        summary && match?.geo?.continent && match.geo.region
-          ? () => {
-              filters = { ...filters, place: [match.geo!.continent!, match.geo!.region!, iso2] };
-              applyFilters();
-            }
-          : undefined,
-    },
+    events:
+      mapView === 'geo'
+        ? {
+            list: here.length
+              ? eventRows(here, (event) =>
+                  openEvent(event, true, () => chooseCountry(iso2), `← Back to ${country.name}`),
+                )
+              : null,
+            onShow:
+              here.length && match?.geo?.continent && match.geo.region
+                ? () => {
+                    filters = {
+                      ...filters,
+                      place: [match.geo!.continent!, match.geo!.region!, iso2],
+                    };
+                    applyFilters();
+                  }
+                : undefined,
+          }
+        : null,
   });
 }
 
@@ -734,9 +766,14 @@ async function start(): Promise<void> {
     );
     showZoomButtons(app);
     showGestureHint();
-    geoToggle.hidden = false;
-    geoToggle.addEventListener('click', () => void setGeoView(!geoView));
-    if (geoView) void setGeoView(true);
+    viewSwitch.hidden = false;
+    for (const [view, button] of Object.entries(viewButtons) as [MapView, HTMLButtonElement][]) {
+      button.addEventListener('click', () => {
+        if (view !== mapView) void setMapView(view);
+      });
+    }
+    showMapView();
+    if (mapView !== 'news') void setMapView(mapView);
     window.setInterval(updateHud, 30_000);
     attachKeyboard(container, app);
     status.hidden = true;

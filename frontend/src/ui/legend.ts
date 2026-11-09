@@ -187,7 +187,10 @@ export function renderLegend(root: HTMLElement): void {
   const more = document.createElement('div');
   more.className = 'legend-more';
   more.id = 'legend-more';
-  more.append(
+  // About the markers: the News map only (hidden by CSS on the others).
+  const markers = document.createElement('div');
+  markers.className = 'legend-markers';
+  markers.append(
     paragraph(
       'legend-note',
       'Deaths as stated in the headline; alerts from USGS and GDACS. More severe events are taller and pulse faster; high and critical also send out rings.',
@@ -195,12 +198,27 @@ export function renderLegend(root: HTMLElement): void {
     heading('On the globe', 'legend-title legend-section'),
     markerRows(),
     symbolList(),
-    // Shown in the geography view only (by CSS, body.geo-view).
-    paragraph('legend-geo-note', 'Countries take the colour of their most severe event.'),
+  );
+  more.append(
+    markers,
+    // Shown on the Geography map only (by CSS, body.geo-view).
+    paragraph(
+      'legend-geo-note',
+      'Countries take the colour of their most severe event. Tap a country for its news.',
+    ),
     link,
   );
 
-  root.replaceChildren(head, more, summary);
+  // The Atlas has no news, so it has this short key instead (by CSS, body.atlas-view).
+  const atlas = document.createElement('div');
+  atlas.className = 'legend-atlas';
+  atlas.append(
+    heading('Atlas'),
+    paragraph('legend-note', 'Tap any name to read about the place.'),
+    paragraph('legend-key', 'Capital city'),
+  );
+
+  root.replaceChildren(head, more, summary, atlas);
 }
 
 /** "Showing 37 of 412 events · Clear filters" while filters are on; hidden otherwise. */

@@ -89,6 +89,15 @@ FACTS: dict[str, list[tuple[str, str]]] = {
         ("length_m", quantity("P2043")),
         ("countries", f"?item wdt:P17 ?v . {CURRENT} {LABEL}"),
     ],
+    "city": [
+        ("countries", f"?item wdt:P17 ?v . {CURRENT} {LABEL}"),
+        (
+            "population",
+            "?item p:P1082 ?s . ?s a wikibase:BestRank ; ps:P1082 ?value ."
+            " OPTIONAL { ?s pq:P585 ?when }",
+        ),
+        ("area_m2", quantity("P2046")),
+    ],
     "peak": [
         ("range", f"?item wdt:P4552 ?v . {LABEL}"),
         ("prominence_m", quantity("P2660")),
@@ -220,6 +229,7 @@ def places_by_kind() -> dict[str, list[str]]:
         "peak": [p["wikidata"] for p in labels["peaks"]],
         # Lakes (Natural Earth gives rivers no Wikidata ID).
         "water": [w["wikidata"] for w in labels.get("waters", [])],
+        "city": [c["wikidata"] for c in labels.get("capitals", [])],
     }
     return {kind: sorted({i for i in items if i}) for kind, items in ids.items()}
 
