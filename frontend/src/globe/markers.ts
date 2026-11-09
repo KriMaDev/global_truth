@@ -14,14 +14,18 @@
 
 import {
   AddEquation,
+  BufferGeometry,
   CanvasTexture,
   Color,
   CustomBlending,
   CylinderGeometry,
   DoubleSide,
+  Float32BufferAttribute,
   Group,
   InstancedBufferAttribute,
   InstancedMesh,
+  LineBasicMaterial,
+  LineSegments,
   LinearMipmapLinearFilter,
   Matrix4,
   Mesh,
@@ -33,7 +37,6 @@ import {
   Quaternion,
   ShaderMaterial,
   Vector3,
-  type BufferGeometry,
 } from 'three';
 import { SEVERITY_STYLES } from '../severity';
 import type { Cluster } from '../clusters';
@@ -296,6 +299,7 @@ export class PillarField {
   private readonly levels: Level[] = [];
   private readonly hits = new Map<string, Mesh>();
   private lastZoom = -1;
+  private fanLines: LineSegments | null = null;
   private lastSelected: string | null = null;
 
   /** One pillar or symbol per group (see ../clusters.ts); `coords` turns latitude and
@@ -305,6 +309,7 @@ export class PillarField {
     coords: (lat: number, lng: number) => { x: number; y: number; z: number },
   ) {
     this.group.name = 'pillars';
+    this.addFanLines(clusters, coords);
     for (const severity of SEVERITIES) {
       const all: Anchor[] = clusters
         .filter((c) => c.severity === severity)
@@ -429,8 +434,32 @@ export class PillarField {
     return hit;
   }
 
+  /** A thin line from each fanned-out marker back to its true place (clusters.ts, fanOut). */
+  private addFanLines(
+    clusters: Cluster[],
+    coords: (lat: number, lng: number) => { x: number; y: number; z: number },
+  ): void {
+    const points = clusters.flatMap((cluster) => {
+      if (!cluster.anchor) return [];
+      const from = coords(cluster.anchor.lat, cluster.anchor.lng);
+      const to = coords(cluster.lat, cluster.lng);
+      return [from.x, from.y, from.z, to.x, to.y, to.z];
+    });
+    if (points.length === 0) return;
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute(points, 3));
+    this.fanLines = new LineSegments(
+      geometry,
+      new LineBasicMaterial({ color: 0xd6dae0, transparent: true, opacity: 0.75 }),
+    );
+    this.fanLines.frustumCulled = false;
+    this.group.add(this.fanLines);
+  }
+
   /** Frees this field's GPU resources (the geometries are shared and kept). */
   dispose(): void {
+    this.fanLines?.geometry.dispose();
+    (this.fanLines?.material as LineBasicMaterial | undefined)?.dispose();
     for (const level of this.levels) {
       for (const part of level.parts) {
         part.mesh.dispose();

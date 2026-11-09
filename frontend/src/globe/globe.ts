@@ -21,7 +21,7 @@ import {
   type LineSegments,
   type WebGLRenderer,
 } from 'three';
-import { clusterDegrees, clusterEvents, clusterOf, type Cluster } from '../clusters';
+import { clusterDegrees, clusterEvents, clusterOf, fanOut, type Cluster } from '../clusters';
 import {
   angularDegrees,
   labelLevel,
@@ -118,6 +118,10 @@ const ADOPT_MAX_FRAMES = 240;
 const BADGE_HALF: [number, number] = [14, 10];
 /** Panels that map labels keep clear of. */
 const LABEL_OBSTACLES = '.brand h1, .preview-note, .topbar-actions > *, .legend, .bottom-right > *';
+/** Markers closer than this on screen (CSS px) are fanned out, so each can be tapped. */
+const FAN_SPACING_PX = 60;
+/** The fan is worked out again each time the zoom changes by this factor. */
+const FAN_ZOOM_STEP = 1.35;
 const FLY_MS = 1400;
 const STEP_MS = 350;
 const AUTO_ROTATE_SPEED = 0.35;
@@ -232,10 +236,12 @@ function labelUnder(container: HTMLElement, x: number, y: number): HTMLElement |
  * handed over like this was never seen lifting, and the globe then counted two fingers for good.
  */
 function passDragToGlobe(element: HTMLElement, down: PointerEvent): void {
+  // Captured: the label stops `pointerup` from bubbling (shield), and if this never saw it,
+  // the next mouse movement would start a drag with no button held.
   const stop = (): void => {
     window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', onEnd);
-    window.removeEventListener('pointercancel', onEnd);
+    window.removeEventListener('pointerup', onEnd, true);
+    window.removeEventListener('pointercancel', onEnd, true);
   };
   const onEnd = (event: PointerEvent): void => {
     if (event.pointerId === down.pointerId) stop();
@@ -248,8 +254,8 @@ function passDragToGlobe(element: HTMLElement, down: PointerEvent): void {
     canvas?.dispatchEvent(new PointerEvent('pointerdown', down));
   };
   window.addEventListener('pointermove', onMove);
-  window.addEventListener('pointerup', onEnd);
-  window.addEventListener('pointercancel', onEnd);
+  window.addEventListener('pointerup', onEnd, true);
+  window.addEventListener('pointercancel', onEnd, true);
 }
 
 /** What the one HTML layer holds: group count badges and, in the geography view, map labels. */
@@ -340,6 +346,12 @@ export async function createGlobeApp(
   let selectedId: string | null = null;
   let events = options.events;
   let degrees = -1;
+  /** Zoomed right in: which zoom step the markers were last fanned out for. */
+  let fanStep: number | null = null;
+  /** Degrees that keep fanned-out markers apart on screen, at the widest view of a zoom step. */
+  const fanSpacing = (step: number): number =>
+    (screenRadiusDegrees(FAN_ZOOM_STEP ** (step + 1), 0) * 2 * FAN_SPACING_PX) /
+    Math.max(1, container.clientHeight);
   let clusters: Cluster[] = [];
   let geography: GeographyData | null = null;
   let mapView: MapView = 'news';
@@ -604,7 +616,8 @@ export async function createGlobeApp(
 
   /** Rebuilds the pillars, rings and badges for the current events and grouping. */
   const regroup = (): void => {
-    clusters = clusterEvents(events, degrees);
+    clusters = fanOut(clusterEvents(events, degrees), fanStep === null ? 0 : fanSpacing(fanStep));
+    container.dataset.fanned = String(clusters.filter((c) => c.anchor).length);
     pillars.dispose();
     pillars = new PillarField(clusters, pillarCoords);
     showMarkers();
@@ -616,8 +629,14 @@ export async function createGlobeApp(
   /** Regroups only when the zoom crosses a grouping step. */
   const regroupForAltitude = (altitude: number): void => {
     const next = clusterDegrees(altitude);
-    if (next === degrees) return;
+    // Only the News map has markers to fan out.
+    const step =
+      next === 0 && mapView === 'news'
+        ? Math.floor(Math.log(altitude) / Math.log(FAN_ZOOM_STEP))
+        : null;
+    if (next === degrees && step === fanStep) return;
     degrees = next;
+    fanStep = step;
     regroup();
   };
 
@@ -891,6 +910,7 @@ export async function createGlobeApp(
       if (view === 'atlas') loadWater();
       for (const line of waterLines) line.visible = view === 'atlas';
       if (viewChanged) {
+        regroupForAltitude(globe.pointOfView().altitude);
         showMarkers();
         globe.customLayerData(view === 'news' ? clusters : []);
         globe.ringsData(ringClusters());

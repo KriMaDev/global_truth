@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { angularDistance, clusterDegrees, clusterEvents, clusterOf } from './clusters';
+import {
+  angularDistance,
+  clusterDegrees,
+  clusterEvents,
+  clusterOf,
+  fanOut,
+  type Cluster,
+} from './clusters';
 import type { GlobeEvent, Severity } from './types';
 
 function event(
@@ -99,5 +106,42 @@ describe('clusterEvents', () => {
     const clusters = clusterEvents([hyderabad, warangal, tokyo], 2);
     expect(clusterOf(clusters, 'hyd')?.id).toBe('group:war');
     expect(clusterOf(clusters, 'tok')?.id).toBe('tok');
+  });
+});
+
+describe('fanOut', () => {
+  const marker = (id: string, lat: number, lng: number): Cluster =>
+    ({ id, lead: { id }, events: [{ id }], lat, lng, severity: 'low' }) as unknown as Cluster;
+
+  it('moves markers at the same place apart, each remembering its true place', () => {
+    const out = fanOut([marker('a', 40, 10), marker('b', 40, 10), marker('c', 40, 10)], 1);
+    expect(out.every((c) => c.anchor?.lat === 40 && c.anchor?.lng === 10)).toBe(true);
+    for (const [i, a] of out.entries()) {
+      for (const b of out.slice(i + 1)) {
+        expect(angularDistance(a.lat, a.lng, b.lat, b.lng)).toBeGreaterThanOrEqual(0.99);
+      }
+    }
+  });
+
+  it('leaves markers with room where they are', () => {
+    const out = fanOut([marker('a', 40, 10), marker('b', 45, 10)], 1);
+    expect(out.map((c) => [c.lat, c.lng, c.anchor])).toEqual([
+      [40, 10, undefined],
+      [45, 10, undefined],
+    ]);
+  });
+
+  it('keeps many markers apart in more than one ring', () => {
+    const out = fanOut(
+      Array.from({ length: 20 }, (_, i) => marker(String(i), 0, 0)),
+      1,
+    );
+    expect(new Set(out.map((c) => `${c.lat.toFixed(3)},${c.lng.toFixed(3)}`)).size).toBe(20);
+    expect(out).toHaveLength(20);
+  });
+
+  it('does nothing with a spacing of 0', () => {
+    const clusters = [marker('a', 40, 10), marker('b', 40, 10)];
+    expect(fanOut(clusters, 0)).toBe(clusters);
   });
 });

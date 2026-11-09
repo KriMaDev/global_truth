@@ -17,9 +17,12 @@ export interface Cluster {
   lead: GlobeEvent;
   /** Every event in the group, most severe and newest first. */
   events: GlobeEvent[];
+  /** Where the marker stands: the true place, unless it has been fanned out. */
   lat: number;
   lng: number;
   severity: Severity;
+  /** The true place of a marker moved aside by fanOut (a thin line joins the two). */
+  anchor?: { lat: number; lng: number };
 }
 
 /** Grouping distance in degrees for a camera altitude (globe radii above the surface). */
@@ -109,6 +112,68 @@ function groupNearby(events: GlobeEvent[], degrees: number): Cluster[] {
     grid.set(key, [...(grid.get(key) ?? []), cluster]);
   }
   return clusters;
+}
+
+/** Where the markers of a stack go, around its middle: rings of 6, 12, 18… (north, east). */
+function ringOffsets(count: number, spacing: number): [number, number][] {
+  const offsets: [number, number][] = [];
+  for (let ring = 1; offsets.length < count; ring += 1) {
+    const slots = Math.min(6 * ring, count - offsets.length);
+    for (let slot = 0; slot < slots; slot += 1) {
+      const angle = (2 * Math.PI * slot) / slots;
+      offsets.push([ring * spacing * Math.cos(angle), ring * spacing * Math.sin(angle)]);
+    }
+  }
+  return offsets;
+}
+
+/**
+ * Zoomed right in, markers closer than `spacing` degrees (or at the very same place) can't each
+ * be tapped, so they move apart in rings around their middle, each remembering its true place.
+ * Markers with room are left alone. A `spacing` of 0 does nothing.
+ */
+export function fanOut(clusters: Cluster[], spacing: number): Cluster[] {
+  if (spacing <= 0) return clusters;
+  const stacks: Cluster[][] = [];
+  const grid = new Map<string, Cluster[][]>();
+  const cell = (value: number): number => Math.floor(value / spacing);
+  for (const cluster of clusters) {
+    const row = cell(cluster.lat);
+    const col = cell(cluster.lng);
+    let home: Cluster[] | undefined;
+    search: for (let dr = -1; dr <= 1; dr += 1) {
+      for (let dc = -1; dc <= 1; dc += 1) {
+        for (const stack of grid.get(`${row + dr}:${col + dc}`) ?? []) {
+          const first = stack[0]!;
+          if (angularDistance(cluster.lat, cluster.lng, first.lat, first.lng) < spacing) {
+            home = stack;
+            break search;
+          }
+        }
+      }
+    }
+    if (home) {
+      home.push(cluster);
+      continue;
+    }
+    const stack = [cluster];
+    stacks.push(stack);
+    const key = `${row}:${col}`;
+    grid.set(key, [...(grid.get(key) ?? []), stack]);
+  }
+  return stacks.flatMap((stack) => {
+    if (stack.length === 1) return stack;
+    const lat = stack.reduce((sum, c) => sum + c.lat, 0) / stack.length;
+    const lng = stack.reduce((sum, c) => sum + c.lng, 0) / stack.length;
+    const narrowing = Math.max(0.1, Math.cos(lat * RAD));
+    const offsets = ringOffsets(stack.length, spacing);
+    return stack.map((cluster, index) => ({
+      ...cluster,
+      lat: Math.max(-89, Math.min(89, lat + offsets[index]![0])),
+      lng: lng + offsets[index]![1] / narrowing,
+      anchor: { lat: cluster.lat, lng: cluster.lng },
+    }));
+  });
 }
 
 /** The group that contains an event, if any. */

@@ -1,6 +1,14 @@
 /** The three maps: what each one shows and hides. Made-up events only. */
 import { expect, test, type Page } from '@playwright/test';
-import { knownWorld, openGlobe, showEurope } from './fixtures';
+import {
+  altitude,
+  knownWorld,
+  openEvent,
+  openGlobe,
+  showEurope,
+  syntheticEvent,
+  view,
+} from './fixtures';
 
 const shownLabels = (page: Page, kind: string) =>
   page.locator(`.map-label.kind-${kind}:not(.is-hidden):not(.is-crowded)`);
@@ -96,3 +104,85 @@ for (const path of ['/', '/?view=geo', '/?view=atlas']) {
     expect(fits).toBe(true);
   });
 }
+
+test('with a mouse, clicking a place name leaves the globe still afterwards', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'Mouse only');
+  await openGlobe(page, '/?view=atlas', { events: knownWorld() });
+  await page.locator('#rotate-toggle').click();
+  await expect(page.locator('.map-label').first()).toBeAttached({ timeout: 30_000 });
+  await page.waitForTimeout(800);
+  const spot = await page.evaluate(() => {
+    for (const label of document.querySelectorAll<HTMLElement>('.map-label')) {
+      if (label.matches('.is-hidden, .is-crowded')) continue;
+      const area = label.getBoundingClientRect();
+      const x = area.x + area.width / 2;
+      const y = area.y + area.height / 2;
+      if (area.width && document.elementFromPoint(x, y) === label) return { x, y };
+    }
+    return null;
+  });
+  if (!spot) throw new Error('No label to click');
+  await page.mouse.move(spot.x, spot.y);
+  await page.mouse.down();
+  await page.waitForTimeout(150);
+  await page.mouse.up();
+  await expect(page.locator('#event-card .card-title')).not.toBeEmpty({ timeout: 10_000 });
+  await page.waitForTimeout(1800); // The flight to the place.
+  const before = await view(page);
+  await page.mouse.move(spot.x + 200, spot.y + 120, { steps: 12 });
+  await page.waitForTimeout(400);
+  expect(await view(page)).toEqual(before);
+});
+
+test('zoomed in, news at the same place fans out and each can be opened', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'Checked with a mouse; the tap target is the same');
+  test.setTimeout(150_000);
+  const same = { place: 'Testville', published: new Date().toISOString() };
+  const events = ['one', 'two', 'three'].map((name) =>
+    syntheticEvent(name, 43.7, -79.4, { ...same, title: `Stacked headline ${name}` }),
+  );
+  await openGlobe(page, '/', { events });
+  await page.locator('#rotate-toggle').click();
+  await openEvent(page, 'one');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(1800);
+  for (let step = 0; step < 4; step += 1) {
+    await page.locator('#zoom-in').click();
+    await page.waitForTimeout(700);
+  }
+  expect(await altitude(page)).toBeLessThan(0.9);
+  await expect(page.locator('#globe')).toHaveAttribute('data-fanned', '3');
+  await openEvent(page, 'one'); // Settles the camera where every later open will leave it.
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(1800);
+
+  const size = page.viewportSize()!;
+  const found = new Set<string>();
+  search: for (let y = 70; y < size.height * 0.42; y += 20) {
+    for (let x = size.width / 2 - 120; x <= size.width / 2 + 120; x += 20) {
+      await page.mouse.click(x, y, { delay: 120 });
+      const title = page.locator('#event-card .card-title');
+      if (await title.isVisible()) {
+        found.add((await title.textContent()) ?? '');
+        await page.keyboard.press('Escape');
+        await page
+          .locator('#event-card .card-close')
+          .click({ timeout: 300 })
+          .catch(() => {});
+        await page.waitForTimeout(1500);
+        if (found.size === 3) break search;
+      }
+    }
+  }
+  expect([...found].sort()).toEqual([
+    'Stacked headline one',
+    'Stacked headline three',
+    'Stacked headline two',
+  ]);
+});

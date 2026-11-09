@@ -66,6 +66,10 @@ How many outlets cover a story is shown as **coverage**, separately. It never ra
 - The Geography map and the Atlas draw no markers: on Geography the country colours (below) show the news, and tapping a country lists it.
 - The legend sums up each level in a few words (`LEVEL_MEANING` in `frontend/src/ui/legend.ts`) and the About page in a table (`frontend/about/index.html`). Any change to a rule must change those too. Its marker samples are grey, so colour only ever means severity.
 
+### Markers that stand too close
+
+Zoomed right in, where no grouping happens, markers less than about 60 screen pixels apart (or at the very same place) move apart in rings, so each can be tapped. A thin line joins each one to its true place.
+
 ### Groups of events
 
 Where pillars would crowd (closer than 4°, 2° or 1° on screen depending on zoom; never when zoomed right in), they merge into one pillar (or one symbol: natural disasters and news are grouped separately, so a group is always one or the other). It takes the **highest severity among its events** and stands at that event's place, with a badge showing how many events it holds. Grouping never changes any event's own severity. Code: `frontend/src/clusters.ts`.
