@@ -137,7 +137,7 @@ Respect each source's rate limits and terms. Cache aggressively. Never hammer a 
 3. ✅ Live data pipeline: 2–3 sources, normalization, geocoding, categories, severity
 4. ✅ Location drill-down and category filters (plus timeline, clusters, geography view, place cards, legal page, NASA close-ups)
 5. ✅ Headlines panel, source attribution, About/Sources pages, plain pages for search engines and AI assistants
-6. Polish: animations, performance, mobile, accessibility, and the globe's own browser tests (owner, 8 Nov 2026): bring the important checks from `private/scripts/` into `tests/browser` on synthetic data (filters, event cards, Headlines panel, failed and out-of-date feeds)
+6. ✅ (10 Nov 2026, tried on phones, iPhone and MacBook) Polish: animations, performance, mobile, accessibility, and the globe's own browser tests (owner, 8 Nov 2026): bring the important checks from `private/scripts/` into `tests/browser` on synthetic data (filters, event cards, Headlines panel, failed and out-of-date feeds)
 7. More sources, monitoring, future ideas (language selection, alerts, public RSS/JSON API, saved regions)
 
 ## Geography education (owner's goal, 7 Nov 2026)

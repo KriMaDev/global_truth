@@ -64,18 +64,17 @@ def _run_feed(
 
 def _mark_partial(status: FeedStatus, last_success: str | None) -> None:
     """Says so when a run that "worked" has a real gap: a file still failing after an hour
-    (gdelt.REPORT_AFTER), or no file read at all. A younger failure is only counted in the
-    stats, since it nearly always clears by the next run. If no file was read, nothing was
-    updated, so the time of the last success stays as it was."""
+    (gdelt.REPORT_AFTER). A younger failure is only counted in the stats, even if no file was
+    read at all: GDELT's newest files often appear late, and a later run picks them up. If no
+    file was read, nothing was updated, so the time of the last success stays as it was."""
     read, missing = status.stats.get("files", 0), status.stats.get("missing_files", 0)
     if status.status != "ok" or not missing:
         return
-    if read and not status.stats.get("overdue_files", 0):
-        return
-    status.status = "partial"
-    status.note = f"{missing} of {read + missing} files could not be read"
     if not read:
         status.last_success = last_success
+    if status.stats.get("overdue_files", 0):
+        status.status = "partial"
+        status.note = f"{missing} of {read + missing} files could not be read"
 
 
 def balance_outlets(
