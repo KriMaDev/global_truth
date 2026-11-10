@@ -1,9 +1,10 @@
 """Finds the Wikidata item for a place Natural Earth gives no ID, without guessing.
 
 A candidate has already matched the place's name and type (the query in build_places.py asks
-for that). It must also lie close to where the map draws the place, and it must be the only
-one that does: with two candidates left, the place stays unmatched, because a blank card is
-better than the wrong river's text.
+for that). It must also lie close to where the map draws the place. If several do, the one
+with an English Wikipedia article wins, since a major river has one and a namesake stream
+usually doesn't. If that still leaves more than one, the place stays unmatched, because a
+blank card is better than the wrong river's text.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ class Candidate:
     qid: str
     lng: float
     lat: float
+    has_article: bool = False
 
 
 def distance_km(lng1: float, lat1: float, lng2: float, lat2: float) -> float:
@@ -37,12 +39,16 @@ def sole_match(
     points: Sequence[Sequence[float]], candidates: Iterable[Candidate], max_km: float
 ) -> str | None:
     """The one item within `max_km` of any of the place's points ([lng, lat]), or None."""
-    close = {
-        candidate.qid
+    close = [
+        candidate
         for candidate in candidates
         if any(
             distance_km(candidate.lng, candidate.lat, point[0], point[1]) <= max_km
             for point in points
         )
-    }
-    return close.pop() if len(close) == 1 else None
+    ]
+    items = {candidate.qid for candidate in close}
+    if len(items) == 1:
+        return items.pop()
+    with_article = {candidate.qid for candidate in close if candidate.has_article}
+    return with_article.pop() if len(with_article) == 1 else None

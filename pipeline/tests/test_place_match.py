@@ -18,6 +18,19 @@ def test_a_namesake_too_far_away_is_no_match() -> None:
     assert sole_match(LINE, [Candidate("Q1", 40.0, 10.0)], 150) is None
 
 
+def test_of_two_nearby_candidates_the_one_with_an_article_wins() -> None:
+    found = [Candidate("Q1", 11.0, 50.5), Candidate("Q2", 12.0, 50.5, has_article=True)]
+    assert sole_match(LINE, found, 150) == "Q2"
+
+
+def test_two_nearby_candidates_with_articles_leave_the_place_unmatched() -> None:
+    found = [
+        Candidate("Q1", 11.0, 50.5, has_article=True),
+        Candidate("Q2", 12.0, 50.5, has_article=True),
+    ]
+    assert sole_match(LINE, found, 150) is None
+
+
 def test_two_nearby_candidates_leave_the_place_unmatched() -> None:
     found = [Candidate("Q1", 11.0, 50.5), Candidate("Q2", 12.0, 50.5)]
     assert sole_match(LINE, found, 150) is None

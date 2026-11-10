@@ -127,4 +127,4 @@ Capitals are the ones Natural Earth marks, including countries with several. A c
 
 ## Places Natural Earth gives no Wikidata ID
 
-Rivers and some peaks, lakes and other features have none. `tools/place_match.py` takes a Wikidata item only if its English name or alias and its type match, it lies close to where the map draws the place (150 km for rivers, 15 km for peaks, 50 km for lakes, 200 km for the rest), and it is the only one that does. Otherwise the place stays without a description. A place with an item but no English article shows Wikidata's one-line description (CC0) and its facts.
+Rivers and some peaks, lakes and other features have none. `tools/place_match.py` takes a Wikidata item only if its English name or alias and its type match, it lies close to where the map draws the place (150 km for rivers, 15 km for peaks, 50 km for lakes, 200 km for the rest), and it is the only one that does; if several do, the only one with an English Wikipedia article. Otherwise the place stays without a description. A place with an item but no English article shows Wikidata's one-line description (CC0) and its facts.

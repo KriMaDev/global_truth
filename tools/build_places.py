@@ -168,6 +168,8 @@ MATCH_RULES: dict[str, tuple[list[str], float]] = {
     "lagoon": (["Q187223"], 200),
 }
 NAME_BATCH = 40
+#: Great rivers whose map name differs from Wikidata's: found by their exact English article.
+RIVER_ARTICLES = {"Amazonas": "Amazon River", "Huang": "Yellow River", "Yangtze": "Yangtze"}
 
 
 def request(url: str, accept: str) -> bytes:
@@ -220,18 +222,27 @@ def candidates_for(names: list[str], types: list[str]) -> dict[str, list[Candida
         values = " ".join(f"{json.dumps(name)}@en" for name in names[start : start + NAME_BATCH])
         kinds = " ".join(f"wd:{t}" for t in types)
         rows = query_rows(
-            "SELECT ?item ?name ?coord WHERE { "
+            "SELECT DISTINCT ?item ?name ?coord ?article WHERE { "
             f"VALUES ?name {{ {values} }} VALUES ?type {{ {kinds} }} "
             "{ ?item rdfs:label ?name } UNION { ?item skos:altLabel ?name } "
-            "?item wdt:P31 ?type ; wdt:P625 ?coord . }"
+            "?item wdt:P31 ?type ; wdt:P625 ?coord . "
+            "OPTIONAL { ?article schema:about ?item ; "
+            "schema:isPartOf <https://en.wikipedia.org/> } }"
         )
         for row in rows:
             point = row["coord"]["value"].removeprefix("Point(").removesuffix(")").split()
             if len(point) == 2:
                 found.setdefault(row["name"]["value"], []).append(
-                    Candidate(qid(row), float(point[0]), float(point[1]))
+                    Candidate(qid(row), float(point[0]), float(point[1]), "article" in row)
                 )
     return found
+
+
+def name_forms(rule: str, name: str) -> list[str]:
+    """The names to look for: Wikidata often calls "Mississippi" the "Mississippi River"."""
+    if rule != "river":
+        return [name]
+    return [name, f"{name} River", f"River {name}", f"{name} He"]
 
 
 def river_points() -> dict[str, list[list[float]]]:
@@ -265,12 +276,21 @@ def match_missing(atlas: dict, fresh: bool) -> None:
             continue
         print(f"matching {rule}: {len(group)} places")
         types, max_km = MATCH_RULES[rule]
-        found = candidates_for(sorted({p["name"] for p in group}), types)
+        names = {p["name"]: name_forms(rule, p["name"]) for p in group}
+        found = candidates_for(sorted({form for forms in names.values() for form in forms}), types)
         for place in group:
             points = lines.get(place["name"], [place["at"]]) if rule == "river" else [place["at"]]
-            known[f"{rule}:{place['name']}"] = sole_match(
-                points, found.get(place["name"], []), max_km
-            )
+            options = [c for form in names[place["name"]] for c in found.get(form, [])]
+            known[f"{rule}:{place['name']}"] = sole_match(points, options, max_km)
+    articles = " ".join(f"{json.dumps(title)}@en" for title in RIVER_ARTICLES.values())
+    rows = query_rows(
+        f"SELECT ?item ?title WHERE {{ VALUES ?title {{ {articles} }} "
+        "?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> ; "
+        "schema:name ?title . }"
+    )
+    by_title = {row["title"]["value"]: qid(row) for row in rows}
+    for name, title in RIVER_ARTICLES.items():
+        known[f"river:{name}"] = by_title.get(title)
     CACHE.mkdir(parents=True, exist_ok=True)
     cache.write_text(json.dumps(known, ensure_ascii=False, indent=0), encoding="utf-8")
     matched = 0
