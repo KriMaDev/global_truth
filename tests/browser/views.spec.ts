@@ -205,3 +205,21 @@ test('the United States shows its states, and a state opens its card', async ({ 
   await expect(page.locator('#event-card .card-kind')).toContainText('State');
   await expect(page.locator('#event-card a[href*="wikipedia.org"]').first()).toBeAttached();
 });
+
+test('the Atlas names big cities and islands, and a city opens its card', async ({ page }) => {
+  await openGlobe(page, '/?view=atlas', { events: knownWorld() });
+  await expect(page.locator('.map-label').first()).toBeAttached({ timeout: 30_000 });
+  await showEurope(page);
+  for (let step = 0; step < 3; step += 1) {
+    await page.locator('#zoom-in').click();
+    await page.waitForTimeout(700);
+  }
+  await expect
+    .poll(() => page.locator('.map-label.kind-island').count(), { timeout: 15_000 })
+    .toBeGreaterThan(0);
+  const city = page.locator('.map-label.kind-city').first();
+  await expect(city).toBeAttached({ timeout: 15_000 });
+  await city.evaluate((element) => (element as HTMLElement).click());
+  await expect(page.locator('#event-card .card-kind')).toContainText(/City|capital/);
+  await expect(page.locator('#event-card a[href*="wikipedia.org"]').first()).toBeAttached();
+});

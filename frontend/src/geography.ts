@@ -33,7 +33,8 @@ interface PlaceLabel {
 
 export interface GeoLabels {
   seas: (PlaceLabel & { kind: string })[];
-  regions: (PlaceLabel & { kind: 'range' | 'desert' })[];
+  /** Mountain ranges, deserts, islands and other land features; `type` is the card's word. */
+  regions: (PlaceLabel & { kind: 'range' | 'desert' | 'island' | 'feature'; type?: string })[];
   peaks: (PlaceLabel & { elevation: number })[];
   /** Rivers (ranked by length) and lakes. */
   waters: (PlaceLabel & { kind: 'river' | 'lake' })[];
@@ -42,6 +43,8 @@ export interface GeoLabels {
   /** The US states and their capitals. */
   states: PlaceLabel[];
   stateCapitals: PlaceLabel[];
+  /** Big cities, on the Atlas only. */
+  cities: PlaceLabel[];
 }
 
 /** A lake's shape, painted as water over the country colours. */
@@ -69,7 +72,9 @@ export type LabelKind =
   | 'lake'
   | 'capital'
   | 'city'
-  | 'state';
+  | 'state'
+  | 'island'
+  | 'feature';
 
 /** The three maps: news markers, countries coloured by their news, and the news-free atlas. */
 export type MapView = 'news' | 'geo' | 'atlas';
@@ -140,6 +145,10 @@ const LIMITS = {
   /** US states below altitude 1, their capitals below 0.5. */
   state: [-1, -1, -1, 1, 1],
   stateCapital: [-1, -1, -1, -1, 2],
+  /** Big cities: over 2 million (rank 3) below altitude 1, the rest (rank 4) below 0.5. */
+  city: [-1, -1, -1, 3, 4],
+  island: [1, 2, 3, 5, 9],
+  feature: [1, 2, 3, 5, 9],
 } as const;
 
 const formatter = new Intl.NumberFormat('en-GB');
@@ -163,6 +172,8 @@ const KIND_ORDER: Record<LabelKind, number> = {
   desert: 3,
   lake: 3,
   river: 3,
+  island: 3,
+  feature: 3,
   peak: 4,
 };
 
@@ -185,8 +196,8 @@ export function angularDegrees(lat1: number, lng1: number, lat2: number, lng2: n
 const CAMERA_FOV = 50;
 /** A little past the screen's corners, so that a small turn finds its labels already there. */
 const SCREEN_MARGIN = 1.35;
-/** Of the limit, how much mountains and deserts, rivers and lakes, and cities are each sure of. */
-const NATURE_SHARE = 0.2;
+/** Of the limit, how much each of mountains, water, cities and other places is sure of. */
+const NATURE_SHARE = 0.125;
 
 /** Degrees from the view's centre to the screen's corner, or to the horizon if that is nearer. */
 export function screenRadiusDegrees(altitude: number, aspect: number): number {
@@ -212,7 +223,8 @@ const CAPITAL_SHARE = 0.25;
 /** Always chosen first: a map missing a country's name looks broken. */
 const FIRST_KINDS: ReadonlySet<LabelKind> = new Set(['country', 'capital', 'state']);
 
-function shareGroup(kind: LabelKind): 'land' | 'water' | 'cities' | null {
+function shareGroup(kind: LabelKind): 'land' | 'water' | 'cities' | 'other' | null {
+  if (kind === 'island' || kind === 'feature') return 'other';
   if (kind === 'range' || kind === 'desert' || kind === 'peak') return 'land';
   if (kind === 'city') return 'cities';
   return kind === 'river' || kind === 'lake' ? 'water' : null;
@@ -249,7 +261,7 @@ export function labelsInView(
     if (chosen.size < limit) chosen.add(label);
   };
   const share = Math.floor(limit * NATURE_SHARE);
-  const shares = (['land', 'water', 'cities'] as const).map((group) =>
+  const shares = (['land', 'water', 'cities', 'other'] as const).map((group) =>
     ordered.filter((label) => shareGroup(label.kind) === group).slice(0, share),
   );
   // Countries come first, then capitals, leaving only what the shares can actually use.
@@ -363,13 +375,29 @@ export function labelsFor(
     });
   }
   if (view === 'geo') return labels;
+  for (const city of data.labels.cities) {
+    if (city.rank > LIMITS.city[level]) continue;
+    labels.push({
+      id: `city:${city.wikidata ?? city.name}`,
+      kind: 'city',
+      type: 'City',
+      name: city.name,
+      text: city.name,
+      rank: city.rank,
+      wikidata: city.wikidata ?? null,
+      lng: city.at[0],
+      lat: city.at[1],
+    });
+  }
   for (const region of data.labels.regions) {
-    if (region.rank > LIMITS.region[level]) continue;
+    const limit =
+      region.kind === 'island' || region.kind === 'feature' ? LIMITS[region.kind] : LIMITS.region;
+    if (region.rank > limit[level]) continue;
     const name = titleCase(region.name);
     labels.push({
       id: `${region.kind}:${region.name}`,
       kind: region.kind,
-      type: region.kind === 'range' ? 'Mountain range' : 'Desert',
+      type: region.type ?? (region.kind === 'range' ? 'Mountain range' : 'Desert'),
       name,
       text: name,
       rank: region.rank,
@@ -462,6 +490,9 @@ export interface PlaceFacts {
   countries?: string[];
   range?: string;
   prominence_m?: number;
+  flows_into?: string;
+  /** Wikidata's one-line description, for places with no English article. */
+  description?: string;
   wikipedia?: WikipediaText;
 }
 
@@ -539,6 +570,7 @@ export function factRows(
     add('Countries', list(f.countries));
   } else if (label.kind === 'river') {
     add('Length', f.length_m ? `${formatter.format(Math.round(f.length_m / 1000))} km` : undefined);
+    add('Flows into', f.flows_into);
     add('Countries', list(f.countries));
   } else if (label.kind === 'peak') {
     add('Elevation', label.elevation ? metres(label.elevation) : undefined);

@@ -182,7 +182,11 @@ const data: GeographyData = {
       { name: 'INDIAN OCEAN', kind: 'ocean', rank: 0, at: [82, -33] },
       { name: 'Gulf of Aden', kind: 'gulf', rank: 3, at: [48, 12] },
     ],
-    regions: [{ name: 'HIMALAYAS', kind: 'range', rank: 1, at: [85, 28] }],
+    regions: [
+      { name: 'HIMALAYAS', kind: 'range', rank: 1, at: [85, 28] },
+      { name: 'Testisle', kind: 'island', type: 'Island', rank: 3, at: [9, 54] },
+      { name: 'Testcape', kind: 'feature', type: 'Cape', rank: 5, at: [10, 55] },
+    ],
     peaks: [
       { name: 'Mount Everest', elevation: 8848, rank: 1, at: [86.9, 27.98] },
       { name: 'Small Hill', elevation: 1200, rank: 9, at: [0, 0] },
@@ -198,6 +202,10 @@ const data: GeographyData = {
     ],
     states: [{ name: 'Teststate', rank: 1, wikidata: 'Q3', at: [-100, 40] }],
     stateCapitals: [{ name: 'Statetown', rank: 2, wikidata: 'Q4', at: [-99, 41] }],
+    cities: [
+      { name: 'Bigcity', rank: 3, wikidata: 'Q5', at: [7, 52] },
+      { name: 'Midcity', rank: 4, wikidata: 'Q6', at: [8, 53] },
+    ],
   },
   lakes: [
     {
@@ -236,6 +244,22 @@ describe('labelsFor', () => {
     expect(texts(0.8)).toContain('Teststate');
     expect(texts(0.8)).not.toContain('Statetown');
     expect(texts(0.3)).toContain('Statetown');
+  });
+
+  it('shows big cities on the Atlas only, the largest first', () => {
+    const texts = (altitude: number, view: 'geo' | 'atlas') =>
+      labelsFor(altitude, data, view).map((l) => l.text);
+    expect(texts(0.8, 'atlas')).toContain('Bigcity');
+    expect(texts(0.8, 'atlas')).not.toContain('Midcity');
+    expect(texts(0.3, 'atlas')).toContain('Midcity');
+    expect(texts(0.3, 'geo')).not.toContain('Bigcity');
+  });
+
+  it('gives islands and other features their own word on the card', () => {
+    const labels = labelsFor(0.3, data, 'atlas');
+    expect(labels.find((l) => l.text === 'Testisle')?.type).toBe('Island');
+    expect(labels.find((l) => l.text === 'Testcape')?.type).toBe('Cape');
+    expect(labelsFor(0.3, data, 'geo').some((l) => l.text === 'Testisle')).toBe(false);
   });
 
   it('shows capitals only once zoomed in', () => {

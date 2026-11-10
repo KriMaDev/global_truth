@@ -3,8 +3,10 @@ each place's English Wikipedia article, for every country, sea, ocean, mountain 
 desert and peak the map can label.
 
 Reads the Wikidata IDs that Natural Earth gives each feature (written into
-frontend/public/geo/countries.json and labels.json by tools/build_geo.py), and writes
-frontend/public/geo/places.json, which the site loads the first time a place is opened.
+frontend/public/geo/countries.json, labels.json and atlas.json by tools/build_geo.py), and
+matches places that have none to Wikidata only where certain (tools/place_match.py). Writes
+places.json for the Geography map and places-land, -water and -city.json for the Atlas, each
+loaded only when a card of that kind is first opened.
 
 Sources and terms (checked 2026-11-07, recorded in docs/sources.md):
 - Wikidata: structured data under CC0. Queried with a few batched SPARQL requests.
@@ -29,6 +31,9 @@ import urllib.parse
 import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
+
+import build_geo
+from place_match import Candidate, sole_match
 
 ROOT = Path(__file__).resolve().parents[1]
 GEO = ROOT / "frontend" / "public" / "geo"
@@ -98,6 +103,21 @@ FACTS: dict[str, list[tuple[str, str]]] = {
         ),
         ("area_m2", quantity("P2046")),
     ],
+    "river": [
+        ("length_m", quantity("P2043")),
+        ("flows_into", f"?item wdt:P403 ?v . {LABEL}"),
+        ("countries", f"?item wdt:P17 ?v . {CURRENT} {LABEL}"),
+    ],
+    "island": [
+        ("area_m2", quantity("P2046")),
+        ("highest_point", f"?item wdt:P610 ?v . {LABEL}"),
+        ("countries", f"?item wdt:P17 ?v . {CURRENT} {LABEL}"),
+    ],
+    "feature": [
+        ("area_m2", quantity("P2046")),
+        ("highest_point", f"?item wdt:P610 ?v . {LABEL}"),
+        ("countries", f"?item wdt:P17 ?v . {CURRENT} {LABEL}"),
+    ],
     "state": [
         ("capital", f"?item wdt:P36 ?v . {LABEL}"),
         (
@@ -116,10 +136,38 @@ FACTS: dict[str, list[tuple[str, str]]] = {
 }
 # Fields with several values (a list); the others keep one value.
 LISTS = {"languages", "currency", "countries"}
+ENGLISH_LABEL = "?item rdfs:label ?value . FILTER(LANG(?value) = 'en')"
+ENGLISH_DESCRIPTION = "?item schema:description ?value . FILTER(LANG(?value) = 'en')"
 SITELINK = (
     "?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> ;"
     " schema:name ?value ."
 )
+
+
+#: Wikidata types a place without an ID may match, and how far from the map it may be (km).
+MATCH_RULES: dict[str, tuple[list[str], float]] = {
+    "river": (["Q4022", "Q47521", "Q355304"], 150),
+    "peak": (["Q8502", "Q8072", "Q207326", "Q54050"], 15),
+    "lake": (["Q23397", "Q131681"], 50),
+    "Mountain range": (["Q46831"], 200),
+    "Desert": (["Q8514"], 200),
+    "Island": (["Q23442"], 200),
+    "Island group": (["Q33837", "Q23442"], 200),
+    "Plateau": (["Q75520"], 200),
+    "Peninsula": (["Q34763"], 200),
+    "Plain": (["Q160091"], 200),
+    "Delta": (["Q43197"], 200),
+    "Valley": (["Q39816"], 200),
+    "Cape": (["Q185113"], 200),
+    "Waterfall": (["Q34038"], 200),
+    "sea": (["Q165"], 200),
+    "gulf": (["Q1322134"], 200),
+    "bay": (["Q39594"], 200),
+    "strait": (["Q37901"], 200),
+    "fjord": (["Q45776"], 200),
+    "lagoon": (["Q187223"], 200),
+}
+NAME_BATCH = 40
 
 
 def request(url: str, accept: str) -> bytes:
@@ -156,6 +204,99 @@ def sparql(pattern: str, ids: list[str], extra: str = "") -> list[dict]:
     return rows
 
 
+def query_rows(query: str) -> list[dict]:
+    body = request(
+        SPARQL + "?" + urllib.parse.urlencode({"query": query, "format": "json"}),
+        "application/sparql-results+json",
+    )
+    time.sleep(PAUSE_SECONDS)
+    return json.loads(body)["results"]["bindings"]
+
+
+def candidates_for(names: list[str], types: list[str]) -> dict[str, list[Candidate]]:
+    """Items of these types whose English name or alias is one of these, with their positions."""
+    found: dict[str, list[Candidate]] = {}
+    for start in range(0, len(names), NAME_BATCH):
+        values = " ".join(f"{json.dumps(name)}@en" for name in names[start : start + NAME_BATCH])
+        kinds = " ".join(f"wd:{t}" for t in types)
+        rows = query_rows(
+            "SELECT ?item ?name ?coord WHERE { "
+            f"VALUES ?name {{ {values} }} VALUES ?type {{ {kinds} }} "
+            "{ ?item rdfs:label ?name } UNION { ?item skos:altLabel ?name } "
+            "?item wdt:P31 ?type ; wdt:P625 ?coord . }"
+        )
+        for row in rows:
+            point = row["coord"]["value"].removeprefix("Point(").removesuffix(")").split()
+            if len(point) == 2:
+                found.setdefault(row["name"]["value"], []).append(
+                    Candidate(qid(row), float(point[0]), float(point[1]))
+                )
+    return found
+
+
+def river_points() -> dict[str, list[list[float]]]:
+    """Every point of each river as the map draws it, by name."""
+    points: dict[str, list[list[float]]] = {}
+    for feature in build_geo.river_features():
+        name = build_geo.river_name(feature["properties"])
+        if name:
+            for line in build_geo.lines_of({"features": [feature]}):
+                points.setdefault(name, []).extend(line[:: max(1, len(line) // 40)])
+    return points
+
+
+def match_missing(atlas: dict, fresh: bool) -> None:
+    """Fills in the Wikidata ID of each place that has none, only where the match is certain."""
+    cache = CACHE / "matches.json"
+    known: dict[str, str | None] = (
+        json.loads(cache.read_text(encoding="utf-8")) if cache.exists() and not fresh else {}
+    )
+    places: list[tuple[str, dict]] = []
+    for label in atlas["waters"]:
+        places.append((label["kind"], label))
+    places += [("peak", label) for label in atlas["peaks"]]
+    places += [(label["type"], label) for label in atlas["regions"]]
+    places += [(label["kind"], label) for label in atlas["marine"]]
+    missing = [(rule, p) for rule, p in places if not p.get("wikidata") and rule in MATCH_RULES]
+    lines = river_points()
+    for rule in sorted({rule for rule, _ in missing}):
+        group = [p for r, p in missing if r == rule and f"{rule}:{p['name']}" not in known]
+        if not group:
+            continue
+        print(f"matching {rule}: {len(group)} places")
+        types, max_km = MATCH_RULES[rule]
+        found = candidates_for(sorted({p["name"] for p in group}), types)
+        for place in group:
+            points = lines.get(place["name"], [place["at"]]) if rule == "river" else [place["at"]]
+            known[f"{rule}:{place['name']}"] = sole_match(
+                points, found.get(place["name"], []), max_km
+            )
+    CACHE.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps(known, ensure_ascii=False, indent=0), encoding="utf-8")
+    matched = 0
+    for rule, place in missing:
+        place["wikidata"] = known.get(f"{rule}:{place['name']}")
+        matched += bool(place["wikidata"])
+    print(f"matched {matched} of {len(missing)} places that had no ID")
+
+
+def simple_lookup(name: str, pattern: str, ids: list[str], fresh: bool) -> dict[str, str]:
+    """One English text per item (cached, asking only for items not seen before)."""
+    cache = CACHE / f"wikidata-{name}.json"
+    known: dict[str, str] = (
+        json.loads(cache.read_text(encoding="utf-8")) if cache.exists() and not fresh else {}
+    )
+    wanted = [i for i in ids if i not in known]
+    if wanted:
+        print(f"wikidata {name}: {len(wanted)} items")
+        known.update({i: "" for i in wanted})
+        for row in sparql(pattern, wanted):
+            known[qid(row)] = row["value"]["value"]
+        CACHE.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(known, ensure_ascii=False, indent=0), encoding="utf-8")
+    return known
+
+
 def qid(row: dict) -> str:
     return row["item"]["value"].rsplit("/", 1)[-1]
 
@@ -168,14 +309,19 @@ def number(text: str) -> float | int:
 def wikidata_facts(kind: str, ids: list[str], fresh: bool) -> dict[str, dict]:
     """Facts per Wikidata ID for one kind of place (cached)."""
     cache = CACHE / f"wikidata-{kind}.json"
-    if cache.exists() and not fresh:
-        return json.loads(cache.read_text(encoding="utf-8"))
-    facts: dict[str, dict] = {i: {} for i in ids}
+    known: dict[str, dict] = (
+        json.loads(cache.read_text(encoding="utf-8")) if cache.exists() and not fresh else {}
+    )
+    # Only items not asked about before: a longer list of places costs only the new ones.
+    wanted = [i for i in ids if i not in known]
+    if not wanted:
+        return known
+    facts: dict[str, dict] = {i: {} for i in wanted}
     for field, pattern in [("wikipedia_title", SITELINK), *FACTS[kind]]:
-        print(f"wikidata {kind}: {field}")
+        print(f"wikidata {kind}: {field} ({len(wanted)} items)")
         extra = "?when" if field == "population" else ""
         best_when: dict[str, str] = {}
-        for row in sparql(pattern, ids, extra):
+        for row in sparql(pattern, wanted, extra):
             item, value = qid(row), row["value"]["value"]
             target = facts.setdefault(item, {})
             if field in LISTS:
@@ -196,9 +342,10 @@ def wikidata_facts(kind: str, ids: list[str], fresh: bool) -> dict[str, dict]:
     for item in facts.values():
         for field in LISTS & item.keys():
             item[field] = sorted(item[field])[:8]
+    known.update(facts)
     CACHE.mkdir(parents=True, exist_ok=True)
-    cache.write_text(json.dumps(facts, ensure_ascii=False, indent=1), encoding="utf-8")
-    return facts
+    cache.write_text(json.dumps(known, ensure_ascii=False, indent=1), encoding="utf-8")
+    return known
 
 
 def summary(title: str, fresh: bool) -> dict | None:
@@ -228,23 +375,34 @@ def summary(title: str, fresh: bool) -> dict | None:
     return result
 
 
-def places_by_kind() -> dict[str, list[str]]:
-    """Wikidata IDs of every place the map can label, by kind of facts."""
-    countries = json.loads((GEO / "countries.json").read_text(encoding="utf-8"))
-    labels = json.loads((GEO / "labels.json").read_text(encoding="utf-8"))
-    ids = {
-        "country": [c["wikidata"] for c in countries],
-        "sea": [s["wikidata"] for s in labels["seas"]],
-        "region": [r["wikidata"] for r in labels["regions"]],
-        "peak": [p["wikidata"] for p in labels["peaks"]],
-        # Lakes (Natural Earth gives rivers no Wikidata ID).
-        "water": [w["wikidata"] for w in labels.get("waters", [])],
-        "city": [
-            c["wikidata"] for c in [*labels.get("capitals", []), *labels.get("stateCapitals", [])]
-        ],
-        "state": [s["wikidata"] for s in labels.get("states", [])],
+def ids_of(items: list[dict]) -> list[str]:
+    return [item["wikidata"] for item in items if item.get("wikidata")]
+
+
+def base_ids(countries: list[dict], labels: dict) -> dict[str, list[str]]:
+    """What the Geography map can open: loaded in places.json."""
+    capitals = [*labels.get("capitals", []), *labels.get("stateCapitals", [])]
+    return {
+        "country": ids_of(countries),
+        "sea": ids_of(labels["seas"]),
+        "city": ids_of(capitals),
+        "state": ids_of(labels.get("states", [])),
     }
-    return {kind: sorted({i for i in items if i}) for kind, items in ids.items()}
+
+
+def atlas_ids(atlas: dict) -> dict[str, list[str]]:
+    """What only the Atlas can open, by the kind of facts it gets."""
+    regions = atlas["regions"]
+    return {
+        "region": ids_of([r for r in regions if r["kind"] in {"range", "desert"}]),
+        "island": ids_of([r for r in regions if r["kind"] == "island"]),
+        "feature": ids_of([r for r in regions if r["kind"] == "feature"]),
+        "peak": ids_of(atlas["peaks"]),
+        "sea": ids_of(atlas["marine"]),
+        "water": ids_of([w for w in atlas["waters"] if w["kind"] == "lake"]),
+        "river": ids_of([w for w in atlas["waters"] if w["kind"] == "river"]),
+        "city": ids_of(atlas["cities"]),
+    }
 
 
 def as_of() -> str:
@@ -255,32 +413,73 @@ def as_of() -> str:
     return datetime.fromtimestamp(oldest, UTC).strftime("%Y-%m-%d")
 
 
+def places_for(kind: str, ids: list[str], fresh: bool, about: dict[str, str]) -> dict[str, dict]:
+    """Facts and article text for places of one kind."""
+    facts = wikidata_facts(kind, ids, fresh)
+    places: dict[str, dict] = {}
+    for qid_ in ids:
+        entry = {k: v for k, v in facts.get(qid_, {}).items() if v not in (None, [], "")}
+        title = entry.pop("wikipedia_title", None)
+        article = summary(title, fresh) if title else None
+        if article and article["extract"]:
+            entry["wikipedia"] = article
+        elif about.get(qid_):
+            entry["description"] = about[qid_]
+        places[qid_] = entry
+    with_text = sum("wikipedia" in places[i] for i in ids)
+    print(f"{kind}: {len(ids)} places, {with_text} with text")
+    return places
+
+
+def write_places(name: str, places: dict[str, dict]) -> None:
+    out = GEO / name
+    document = {"generated": as_of(), "places": places}
+    out.write_text(
+        json.dumps(document, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+    )
+    print(f"wrote geo/{name} ({out.stat().st_size // 1024} KB)")
+
+
 def main() -> None:
     fresh = "--fresh" in sys.argv
-    places: dict[str, dict] = {}
-    for kind, ids in places_by_kind().items():
-        facts = wikidata_facts(kind, ids, fresh)
-        for qid_ in ids:
-            entry = {k: v for k, v in facts.get(qid_, {}).items() if v not in (None, [], "")}
-            title = entry.pop("wikipedia_title", None)
-            article = summary(title, fresh) if title else None
-            if article and article["extract"]:
-                entry["wikipedia"] = article
-            places[qid_] = entry
-        print(f"{kind}: {len(ids)} places, {sum('wikipedia' in places[i] for i in ids)} with text")
-    out = GEO / "places.json"
-    out.write_text(
-        json.dumps(
-            {
-                "generated": as_of(),
-                "places": places,
-            },
-            ensure_ascii=False,
-            separators=(",", ":"),
-        ),
-        encoding="utf-8",
+    countries = json.loads((GEO / "countries.json").read_text(encoding="utf-8"))
+    labels = json.loads((GEO / "labels.json").read_text(encoding="utf-8"))
+    atlas_path = GEO / "atlas.json"
+    atlas = json.loads(atlas_path.read_text(encoding="utf-8"))
+    match_missing(atlas, fresh)
+
+    # Natural Earth's English city names have mistakes; Wikidata's label is the name shown.
+    names = simple_lookup("city-names", ENGLISH_LABEL, ids_of(atlas["cities"]), fresh)
+    for city in atlas["cities"]:
+        city["name"] = names.get(city["wikidata"]) or city["name"]
+    atlas_path.write_text(
+        json.dumps(atlas, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
     )
-    print(f"wrote geo/places.json ({out.stat().st_size // 1024} KB)")
+
+    base = base_ids(countries, labels)
+    extra = atlas_ids(atlas)
+    every = sorted({i for group in (base, extra) for ids in group.values() for i in ids})
+    about = simple_lookup("descriptions", ENGLISH_DESCRIPTION, every, fresh)
+
+    done: set[str] = set()
+    main_places: dict[str, dict] = {}
+    for kind, ids in base.items():
+        wanted = sorted(set(ids) - done)
+        main_places.update(places_for(kind, wanted, fresh, about))
+        done.update(wanted)
+    write_places("places.json", main_places)
+
+    for name, kinds in (
+        ("places-land.json", ("region", "island", "feature", "peak")),
+        ("places-water.json", ("sea", "water", "river")),
+        ("places-city.json", ("city",)),
+    ):
+        places: dict[str, dict] = {}
+        for kind in kinds:
+            wanted = sorted(set(extra[kind]) - done)
+            places.update(places_for(kind, wanted, fresh, about))
+            done.update(wanted)
+        write_places(name, places)
 
 
 if __name__ == "__main__":

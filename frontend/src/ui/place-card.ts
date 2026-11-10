@@ -53,7 +53,8 @@ export function placeCardParts(input: PlaceCardInput): HTMLElement[] {
 
   // Short things first (the description, facts and events), then the article's text.
   const wiki = facts?.wikipedia;
-  if (wiki?.description) parts.push(el('p', 'card-place', wiki.description));
+  const oneLine = wiki?.description ?? facts?.description;
+  if (oneLine) parts.push(el('p', 'card-place', oneLine));
 
   const rows = factRows(label, facts);
   if (rows.length) {
@@ -61,7 +62,7 @@ export function placeCardParts(input: PlaceCardInput): HTMLElement[] {
     for (const [name, value] of rows) list.append(el('dt', '', name), el('dd', '', value));
     parts.push(list);
   }
-  if (!wiki && rows.length === 0) {
+  if (!wiki && rows.length === 0 && !oneLine) {
     parts.push(el('p', 'card-reason', 'No description is available for this place yet.'));
   }
 
@@ -96,14 +97,14 @@ export function placeCardParts(input: PlaceCardInput): HTMLElement[] {
       '. ',
     );
   }
-  if (rows.length && label.wikidata) {
+  if ((rows.length || facts?.description) && label.wikidata) {
     credits.append(
       'Facts: ',
       link('Wikidata', `https://www.wikidata.org/wiki/${label.wikidata}`),
       ' (CC0). ',
     );
   }
-  if (input.asOf && (wiki || rows.length)) credits.append(`As of ${input.asOf}. `);
+  if (input.asOf && (wiki || rows.length || oneLine)) credits.append(`As of ${input.asOf}. `);
   credits.append(
     label.kind === 'peak'
       ? 'Name, position and elevation: Natural Earth.'

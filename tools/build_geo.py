@@ -209,10 +209,51 @@ def build_countries() -> list[dict]:
 
 MAX_PEAK_RANK = 7
 MARINE_KINDS = {"ocean", "sea", "gulf", "bay", "strait", "channel"}
+#: The Atlas also names these, from Natural Earth's most detailed marine layer.
+ATLAS_MARINE_KINDS = MARINE_KINDS | {"sound", "lagoon", "fjord", "reef", "inlet"}
+#: Natural Earth's land features on the Atlas: its class, our kind, and the word on the card.
+ATLAS_REGIONS = {
+    "Range/mtn": ("range", "Mountain range"),
+    "Desert": ("desert", "Desert"),
+    "Island": ("island", "Island"),
+    "Island group": ("island", "Island group"),
+    "Plateau": ("feature", "Plateau"),
+    "Pen/cape": ("feature", "Peninsula"),
+    "Peninsula": ("feature", "Peninsula"),
+    "Plain": ("feature", "Plain"),
+    "Delta": ("feature", "Delta"),
+    "Basin": ("feature", "Basin"),
+    "Valley": ("feature", "Valley"),
+    "Lowland": ("feature", "Lowland"),
+    "Tundra": ("feature", "Tundra"),
+    "Isthmus": ("feature", "Isthmus"),
+    "Foothills": ("feature", "Foothills"),
+    "Gorge": ("feature", "Gorge"),
+    "Wetlands": ("feature", "Wetlands"),
+    "Depression": ("feature", "Depression"),
+    "Coast": ("feature", "Coast"),
+    "Geoarea": ("feature", "Region"),
+    "Continent": ("feature", "Continent"),
+}
+ATLAS_POINTS = {
+    "island": ("island", "Island"),
+    "island group": ("island", "Island group"),
+    "cape": ("feature", "Cape"),
+    "waterfall": ("feature", "Waterfall"),
+    "pole": ("feature", "Pole"),
+    "plain": ("feature", "Plain"),
+}
+#: Cities of at least this many people are on the Atlas (capitals always are).
+MIN_CITY_POPULATION = 500_000
+#: Cities of at least this many people appear earlier when zooming in.
+LARGE_CITY_POPULATION = 2_000_000
 REGION_KINDS = {"Range/mtn": "range", "Desert": "desert"}
 # Natural Earth abbreviates some range names ("APPALACHIAN MTS."); its English names are
 # sometimes wrong for ranges, so the original names are kept and only spelled out.
 ABBREVIATIONS = {
+    "I.": "Island",
+    "Is.": "Islands",
+    "Pen.": "Peninsula",
     "MTS.": "MOUNTAINS",
     "Mts.": "Mountains",
     "RA.": "RANGE",
@@ -292,6 +333,89 @@ def build_state_capitals() -> list[dict]:
     return sorted(capitals, key=lambda c: c["name"])
 
 
+def build_atlas_regions() -> list[dict]:
+    """Every land feature the Atlas names: areas first, then single points."""
+    regions = [
+        {
+            "name": region_name(p["NAME"]),
+            "kind": ATLAS_REGIONS[p["FEATURECLA"]][0],
+            "type": ATLAS_REGIONS[p["FEATURECLA"]][1],
+            "rank": p.get("SCALERANK", 5),
+            "wikidata": p.get("WIKIDATAID") or None,
+            "at": label_point(f["geometry"]),
+        }
+        for f in load("ne_10m_geography_regions_polys")["features"]
+        for p in [f["properties"]]
+        if p.get("FEATURECLA") in ATLAS_REGIONS and p.get("NAME")
+    ]
+    points = [
+        {
+            "name": region_name(p.get("name_en") or p["name"]),
+            "kind": ATLAS_POINTS[p["featurecla"]][0],
+            "type": ATLAS_POINTS[p["featurecla"]][1],
+            "rank": p.get("scalerank", 5),
+            "wikidata": p.get("wikidataid") or None,
+            "at": [round(c, 2) for c in f["geometry"]["coordinates"][:2]],
+        }
+        for f in load("ne_10m_geography_regions_points")["features"]
+        for p in [f["properties"]]
+        if p.get("featurecla") in ATLAS_POINTS and p.get("name")
+    ]
+    return unique(regions + points)
+
+
+def build_atlas_marine() -> list[dict]:
+    """Seas, gulfs, bays, straits and other named water, in the most detail available."""
+    return unique(
+        [
+            {
+                "name": sea_name(f["properties"]),
+                "kind": f["properties"]["featurecla"],
+                "rank": f["properties"].get("scalerank", 5),
+                "wikidata": f["properties"].get("wikidataid") or None,
+                "at": label_point(f["geometry"]),
+            }
+            for f in load("ne_10m_geography_marine_polys")["features"]
+            if f["properties"].get("featurecla") in ATLAS_MARINE_KINDS
+            and f["properties"].get("name")
+        ]
+    )
+
+
+def build_cities(already: set[str]) -> list[dict]:
+    """Big cities, except capitals and state capitals (which have their own labels)."""
+    cities = []
+    for feature in load("ne_10m_populated_places")["features"]:
+        p = feature["properties"]
+        qid = p.get("WIKIDATAID")
+        if not qid or qid in already or p.get("ADM0CAP") == 1:
+            continue
+        if (p.get("POP_MAX") or 0) < MIN_CITY_POPULATION:
+            continue
+        cities.append(
+            {
+                "name": " ".join(p["NAME"].split()),
+                "rank": 3 if p["POP_MAX"] >= LARGE_CITY_POPULATION else 4,
+                "wikidata": qid,
+                "at": [round(c, 2) for c in feature["geometry"]["coordinates"][:2]],
+            }
+        )
+    seen: set[str] = set()
+    return [c for c in cities if not (c["wikidata"] in seen or seen.add(c["wikidata"]))]
+
+
+def build_atlas(labels: dict) -> dict:
+    """What only the Atlas shows, in its own file so Geography stays small."""
+    known = {c["wikidata"] for c in [*labels["capitals"], *labels["stateCapitals"]]}
+    return {
+        "marine": build_atlas_marine(),
+        "regions": build_atlas_regions(),
+        "peaks": build_peaks(),
+        "waters": build_waters(),
+        "cities": build_cities({q for q in known if q}),
+    }
+
+
 def build_labels() -> dict:
     seas = [
         {
@@ -304,17 +428,15 @@ def build_labels() -> dict:
         for f in load("ne_50m_geography_marine_polys")["features"]
         if f["properties"].get("featurecla") in MARINE_KINDS and f["properties"].get("name")
     ]
-    regions = [
-        {
-            "name": region_name(f["properties"]["NAME"]),
-            "kind": REGION_KINDS[f["properties"]["FEATURECLA"]],
-            "rank": f["properties"].get("SCALERANK", 5),
-            "wikidata": f["properties"].get("WIKIDATAID") or None,
-            "at": label_point(f["geometry"]),
-        }
-        for f in load("ne_50m_geography_regions_polys")["features"]
-        if f["properties"].get("FEATURECLA") in REGION_KINDS and f["properties"].get("NAME")
-    ]
+    return {
+        "seas": unique([s for s in seas if s["kind"] in {"sea", "ocean"}]),
+        "capitals": build_capitals(),
+        "states": build_states(),
+        "stateCapitals": build_state_capitals(),
+    }
+
+
+def build_peaks() -> list[dict]:
     peaks = [
         {
             "name": f["properties"].get("name_en") or f["properties"]["name"],
@@ -331,15 +453,7 @@ def build_labels() -> dict:
         and f["properties"].get("scalerank", 9) <= MAX_PEAK_RANK
     ]
     peaks.sort(key=lambda p: -p["elevation"])
-    return {
-        "seas": unique(seas),
-        "regions": unique(regions),
-        "peaks": unique(peaks),
-        "waters": build_waters(),
-        "capitals": build_capitals(),
-        "states": build_states(),
-        "stateCapitals": build_state_capitals(),
-    }
+    return unique(peaks)
 
 
 def river_name(properties: dict) -> str:
@@ -471,9 +585,11 @@ def main() -> None:
     ]
     size = write_lines([], lines_of({"features": us_lines}), "states.bin")
     print(f"wrote geo/states.bin ({size // 1024} KB)")
+    labels = build_labels()
     for name, data in (
         ("countries", build_countries()),
-        ("labels", build_labels()),
+        ("labels", labels),
+        ("atlas", build_atlas(labels)),
         ("lakes", build_lakes()),
     ):
         path = OUT / f"{name}.json"

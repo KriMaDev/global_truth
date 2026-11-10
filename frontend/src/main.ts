@@ -491,23 +491,67 @@ async function loadGeography(): Promise<GeographyData> {
       capitals: parts.capitals ?? [],
       states: parts.states ?? [],
       stateCapitals: parts.stateCapitals ?? [],
+      cities: [],
     },
     lakes: Array.isArray(lakes) ? (lakes as GeographyData['lakes']) : [],
   };
 }
 
-/** The texts for "About this place", fetched once; the map works without them. */
-let placesLoading: Promise<void> | null = null;
-function loadPlaces(): Promise<void> {
-  placesLoading ??= fetchJson('/geo/places.json')
+/** What only the Atlas names, loaded the first time it opens (the map works without it). */
+let atlasLoading: Promise<void> | null = null;
+function loadAtlas(data: GeographyData): Promise<void> {
+  atlasLoading ??= fetchJson('/geo/atlas.json')
     .then((doc) => {
-      const places = doc as Partial<PlacesData> | null;
-      placesData = places?.places
-        ? { generated: String(places.generated ?? ''), places: places.places }
-        : null;
+      const atlas = doc as Partial<{
+        marine: GeographyData['labels']['seas'];
+        regions: GeographyData['labels']['regions'];
+        peaks: GeographyData['labels']['peaks'];
+        waters: GeographyData['labels']['waters'];
+        cities: GeographyData['labels']['cities'];
+      }>;
+      data.labels = {
+        ...data.labels,
+        seas: atlas.marine ?? data.labels.seas,
+        regions: atlas.regions ?? [],
+        peaks: atlas.peaks ?? [],
+        waters: atlas.waters ?? [],
+        cities: atlas.cities ?? [],
+      };
     })
-    .catch((error: unknown) => console.warn('Place descriptions unavailable:', error));
-  return placesLoading;
+    .catch((error: unknown) => console.warn('Atlas places unavailable:', error));
+  return atlasLoading;
+}
+
+const PLACE_FILES: Partial<Record<MapLabel['kind'], string[]>> = {
+  sea: ['places-water.json'],
+  river: ['places-water.json'],
+  lake: ['places-water.json'],
+  city: ['places-city.json'],
+  range: ['places-land.json'],
+  desert: ['places-land.json'],
+  peak: ['places-land.json'],
+  island: ['places-land.json'],
+  feature: ['places-land.json'],
+};
+
+/** The texts for "About this place", each file fetched once; the map works without them. */
+const placesLoading = new Map<string, Promise<void>>();
+function loadPlaces(file = 'places.json'): Promise<void> {
+  let loading = placesLoading.get(file);
+  if (!loading) {
+    loading = fetchJson(`/geo/${file}`)
+      .then((doc) => {
+        const places = doc as Partial<PlacesData> | null;
+        if (!places?.places) return;
+        placesData = {
+          generated: placesData?.generated || String(places.generated ?? ''),
+          places: { ...placesData?.places, ...places.places },
+        };
+      })
+      .catch((error: unknown) => console.warn('Place descriptions unavailable:', error));
+    placesLoading.set(file, loading);
+  }
+  return loading;
 }
 
 /** Shows which map is on, on the switch and for the page's styles. */
@@ -539,6 +583,10 @@ async function setMapView(next: MapView): Promise<void> {
       showMapView();
       return;
     }
+  }
+  if (next === 'atlas' && geoData) {
+    await loadAtlas(geoData);
+    if (mapView !== 'atlas') return; // Switched away while it was loading.
   }
   app?.setGeography(mapView === 'news' ? null : geoData, countrySeverity(events), mapView);
   applyFilters();
@@ -583,7 +631,8 @@ function openPlace(
   closePanels();
   app?.select(null);
   // On a slow connection the card waits for its text rather than opening without it.
-  void loadPlaces().then(() => {
+  const files = ['places.json', ...(PLACE_FILES[label.kind] ?? [])];
+  void Promise.all(files.map((file) => loadPlaces(file))).then(() => {
     const facts = label.wikidata ? placesData?.places[label.wikidata] : undefined;
     card.openPanel(
       label.id,
@@ -598,6 +647,8 @@ function openPlace(
     country: 1.6,
     sea: 1.6,
     capital: 0.6,
+    island: 1,
+    feature: 1.4,
     state: 0.9,
     city: 0.6,
     range: 1.4,

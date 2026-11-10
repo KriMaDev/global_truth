@@ -456,6 +456,15 @@ button {
   background-clip: content-box;
 }
 
+.map-label.kind-island {
+  color: rgb(214 226 200 / 85%);
+  font-style: italic;
+}
+
+.map-label.kind-feature {
+  color: rgb(226 214 188 / 78%);
+}
+
 .map-label.kind-state {
   color: rgb(214 218 224 / 72%);
   letter-spacing: 0.2em;
