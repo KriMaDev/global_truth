@@ -24,13 +24,13 @@ const readJson = (file: string) => JSON.parse(readFileSync(file, 'utf8')) as Rec
 /** One version of each shared tool. Every package.json that names one must use exactly this. */
 const versions: Record<string, string> = {
   '@playwright/test': '1.64.1',
-  '@types/node': '26.6.5',
+  '@types/node': '26.6.6',
   eslint: '10.13.0',
   prettier: '3.9.10',
   typescript: '6.0.3',
-  'typescript-eslint': '8.72.0',
+  'typescript-eslint': '8.72.1',
   vitest: '5.0.5',
-  wrangler: '4.154.0',
+  wrangler: '4.155.0',
 };
 const requiredEverywhere = ['eslint', 'prettier', 'typescript', 'vitest', 'wrangler'];
 
