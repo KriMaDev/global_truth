@@ -19,6 +19,18 @@ for (const path of ['/about/', '/sources/', '/legal/']) {
   });
 }
 
+// GDPR review of 14 November 2026: the full set of rights, the safeguard for data sent to the US,
+// a way to have a headline about oneself removed, and where messages written to us are handled.
+test('Legal lists every right and how to have a headline removed', async ({ page }) => {
+  await serveWorld(page);
+  await page.goto('/legal/');
+  const privacy = page.locator('#privacy');
+  await expect(privacy).toContainText('corrected or deleted, restrict its use or object to it');
+  await expect(privacy).toContainText('Data Privacy Framework');
+  await expect(privacy.locator('a[href="https://krimadev.com/privacy-policy/"]')).toHaveCount(1);
+  await expect(page.locator('#corrections')).toContainText('a headline names you');
+});
+
 const outlets = {
   outlets: [
     {
