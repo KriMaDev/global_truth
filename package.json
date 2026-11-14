@@ -1,6 +1,7 @@
 {
   "name": "world-news-globe",
   "private": true,
+  "version": "1.9.0",
   "type": "module",
   "license": "MIT",
   "author": "KriMa (https://krimadev.com)",
@@ -36,7 +37,7 @@
     "typescript-eslint": "8.72.1",
     "vite": "8.3.5",
     "vitest": "5.0.5",
-    "wrangler": "4.155.0"
+    "wrangler": "4.156.1"
   },
   "dependencies": {
     "@fontsource/hanken-grotesk": "5.3.0",
@@ -51,6 +52,6 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
-    "workerd@1.20261023.1": true
+    "workerd@1.20261101.1": true
   }
 }

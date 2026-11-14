@@ -6,7 +6,11 @@ for (const path of ['/about/', '/sources/', '/legal/']) {
   test(`${path} fits the screen, and its in-page links lead somewhere`, async ({ page }) => {
     await serveWorld(page);
     await page.goto(path);
-    await expect(page.locator('#version')).toContainText('Version');
+    // The release number and build date, linked to the changelog (src/version.ts).
+    await expect(page.locator('#version')).toHaveText(
+      /^Version \d+\.\d+\.\d+\+? · \d{4}-\d{2}-\d{2}$/,
+    );
+    await expect(page.locator('#version')).toHaveAttribute('href', /\/CHANGELOG\.md$/);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);

@@ -57,6 +57,7 @@ import { setupInfoPanel } from './ui/info-panel';
 import { followDeviceMotion, initialReducedMotion } from './ui/motion';
 import { setupFloatingPanelTitle } from './ui/panel-title';
 import { applySavedTextSize, setupTextSize } from './ui/text-size';
+import { showVersion } from './version';
 
 applySavedTextSize();
 
@@ -737,17 +738,8 @@ function showList(message: string): void {
   renderEventList(list, events, { onOpen: (event) => card.open(event, true) });
 }
 
-/** The footer's version: build date and commit, linked to that commit on GitHub. */
-function showVersion(): void {
-  const link = byId<HTMLAnchorElement>('version');
-  link.textContent = `Version ${__BUILD_DATE__} · ${__BUILD_COMMIT__}`;
-  const sha = __BUILD_COMMIT__.replace('+', '');
-  if (/^[0-9a-f]{7}$/.test(sha))
-    link.href = `https://github.com/KriMaDev/world_news_globe/commit/${sha}`;
-}
-
 async function start(): Promise<void> {
-  showVersion();
+  showVersion(document.getElementById('version'));
   startAnalytics();
   renderLegend(byId('legend'));
   if (footer) setupInfoPanel(footer, byId<HTMLButtonElement>('info-toggle'));

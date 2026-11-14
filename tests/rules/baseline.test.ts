@@ -30,7 +30,7 @@ const versions: Record<string, string> = {
   typescript: '6.0.3',
   'typescript-eslint': '8.72.1',
   vitest: '5.0.5',
-  wrangler: '4.155.0',
+  wrangler: '4.156.1',
 };
 const requiredEverywhere = ['eslint', 'prettier', 'typescript', 'vitest', 'wrangler'];
 

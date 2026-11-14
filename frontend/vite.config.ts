@@ -1,28 +1,37 @@
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 
 /**
- * The version shown in the footer: the build date and the commit it was built from, with
- * "+" when there were uncommitted changes (as in Star Teller). In GitHub Actions the commit
- * comes from GITHUB_SHA.
+ * The version shown in the footer: the release number from package.json (CHANGELOG.md) and
+ * the build date, with "+" after the number when there were uncommitted changes (as in Star
+ * Teller). GitHub Actions builds a clean checkout, so it never has the "+". Each release has a
+ * git tag (v1.9.0) on its commit.
  */
-function version(): { date: string; commit: string } {
+function version(): { date: string; release: string } {
   const date = new Date().toISOString().slice(0, 10);
-  const git = (...args: string[]): string =>
-    execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-  try {
-    const sha = process.env.GITHUB_SHA ?? git('rev-parse', 'HEAD');
-    const dirty = process.env.GITHUB_SHA ? false : git('status', '--porcelain') !== '';
-    return { date, commit: sha.slice(0, 7) + (dirty ? '+' : '') };
-  } catch {
-    return { date, commit: 'unknown' };
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+    version: string;
+  };
+  let dirty = false;
+  if (!process.env.GITHUB_ACTIONS) {
+    try {
+      const status = execFileSync('git', ['status', '--porcelain'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
+      dirty = status.trim() !== '';
+    } catch {
+      // Not a git checkout: nothing to compare with.
+    }
   }
+  return { date, release: pkg.version + (dirty ? '+' : '') };
 }
 
-const { date, commit } = version();
+const { date, release } = version();
 
 // The frontend lives in frontend/; `npm run build` writes frontend/dist,
 // which wrangler.jsonc publishes as static assets.
@@ -35,7 +44,7 @@ export default defineConfig({
   },
   define: {
     __BUILD_DATE__: JSON.stringify(date),
-    __BUILD_COMMIT__: JSON.stringify(commit),
+    __BUILD_VERSION__: JSON.stringify(release),
   },
   build: {
     outDir: 'dist',

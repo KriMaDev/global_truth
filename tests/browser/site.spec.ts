@@ -45,7 +45,10 @@ test('the globe page starts without breaking a security rule', async ({ page }) 
     if (/content security policy/i.test(message.text())) refused.push(message.text());
   });
   await page.goto('/');
-  await expect(page.locator('#version')).toContainText('Version');
+  await expect(page.locator('#version')).toHaveText(
+    /^Version \d+\.\d+\.\d+\+? · \d{4}-\d{2}-\d{2}$/,
+  );
+  await expect(page.locator('#version')).toHaveAttribute('href', /\/CHANGELOG\.md$/);
   await page.waitForTimeout(1500);
   expect(refused).toEqual([]);
 });
